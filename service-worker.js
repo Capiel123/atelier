@@ -1,54 +1,44 @@
-/* Atelier — Service Worker
-   Estratégia: shell em cache-first, HTML em network-first.
-   Bump CACHE_VERSION a cada release nova (senão o update não chega no usuário). */
-const CACHE_VERSION = 'atelier-2026-10-22-V5';
+const CACHE_VERSION = 'atelier-2026-10-30-forced'; // Data nova forçada
 const SHELL_CACHE = 'shell-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'runtime-' + CACHE_VERSION;
 
+// Removi os ícones daqui para garantir que não dê erro 404
 const SHELL_ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-512-maskable.png',
-  './apple-touch-icon.png'
+  './manifest.json'
 ];
 
-// Instala: pré-cache do shell, mas NÃO ativa automaticamente (espera aviso do app)
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Força o novo SW a assumir imediatamente
   event.waitUntil(
-    caches.open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_ASSETS))
-      .catch((err) => console.warn('[SW] pré-cache falhou:', err))
+    caches.open(SHELL_CACHE).then((cache) => {
+      // Tenta adicionar um por um. Se um falhar, ele ignora e continua.
+      return Promise.all(
+        SHELL_ASSETS.map(url => cache.add(url).catch(err => console.warn('Falha ao cachear:', url, err)))
+      );
+    })
   );
 });
 
-// Ativa: limpa caches antigos e assume controle
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(
-      keys
-        .filter((k) => k !== SHELL_CACHE && k !== RUNTIME_CACHE)
-        .map((k) => caches.delete(k))
+      keys.filter(k => k !== SHELL_CACHE && k !== RUNTIME_CACHE).map(k => caches.delete(k))
     );
     await self.clients.claim();
   })());
 });
 
-// Fetch: HTML em network-first, assets em cache-first
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-
   const url = new URL(req.url);
-  // Só mexe em same-origin. APIs externas (claude.db, Google Fonts) passam direto.
   if (url.origin !== self.location.origin) return;
 
-  // HTML / navegação: tenta rede, cai pro cache se offline
   if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith((async () => {
       try {
@@ -57,14 +47,12 @@ self.addEventListener('fetch', (event) => {
         cache.put(req, fresh.clone());
         return fresh;
       } catch {
-        const cached = await caches.match(req);
-        return cached || caches.match('./index.html');
+        return (await caches.match(req)) || caches.match('./index.html');
       }
     })());
     return;
   }
 
-  // Assets: cache-first, network como fallback
   event.respondWith((async () => {
     const cached = await caches.match(req);
     if (cached) return cached;
@@ -81,9 +69,6 @@ self.addEventListener('fetch', (event) => {
   })());
 });
 
-// O app manda SKIP_WAITING quando o usuário clica em "Atualizar" no banner
 self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
