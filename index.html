@@ -16,13 +16,16 @@
 <div class="wrap">
   <header>
     <div class="logo" id="logo"></div>
-    <button class="search-btn" data-a="openSearch" title="Buscar (Ctrl+K)" aria-label="Buscar">🔍</button>
-    <div id="lvl"></div>
-    <div id="timerWidget" class="timer">
-      <span id="tlabel">Pronto</span>
-      <b id="ttime">00:00</b>
-      <button id="tstop" style="display:none">⏸ Parar</button>
+    <div class="header-right">
+      <div id="syncPill" class="sync-pill" data-state="saved"><span class="sp-dot"></span><span class="sp-text">Salvo</span></div>
+      <button class="search-btn" data-a="openSearch" title="Buscar (Ctrl+K)" aria-label="Buscar">🔍</button>
+      <div id="timerWidget" class="timer">
+        <span id="tlabel">Pronto</span>
+        <b id="ttime">00:00</b>
+        <button id="tstop" style="display:none">⏸ Parar</button>
+      </div>
     </div>
+    <div id="lvl"></div>
   </header>
   <div id="backupBanner"></div>
   <nav id="nav"></nav>
