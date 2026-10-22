@@ -501,7 +501,7 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
   .search-modal, .shortcuts-modal, .more-sheet {background:rgba(0,0,0,.92)}
 }
 
-/* ===== V14.1 UX LAYER (fim do arquivo: sobrescreve sem mexer no resto) ===== */
+/* ===== V14.1 UX LAYER ===== */
 :root{color-scheme:dark;--r:12px;--sh:0 6px 18px #0007;--ease:cubic-bezier(.2,.8,.2,1)}
 body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 ::selection{background:color-mix(in srgb,var(--ac) 35%,transparent)}
@@ -538,7 +538,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(max-width:640px){
   header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:6px 8px;position:sticky;top:0;z-index:40;margin:-10px -10px 10px;padding:8px 10px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--bd)}
   .logo{grid-area:1/1}.header-right{grid-area:1/2; display:flex; gap: 4px; align-items: center;} 
-  #timerWidget{grid-area:1/3; display:none;} /* Hide timer on mobile header to save space, shown inside list if needed */
+  #timerWidget{grid-area:1/3; display:none;} 
   #lvl{grid-area:2/1/3/-1;min-width:0}
   #lvl .lb{height:4px}
   .bottom-nav{background:color-mix(in srgb,var(--s1) 94%,transparent);backdrop-filter:blur(12px)}
@@ -584,7 +584,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     gap: 2px !important;
     margin-bottom: 8px !important;
   }
-  
   .days button {
     flex: 1 1 0px !important;
     min-width: 0 !important;
@@ -592,19 +591,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     border-radius: 6px !important;
     background: var(--s1);
   }
-  
   .days small {
     font-size: 9px !important;
     margin-top: 1px !important;
   }
-  
   .days i {
     top: 3px !important;
     right: 3px !important;
     width: 5px !important;
     height: 5px !important;
   }
-
   .today-hero {
     padding: 6px 10px !important;
     margin-bottom: 8px !important;
@@ -616,7 +612,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     padding: 1px 5px !important;
     font-size: 10px !important;
   }
-
   .bar {
     height: 16px !important;
     margin-bottom: 8px !important;
@@ -624,7 +619,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .bar span {
     font-size: 10px !important;
   }
-
   .energy-row {
     margin-bottom: 8px !important;
   }
@@ -633,58 +627,45 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     font-size: 10.5px !important;
   }
 }
+
 /* ═══ V16 UX REFINEMENTS (MOBILE ONLY) ═══ */
 @media(max-width:640px) {
+  .list-actions { display: none !important; }
+  .fab { display: flex !important; }
+  .fab[hidden] { display: flex !important; }
+  .today-hero .th-stats { display: none !important; }
+  .section-header-meta, .section-pct { display: none !important; }
   
-  /* 1. Hierarquia do Botão de Ação (FAB) */
-  .list-actions { 
-    display: none !important; /* Esconde o botão inline */
-  }
-  .fab { 
-    display: flex !important; /* Força o FAB do JS a aparecer */
-  }
-  .fab[hidden] { 
-    display: flex !important; /* Ignora o hidden do JS */
-  }
-
-  /* 2. Redução de Redundância */
-  .today-hero .th-stats { 
-    display: none !important; /* Remove as stats do topo */
-  }
-  .section-header-meta, .section-pct { 
-    display: none !important; /* Remove as stats dos cabeçalhos de categoria */
-  }
-  
-  /* 3. Contraste e Indicadores */
   .card {
-    background: color-mix(in srgb, var(--s2) 80%, var(--s1)) !important; /* Fundo do card mais claro */
-    border-left-width: 4px !important; /* Destaque na borda esquerda */
+    background: color-mix(in srgb, var(--s2) 80%, var(--s1)) !important;
+    border-left-width: 4px !important;
   }
   .chk, .chk.s {
-    border: 1.5px solid var(--mu) !important; /* Borda do checkbox mais visível */
+    border: 1.5px solid var(--mu) !important;
     background: var(--bg) !important;
   }
   .days small {
     color: var(--tx) !important;
-    opacity: 0.6; /* "0/0" mais legível */
+    opacity: 0.6;
   }
 
-  /* 4. Agrupamento Lógico (Truque de Flexbox para mover a Energia) */
+  /* FLEXBOX REORDERING - FIX */
   #app:has(.today-hero) {
     display: flex;
     flex-direction: column;
   }
   
-  /* Dá uma ordem para os elementos, movendo a energia para baixo dos filtros */
-  #app:has(.today-hero) > .today-hero { order: 1; }
-  #app:has(.today-hero) > .days { order: 2; }
-  #app:has(.today-hero) > .bar { order: 3; margin-top: 4px; }
-  #app:has(.today-hero) > .next-card { order: 4; }
-  #app:has(.today-hero) > .tasks-header { order: 5; margin-bottom: 0; border-bottom: none; }
+  /* Define um padrão para todos os filhos para não quebrar */
+  #app:has(.today-hero) > * { order: 5; }
   
-  /* Move a linha de energia para ficar colada no Tasks-header, parecendo uma barra de ferramentas */
+  #app:has(.today-hero) > .today-hero { order: 1 !important; }
+  #app:has(.today-hero) > .days { order: 2 !important; }
+  #app:has(.today-hero) > .bar { order: 3 !important; margin-top: 4px; }
+  #app:has(.today-hero) > .next-card { order: 4 !important; }
+  #app:has(.today-hero) > .tasks-header { order: 6 !important; margin-bottom: 0; border-bottom: none; }
+  
   #app:has(.today-hero) > .energy-row { 
-    order: 6;
+    order: 7 !important;
     background: var(--s1);
     padding: 8px 12px;
     border-radius: 0 0 10px 10px;
@@ -695,11 +676,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     justify-content: center;
   }
   
-  /* O resto dos elementos segue a ordem normal */
-  #app:has(.today-hero) > .filter-bar { order: 7; }
-  #app:has(.today-hero) > .labels-filter { order: 8; }
-  #app:has(.today-hero) > #taskList { order: 9; }
-  
-  /* Se a tarefa rápida for aberta, ela entra no topo da lista */
-  #app:has(.today-hero) > div:has(> #qa) { order: 7; } 
+  #app:has(.today-hero) > .filter-bar { order: 8 !important; }
+  #app:has(.today-hero) > .labels-filter { order: 9 !important; }
+  #app:has(.today-hero) > #taskList { order: 10 !important; }
+  #app:has(.today-hero) > div:has(> #qa) { order: 9 !important; } 
 }

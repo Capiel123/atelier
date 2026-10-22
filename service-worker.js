@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'atelier-2026-10-31-forced'; // Data nova forçada
+const CACHE_VERSION = 'atelier-2026-10-32'; // Data nova forçada
 const SHELL_CACHE = 'shell-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'runtime-' + CACHE_VERSION;
 
