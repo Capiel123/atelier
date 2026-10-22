@@ -633,3 +633,73 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     font-size: 10.5px !important;
   }
 }
+/* ═══ V16 UX REFINEMENTS (MOBILE ONLY) ═══ */
+@media(max-width:640px) {
+  
+  /* 1. Hierarquia do Botão de Ação (FAB) */
+  .list-actions { 
+    display: none !important; /* Esconde o botão inline */
+  }
+  .fab { 
+    display: flex !important; /* Força o FAB do JS a aparecer */
+  }
+  .fab[hidden] { 
+    display: flex !important; /* Ignora o hidden do JS */
+  }
+
+  /* 2. Redução de Redundância */
+  .today-hero .th-stats { 
+    display: none !important; /* Remove as stats do topo */
+  }
+  .section-header-meta, .section-pct { 
+    display: none !important; /* Remove as stats dos cabeçalhos de categoria */
+  }
+  
+  /* 3. Contraste e Indicadores */
+  .card {
+    background: color-mix(in srgb, var(--s2) 80%, var(--s1)) !important; /* Fundo do card mais claro */
+    border-left-width: 4px !important; /* Destaque na borda esquerda */
+  }
+  .chk, .chk.s {
+    border: 1.5px solid var(--mu) !important; /* Borda do checkbox mais visível */
+    background: var(--bg) !important;
+  }
+  .days small {
+    color: var(--tx) !important;
+    opacity: 0.6; /* "0/0" mais legível */
+  }
+
+  /* 4. Agrupamento Lógico (Truque de Flexbox para mover a Energia) */
+  #app:has(.today-hero) {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Dá uma ordem para os elementos, movendo a energia para baixo dos filtros */
+  #app:has(.today-hero) > .today-hero { order: 1; }
+  #app:has(.today-hero) > .days { order: 2; }
+  #app:has(.today-hero) > .bar { order: 3; margin-top: 4px; }
+  #app:has(.today-hero) > .next-card { order: 4; }
+  #app:has(.today-hero) > .tasks-header { order: 5; margin-bottom: 0; border-bottom: none; }
+  
+  /* Move a linha de energia para ficar colada no Tasks-header, parecendo uma barra de ferramentas */
+  #app:has(.today-hero) > .energy-row { 
+    order: 6;
+    background: var(--s1);
+    padding: 8px 12px;
+    border-radius: 0 0 10px 10px;
+    border: 1px solid var(--bd);
+    border-top: none;
+    margin-top: 0;
+    margin-bottom: 12px;
+    justify-content: center;
+  }
+  
+  /* O resto dos elementos segue a ordem normal */
+  #app:has(.today-hero) > .filter-bar { order: 7; }
+  #app:has(.today-hero) > .labels-filter { order: 8; }
+  #app:has(.today-hero) > #taskList { order: 9; }
+  
+  /* Se a tarefa rápida for aberta, ela entra no topo da lista */
+  #app:has(.today-hero) > div:has(> #qa) { order: 7; } 
+}
