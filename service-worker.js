@@ -1,7 +1,7 @@
 /* Atelier — Service Worker
    Estratégia: shell em cache-first, HTML em network-first.
    Bump CACHE_VERSION a cada release nova (senão o update não chega no usuário). */
-const CACHE_VERSION = 'atelier-2026-10-22-V4';
+const CACHE_VERSION = 'atelier-2026-10-24';
 const SHELL_CACHE = 'shell-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'runtime-' + CACHE_VERSION;
 
