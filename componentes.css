@@ -276,3 +276,45 @@
 .view-toggle{display:flex;gap:4px;background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:3px;margin-bottom:10px}
 .view-toggle button{flex:1;padding:6px 10px;font-size:12px;background:none;border:none;color:var(--mu);border-radius:6px}
 .view-toggle button.on{background:var(--s3);color:var(--tx)}
+
+/* --- PÍLULAS (STACK) DE HABILIDADES E LABELS --- */
+.pill-stack { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; padding: 4px 0; }
+.pill-stack label { 
+    cursor: pointer; 
+    display: inline-flex; 
+    align-items: center; 
+    margin: 0; 
+    position: relative;
+}
+/* Esconde o checkbox feio do sistema */
+.pill-stack input[type="checkbox"] { 
+    position: absolute; 
+    opacity: 0; 
+    cursor: pointer; 
+    height: 0; 
+    width: 0; 
+}
+/* O visual da pílula */
+.pill-stack span {
+    padding: 6px 12px; 
+    border-radius: 20px; 
+    font-size: 12px; 
+    font-weight: 600;
+    background: var(--s1); 
+    border: 1px solid var(--bd); 
+    color: var(--mu);
+    transition: all 0.2s ease; 
+    user-select: none;
+}
+/* Hover (passar o mouse/dedo) */
+.pill-stack span:hover { 
+    border-color: var(--pc); 
+    color: var(--pc);
+}
+/* Quando está SELECIONADO */
+.pill-stack input:checked + span {
+    background: color-mix(in srgb, var(--pc) 20%, var(--s1));
+    border-color: var(--pc); 
+    color: var(--pc);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--pc) 20%, transparent);
+}
