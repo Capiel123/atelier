@@ -200,9 +200,10 @@ function viewWeek() {
     </div>
   </div>
     ${showReviewHint ? `<div class="warn" style="border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 10%,var(--s1));padding:8px 10px;border-radius:8px;font-size:12px;margin-bottom:8px"><b style="color:var(--ac)">É dia de revisão semanal.</b> <a href="#" data-a="tab" data-t="review" style="color:var(--ac);font-weight:700">Abrir →</a></div>` : ''}
-    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>t.done).length}/${a.length}</small></button>`;}).join('')}</div>
+       <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>t.done).length}/${a.length}</small></button>`;}).join('')}</div>
+    ${bar(workProg.pct, total ? `${workTasks.filter(t=>t.done).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', workProg.pct>=100 ? 'Trabalho fechado.' : workProg.pct>=50 ? 'Embalou.' : workProg.pct>0 ? 'Primeira vitória.' : 'Comece pequeno.')}
     <div class="energy-row"><span class="energy-label">${slotLabel}:</span><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${e.icon} ${e.n}</button>`).join('')}</div></div>
-    ${nextCard}
+      ${nextCard}
     ${(commitmentTasks.length || personalTasks.length) ? `<div style="display:flex;gap:16px;font-size:11.5px;color:var(--mu);margin:4px 2px 10px;flex-wrap:wrap">
       ${commitmentTasks.length ? `<span>${SECTION_META.commitment.icon} Compromissos: <b style="color:var(--tx)">${commitmentProg.pct}%</b> <span style="opacity:.7">(${commitmentTasks.filter(t=>t.done).length}/${commitmentTasks.length})</span></span>` : ''}
       ${personalTasks.length ? `<span>${SECTION_META.personal.icon} Pessoal: <b style="color:var(--tx)">${personalProg.pct}%</b> <span style="opacity:.7">(${personalTasks.filter(t=>t.done).length}/${personalTasks.length})</span></span>` : ''}
@@ -221,8 +222,7 @@ function viewWeek() {
         <label class="auto-prio-label" style="margin-left:8px"><input type="checkbox" id="autoPriorityToggle" ${S.cfg.autoPriority?'checked':''}><span>⭐ Auto</span></label>
       </div>
     </div>
-    <div id="taskList">${renderFilteredTasks()}</div>
-    ${bar(workProg.pct, total ? `${workTasks.filter(t=>t.done).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', workProg.pct>=100 ? 'Trabalho fechado.' : workProg.pct>=50 ? 'Embalou.' : workProg.pct>0 ? 'Primeira vitória.' : 'Comece pequeno.')}`;
+    <div id="taskList">${renderFilteredTasks()}</div>`;
 }
 
 function adder(d) {
@@ -385,9 +385,11 @@ function cardTask(t, score) {
 
     ${(stuck || over || score != null) ? `<div class="meta" style="margin-top:6px">${stuck ? `<span class="postpone-badge ${urgentStuck?'urgent':'stuck'}">⟳ ${t.postponedCount}x</span>` : ''}${over ? '<span class="parkinson-badge">⏱ 2×</span>' : ''}${score != null ? `<span class="score-badge ${scoreClass(score)}" title="${esc(scoreTip)}">${score}</span>` : ''}</div>` : ''}
 
-    <div class="acts">
+      <div class="acts">
       ${runningThis ? `<button data-a="stopTimer" style="background:var(--bu)">⏸</button>` : `<button data-a="startTimer" data-id="${t.id}" ${S.timer?'disabled':''}>▶</button>`}
-      <button data-a="log" data-id="${t.id}" data-m="25">+25m</button>
+      <button data-a="log" data-id="${t.id}" data-m="10">+10m</button>
+      <button data-a="log" data-id="${t.id}" data-m="-10">-10m</button>
+      <button data-a="log" data-id="${t.id}" data-m="-5">-5m</button>
       <button data-a="setnext" data-id="${t.id}">${t.next?'⭐':'☆'}</button>
       <button data-a="moveUp" data-id="${t.id}" title="Subir">↑</button>
       <button data-a="moveDown" data-id="${t.id}" title="Descer">↓</button>
@@ -395,14 +397,14 @@ function cardTask(t, score) {
       <select class="postpone-sel" data-a="postpone" data-id="${t.id}"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
       <button data-a="del" data-id="${t.id}">✕</button>
     </div>
-
+    
     ${subsTotal ? (subsExpanded ? renderSubs(t) : `<div class="subs-badge" data-a="expandSubs" data-id="${t.id}"><span>${subsDone}/${subsTotal} subs · ${subPct}%</span><span class="chev">▾</span></div>`) : ''}
 
     <details data-eid="${t.id}" ${openEdits.has(t.id)?'open':''}>
       <summary>Editar detalhes</summary>
       <div class="form"><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades<div class="skills-box">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="color:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label><label class="full">Labels<div class="skills-box">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="color:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label><label class="full">Nova subtarefa<input data-a="sadd" data-id="${t.id}" placeholder="Enter"></label></div>
-      <div class="acts" style="margin-top:10px"><button data-a="log" data-id="${t.id}" data-m="10">+10m</button><button data-a="log" data-id="${t.id}" data-m="50">+50m</button></div>
-      <div class="acts" style="margin-top:4px">${DAYS.map((d,i) => `<button data-a="cp" data-id="${t.id}" data-i="${i}">${d}</button>`).join('')}<button data-a="cp" data-id="${t.id}" data-i="q">Fila</button></div>
+      <div class="acts" style="margin-top:10px"><button data-a="log" data-id="${t.id}" data-m="10">+10m</button><button data-a="log" data-id="${t.id}" data-m="-10">-10m</button></div>
+         <div class="acts" style="margin-top:4px">${DAYS.map((d,i) => `<button data-a="cp" data-id="${t.id}" data-i="${i}">${d}</button>`).join('')}<button data-a="cp" data-id="${t.id}" data-i="q">Fila</button></div>
     </details>
   </div>`;
 }
@@ -547,7 +549,6 @@ function projectCard(p) {
   const valUnit = p.billingType === 'hourly' ? `${CURRENCIES[cur].sym}/h` : p.billingType === 'minute' ? `${CURRENCIES[cur].sym}/min` : CURRENCIES[cur].sym;
   return `<div class="card" style="--c:${color}">
     <div class="big"><input data-p="${esc(k('n'))}" value="${esc(p.n)}" style="font-weight:600"><button data-a="pdel" data-id="${p.id}">✕</button></div>
-    ${bar(pctTasks, `${done}/${total} tarefas`, `Tempo: ${fmtMin(mins)}${estTotal?' · '+fmtMin(estDone)+'/'+fmtMin(estTotal):''}`)}
     ${isComplete ? `<div class="msg" style="color:var(--ok)">✓ Concluído em ${fmtDate(iso(new Date(p.completedAt)))}${earnings.total>0?` · ${fmtMoney(earnings.total, cur)}`:''}${earnings.ratePerHour>0?` · ${fmtMoney(earnings.ratePerHour, cur)}/h`:''}</div>` : ''}
     ${estTotal ? `<div class="proj-progress"><div class="pp-row"><span class="pp-label">Tarefas</span><div class="pp-bar"><div style="width:${pctTasks}%;background:${color}"></div></div><span class="pp-val">${pctTasks}%</span></div><div class="pp-row"><span class="pp-label">Tempo</span><div class="pp-bar"><div style="width:${pctTime}%;background:${color}88"></div></div><span class="pp-val">${pctTime}%</span></div></div>` : ''}
     <div class="form">
@@ -1036,12 +1037,10 @@ function renderFocus() {
       ${hint ? `<div class="focus-hint" style="margin-top:6px;opacity:1;color:var(--ac);font-size:11px">${esc(hint)}</div>` : ''}
       ${cycleDots}
       ${durationsHtml}
-      <div class="focus-actions">
-        ${primaryBtn}
-        ${skipBtn}
-        <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
-      </div>
-      ${(t.subs||[]).length ? `<div class="focus-subs"><div class="focus-subs-title">Subtarefas</div>${t.subs.map((s, i) => `<label class="focus-sub ${runningSub && runningSub.id === s.id ? 'run' : ''}"><input type="checkbox" data-a="focusSub" data-i="${i}" ${s.d?'checked':''}><span class="${s.d?'x':''}">${runningSub && runningSub.id === s.id ? '▶ ' : ''}${esc(s.t)}</span></label>`).join('')}</div>` : ''}
-      <div class="focus-hint">Esc sai · Espaço ${isPaused ? 'retoma' : (running ? 'pausa' : 'inicia')}</div>
-    </div>`;
+    <div class="focus-actions">
+          ${primaryBtn}
+          ${skipBtn}
+          <button data-a="log" data-id="${t.id}" data-m="-10" class="focus-btn ghost">-10m</button>
+          <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
+       </div>`;
 }

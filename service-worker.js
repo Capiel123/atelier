@@ -9,7 +9,7 @@
 // o navegador de que existe algo novo para baixar.
 // 💡 Regra prática: use a data de hoje + um sufixo se publicar
 // mais de uma vez no mesmo dia.
-const CACHE_VERSION = 'atelier-2026-10-23-v3';
+const CACHE_VERSION = 'atelier-2026-10-23-v4';
 
 // Dois caches separados:
 // - SHELL: arquivos fixos do app (HTML, CSS, JS) baixados na instalação

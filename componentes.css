@@ -85,7 +85,7 @@
    ========================================================= */
 .card{background:var(--s1);border:1px solid var(--bd);border-left:3px solid var(--c,var(--bd));border-radius:12px;padding:14px;margin-bottom:10px;transition:.2s}
 .card.done{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--s1))}
-.card.done .tt{text-decoration:line-through;opacity:.55}
+.card.done .tt, .card.done .compact-tt{text-decoration:line-through;opacity:.55}
 .card.next-card-in{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac) inset}
 .card.highlight{box-shadow:0 0 0 2px var(--ac);transition:box-shadow 2s}
 .card.selected{box-shadow:0 0 0 2px var(--ac);background:color-mix(in srgb,var(--ac) 8%,var(--s1))}
@@ -101,9 +101,8 @@
 .tdesc{font-size:13px;color:var(--mu);margin-top:4px;white-space:pre-wrap;word-break:break-word}
 
 /* Checkbox circular (25px padrão, .s é 18px) */
-.chk{width:26px;height:26px;border-radius:50%;padding:0;flex:none;color:#000;font-weight:700;background:var(--s2)}
-.card.done>.row>.chk{background:var(--c);border-color:var(--c)}
-.chk.s{width:18px;height:18px;font-size:11px;padding:0}
+.chk{width:26px;height:26px;border-radius:50%;padding:0;flex:none;color:var(--tx);font-weight:700;background:var(--chk-bg,var(--s2));border:1.5px solid var(--chk-bd,var(--bd));display:flex;align-items:center;justify-content:center;transition:all .2s}
+.card.done>.row>.chk{background:var(--chk-done,var(--c)) !important;border-color:var(--chk-done,var(--c)) !important;color:var(--chk-mark,#000) !important}
 
 .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--mu);font-size:12px;margin-top:6px}
 .tag{background:var(--s2);border-radius:6px;padding:2px 6px;font-size:11px}
