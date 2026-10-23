@@ -10,7 +10,11 @@
 <link rel="manifest" href="./manifest.json">
 <title>Atelier — Tarefas, Carreira, Rendimento</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Grenze+Gotisch:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./base.css">
+<link rel="stylesheet" href="./layout.css">
+<link rel="stylesheet" href="./componentes.css">
+<link rel="stylesheet" href="./paginas.css">
+<link rel="stylesheet" href="./responsivo.css">
 </head>
 <body>
 <div class="wrap">
@@ -35,6 +39,10 @@
 <div class="more-sheet" id="moreSheet"></div>
 <div id="toast" class="toast"></div>
 
-<script src="./app.js"></script>
+<!-- JS na ordem de dependência — defer preserva a ordem e roda após o DOM estar pronto -->
+<script src="./estado.js"    defer></script>
+<script src="./logica.js"    defer></script>
+<script src="./interface.js" defer></script>
+<script src="./app.js"       defer></script>
 </body>
 </html>

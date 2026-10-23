@@ -1,0 +1,71 @@
+/* =========================================================
+   LAYOUT.CSS
+   Estrutura das telas: topo, menu de navegação, dias,
+   cabeçalho do dia, menu "mais" (mobile), botões de topo.
+   Não contém cores nem estilos de cards.
+   ========================================================= */
+
+/* --- CONTÊINER PRINCIPAL ---
+   💡 Altere max-width para deixar o app mais estreito/largo no desktop. */
+.wrap{max-width:960px;margin:auto;padding:12px}
+
+/* --- TOPO / HEADER ---
+   💡 Para mudar o espaçamento do topo, mexa aqui. */
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.logo{font-weight:700;font-size:20px;letter-spacing:.04em;color:var(--ac);display:flex;align-items:center;gap:8px;cursor:pointer}
+.logo img{max-height:32px;max-width:100px;object-fit:contain;flex:none}
+.logo-text{font-family:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;font-size:24px;letter-spacing:.06em;color:var(--ac);font-weight:700;line-height:1;white-space:nowrap}
+
+/* Botão de busca do topo */
+.search-btn{background:transparent;border:1px solid var(--bd);padding:6px 9px;cursor:pointer;color:var(--mu);border-radius:8px;font-size:14px; height: 34px; display:flex; align-items:center;}
+.search-btn:hover{color:var(--ac);border-color:var(--ac)}
+
+/* Barra de nível (progresso do usuário) */
+#lvl{flex:1;min-width:150px;font-size:12px;color:var(--mu); margin-top: 4px;}
+#lvl .lb{height:4px;background:var(--s2);border-radius:2px;margin-top:3px;overflow:hidden}
+#lvl .lb div{height:100%;background:linear-gradient(90deg,var(--bu),var(--ac));transition:width .4s}
+
+/* Widget do cronômetro no topo */
+.timer{display:flex;gap:8px;align-items:center;background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:4px 8px;font-size:12px; height: 34px;}
+.timer.run{border-color:var(--bu);box-shadow:0 0 12px color-mix(in srgb,var(--bu) 40%,transparent)}
+.timer b{font-size:14px;font-variant-numeric:tabular-nums;min-width:48px;text-align:center;color:var(--tx)}
+.timer #tlabel{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mu); font-size: 11px;}
+.timer button{padding:2px 6px; font-size: 11px;}
+
+/* --- NAVEGAÇÃO PRINCIPAL (desktop) --- */
+#nav{display:flex;gap:2px;overflow-x:auto;margin-bottom:12px;border-bottom:1px solid var(--bd);scrollbar-width:none}
+#nav::-webkit-scrollbar{display:none}
+#nav button{white-space:nowrap;background:none;border:none;color:var(--mu);font-weight:500;padding:8px 10px;border-bottom:2px solid transparent;border-radius:0}
+#nav button.on{color:var(--ac);border-bottom-color:var(--ac)}
+
+/* --- CABEÇALHO DO DIA (compacto) --- */
+.today-hero{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap; background: var(--s1); padding: 10px 12px; border-radius: 12px; border: 1px solid var(--bd);}
+.today-hero .th-day{font-size:18px;font-weight:700;color:var(--ac);text-transform:capitalize}
+.today-hero .th-date{color:var(--mu);font-size:11px; margin-left: 6px;}
+.today-hero .th-stats{display:flex;gap:8px;font-size:11px;color:var(--mu);flex-wrap:wrap; justify-content: flex-end;}
+.today-hero .th-stats b{color:var(--tx);font-variant-numeric:tabular-nums}
+.today-hero .th-stats span { background: var(--s2); padding: 2px 8px; border-radius: 6px;}
+
+/* --- SELETOR DE DIAS DA SEMANA --- */
+.days{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+.days button{flex:1;min-width:60px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;position:relative;background:var(--s1); border-radius:8px;}
+.days button.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 15%,var(--s1))}
+.days small{color:var(--mu);font-size:10px;margin-top:2px}
+.days i{position:absolute;top:4px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+
+/* --- BARRA DE TÍTULO DE TAREFAS (sticky) ---
+   💡 Sticky aqui mantém o título "fixo" enquanto rola a lista. */
+.tasks-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0 6px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5}
+.tasks-header-actions{display:flex;gap:6px;align-items:center}
+
+/* --- MENU INFERIOR (MOBILE) — padrão é oculto --- */
+.bottom-nav{display:none}
+
+/* --- FOLHA "MAIS" (MOBILE) --- */
+.more-sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:120;display:none;align-items:flex-end}
+.more-sheet.open{display:flex}
+.more-sheet-panel{width:100%;max-width:960px;margin:0 auto;background:var(--s1);border:1px solid var(--bd);border-radius:16px 16px 0 0;padding:14px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));max-height:75vh;overflow-y:auto}
+.more-menu{position:absolute;right:0;top:100%;margin-top:4px;background:var(--s1);border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:10;min-width:160px;box-shadow:0 4px 16px #0008;display:flex;flex-direction:column;gap:1px}
+.more-menu button{background:transparent;border:none;text-align:left;padding:8px 10px;font-size:12px;border-radius:6px}
+.more-menu button:hover{background:var(--s2)}

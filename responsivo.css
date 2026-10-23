@@ -1,0 +1,238 @@
+/* =========================================================
+   RESPONSIVO.CSS
+   Camada final: media queries (celular/desktop), polimento
+   de UX (v14.1 / v15 / v16), acessibilidade. É o ÚLTIMO
+   arquivo — pode sobrescrever os anteriores em mobile/desktop.
+   ========================================================= */
+
+/* =========================================================
+   MOBILE (≤ 640px) — primeira camada
+   ========================================================= */
+@media(max-width:640px){
+  #nav{display:none}
+  /* Menu inferior aparece só no mobile */
+  .bottom-nav{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--s1);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:50;justify-content:space-around;align-items:stretch}
+  .bottom-nav button{flex:1;background:none;border:none;border-radius:0;color:var(--mu);font-size:10px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;cursor:pointer}
+  .bottom-nav button.on{color:var(--ac)}
+  .bottom-nav .bn-icon{font-size:18px;line-height:1}
+  .wrap{padding:10px;padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  input,textarea,select{font-size:16px !important}
+  .acts button{padding:8px 10px;min-height:40px;font-size:12.5px}
+  .acts select{padding:6px 8px;min-height:40px;font-size:12.5px}
+  .chk{width:28px;height:28px}
+  .chk.s{width:22px;height:22px;font-size:11px}
+  .sub .btn-sm{padding:4px 8px;min-width:32px;min-height:32px}
+  .quick-actions button{padding:8px 12px;min-height:40px;font-size:12.5px}
+  .filter-bar input{min-width:100%}
+  .filter-bar select{flex:1;min-width:0;max-width:none}
+  .today-hero{padding: 8px 10px;}
+  .today-hero .th-day{font-size:16px}
+  .today-hero .th-date{font-size:10px}
+  .today-hero .th-stats span {font-size: 10px; padding: 1px 6px;}
+  .timer #tlabel{max-width:80px;font-size:11px}
+  .timer b{font-size:14px;min-width:48px}
+  h3{font-size:13px}
+  .tm{min-width:60px}
+  .next-card .nc-actions{width:100%}
+  .next-card .nc-actions button{flex:1;min-height:44px}
+  .chart-row .ch-label{width:90px;font-size:11px}
+  .focus-time{font-size:36px}
+  .focus-title{font-size:20px}
+  .xp-hero{padding:12px;gap:10px}
+  .xp-hero .xp-level{font-size:34px}
+  .theme-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .history-actions button{min-width:38px;min-height:38px}
+  .logo-text{font-size:20px}
+  .logo img{max-height:28px;max-width:80px}
+  .card{border:none;border-left:3px solid var(--c,var(--bd));margin-bottom:10px}
+  .compact-meta{font-size:11px}
+  .tasks-header{margin-top:8px}
+  .area-row input[type=text]{font-size:14px !important}
+  .section-header{padding:10px 4px}
+  .section-progress{width:40px}
+}
+
+/* Fallback: navegadores sem backdrop-filter ganham fundo mais opaco */
+@supports not (backdrop-filter: blur(4px)) {
+  .search-modal, .shortcuts-modal, .more-sheet {background:rgba(0,0,0,.92)}
+}
+
+/* =========================================================
+   V14.1 — CAMADA DE POLIMENTO UX (não-mobile)
+   ========================================================= */
+
+:root{color-scheme:dark;--r:12px;--sh:0 6px 18px #0007;--ease:cubic-bezier(.2,.8,.2,1)}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+::selection{background:color-mix(in srgb,var(--ac) 35%,transparent)}
+button,[data-a]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:active{transform:scale(.97)}
+button,input,select,textarea,.card{transition:border-color .15s,background .15s,box-shadow .15s,transform .12s var(--ease)}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 22%,transparent)}
+
+/* Expande a área clicável do checkbox (útil no celular) */
+.chk{position:relative}.chk::after{content:'';position:absolute;inset:-8px}
+
+.kpi-value,.th-stats b,.tm b,.ttime,#ttime{font-variant-numeric:tabular-nums}
+.card.done{opacity:.82}
+.days button.on{font-weight:700;box-shadow:0 0 0 1px var(--ac) inset}
+.more-sheet.open .more-sheet-panel{animation:v141up .22s var(--ease)}
+.more-sheet-panel::before{content:'';display:block;width:36px;height:4px;border-radius:2px;background:var(--bd);margin:0 auto 10px}
+.more-sheet-panel button.on{border-color:var(--ac);color:var(--ac);background:color-mix(in srgb,var(--ac) 10%,var(--s2))}
+@keyframes v141up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+
+/* FAB (botão flutuante de adicionar) — padrão oculto, mobile ativa */
+.fab{display:none;position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:var(--ac);color:#000;border:none;font-size:30px;font-weight:700;line-height:1;padding:0;box-shadow:var(--sh);z-index:45;align-items:center;justify-content:center}
+.fab:hover{border:none;filter:brightness(1.08)}.fab[hidden]{display:none!important}
+
+/* --- DESKTOP (≥ 1024px) --- */
+@media(min-width:1024px){
+  .wrap{max-width:1080px;padding:20px 28px 48px}
+  header{margin-bottom:14px}.logo-text{font-size:28px}
+  #nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);padding-top:6px;-webkit-mask-image:linear-gradient(90deg,#000 94%,transparent);mask-image:linear-gradient(90deg,#000 94%,transparent)}
+  #nav button{padding:10px 14px;font-size:13.5px}#nav button:hover{color:var(--tx)}
+  .card{padding:14px 16px}
+  .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  h3{font-size:15px;margin-top:20px}
+}
+@media(hover:hover){.card.compact:hover{transform:translateY(-1px);box-shadow:var(--sh)}}
+@media(min-width:1024px){*{scrollbar-width:thin;scrollbar-color:var(--bd) transparent}}
+
+/* --- MOBILE (≤ 640px) — refinamentos de layout --- */
+@media(max-width:640px){
+  /* Header "grudado" no topo com blur */
+  header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:6px 8px;position:sticky;top:0;z-index:40;margin:-10px -10px 10px;padding:8px 10px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--bd)}
+  .logo{grid-area:1/1}.header-right{grid-area:1/2; display:flex; gap: 4px; align-items: center;}
+  #timerWidget{grid-area:1/3; display:none;}
+  #lvl{grid-area:2/1/3/-1;min-width:0}
+  #lvl .lb{height:4px}
+  .bottom-nav{background:color-mix(in srgb,var(--s1) 94%,transparent);backdrop-filter:blur(12px)}
+  .bottom-nav button{position:relative;font-size:10.5px;min-height:56px}
+  .bottom-nav button.on::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--ac)}
+  .bottom-nav .bn-icon{font-size:20px}
+  .next-card{flex-direction:column;align-items:stretch}.next-card .nc-title{font-size:17px}
+  .filter-bar{padding:6px}
+  .card.compact{padding:10px 12px}
+}
+/* Respeita usuários que preferem menos animação */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Banner de "nova versão disponível" no mobile */
+@media(max-width:640px){
+  .update-banner{font-size:12px;padding:6px 10px}
+  .update-banner button[data-pwa="update"]{padding:8px 14px;min-height:40px}
+}
+
+/* =========================================================
+   V15 — Ajustes finos: dias da semana e topo compacto (mobile)
+   ========================================================= */
+@media(max-width:640px) {
+  /* Todos os dias cabem na tela sem quebrar linha */
+  .days {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    gap: 2px !important;
+    margin-bottom: 8px !important;
+  }
+  .days button {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    padding: 5px 0 !important;
+    border-radius: 6px !important;
+    background: var(--s1);
+  }
+  .days small {
+    font-size: 9px !important;
+    margin-top: 1px !important;
+  }
+  .days i {
+    top: 3px !important;
+    right: 3px !important;
+    width: 5px !important;
+    height: 5px !important;
+  }
+  .today-hero {
+    padding: 6px 10px !important;
+    margin-bottom: 8px !important;
+  }
+  .today-hero .th-day {
+    font-size: 16px !important;
+  }
+  .today-hero .th-stats span {
+    padding: 1px 5px !important;
+    font-size: 10px !important;
+  }
+  .bar {
+    height: 16px !important;
+    margin-bottom: 8px !important;
+  }
+  .bar span {
+    font-size: 10px !important;
+  }
+  .energy-row {
+    margin-bottom: 8px !important;
+  }
+  .energy-pills button {
+    padding: 2px 8px !important;
+    font-size: 10.5px !important;
+  }
+}
+
+/* =========================================================
+   V16 — Refinamentos de UX (SÓ mobile)
+   ========================================================= */
+@media(max-width:640px) {
+  .list-actions { display: none !important; }
+  .fab { display: flex !important; }
+  .fab[hidden] { display: flex !important; }
+  .today-hero .th-stats { display: none !important; }
+  .section-header-meta, .section-pct { display: none !important; }
+
+  .card {
+    background: color-mix(in srgb, var(--s2) 80%, var(--s1)) !important;
+    border-left-width: 4px !important;
+  }
+  .chk, .chk.s {
+    border: 1.5px solid var(--mu) !important;
+    background: var(--bg) !important;
+  }
+  .days small {
+    color: var(--tx) !important;
+    opacity: 0.6;
+  }
+
+  /* Reordena os blocos da tela "Hoje" usando flexbox
+     (o :has() garante que só aplica quando .today-hero existe) */
+  #app:has(.today-hero) {
+    display: flex;
+    flex-direction: column;
+  }
+  /* Ordem padrão dos filhos: 5 (meio) — cada um sobrescreve abaixo */
+  #app:has(.today-hero) > * { order: 5; }
+
+  #app:has(.today-hero) > .today-hero { order: 1 !important; }
+  #app:has(.today-hero) > .days { order: 2 !important; }
+  #app:has(.today-hero) > .bar { order: 3 !important; margin-top: 4px; }
+  #app:has(.today-hero) > .next-card { order: 4 !important; }
+  #app:has(.today-hero) > .tasks-header { order: 6 !important; margin-bottom: 0; border-bottom: none; }
+
+  /* Energia vira uma "cartela" colada embaixo do cabeçalho */
+  #app:has(.today-hero) > .energy-row {
+    order: 7 !important;
+    background: var(--s1);
+    padding: 8px 12px;
+    border-radius: 0 0 10px 10px;
+    border: 1px solid var(--bd);
+    border-top: none;
+    margin-top: 0;
+    margin-bottom: 12px;
+    justify-content: center;
+  }
+
+  #app:has(.today-hero) > .filter-bar { order: 8 !important; }
+  #app:has(.today-hero) > .labels-filter { order: 9 !important; }
+  #app:has(.today-hero) > #taskList { order: 10 !important; }
+  #app:has(.today-hero) > div:has(> #qa) { order: 9 !important; }
+}
