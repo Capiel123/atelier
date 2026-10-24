@@ -70,6 +70,8 @@ function projEstTotal(pId) {return S.tasks.filter(t => t.proj === pId).reduce((a
 function projEstDone(pId) {return S.tasks.filter(t => t.proj === pId && t.done).reduce((a,t) => a + (t.est || 0), 0);}
 function projTaskCount(pId) {return S.tasks.filter(t => t.proj === pId).length;}
 function projDoneCount(pId) {return S.tasks.filter(t => t.proj === pId && t.done).length;}
+function projGoalsTotal(p) {return (p.goals || []).length;}
+function projGoalsDone(p) {return (p.goals || []).filter(g => g.d).length;}
 
 /* --- SEÇÕES E PESOS --- */
 function taskSection(t) {
@@ -301,4 +303,151 @@ function xpProgression() {
   const topSkills = [...activeSkills].sort((a,b) => num(b.xp) - num(a.xp)).slice(0, 6);
   const maxSkillXp = Math.max(1, ...topSkills.map(s => num(s.xp)));
   return {gxp, lv: info.lv, inLevel: info.inLevel, toNext: info.toNext, forLevel: info.forLevel, progress: info.progress, weekXp, monthXp, topSkills, maxSkillXp};
+}
+
+/* --- REGISTROS DE TRABALHO (resumos por tarefa/data) --- */
+function workLogsForTask(taskId) {
+  return (S.workLogs || []).filter(l => l.taskId === taskId).sort((a,b) => (b.ts || 0) - (a.ts || 0));
+}
+function saveWorkLog(taskId, text) {
+  const today = iso(new Date());
+  const trimmed = String(text || '').trim();
+  if (!S.workLogs) S.workLogs = [];
+  const idx = S.workLogs.findIndex(l => l.taskId === taskId && l.date === today);
+  // Resumo vazio remove o registro do dia — nunca cria registro vazio acidental
+  if (!trimmed) {
+    if (idx >= 0) S.workLogs.splice(idx, 1);
+    return null;
+  }
+  // Editar no mesmo dia atualiza o registro existente e PRESERVA os snapshots históricos
+  if (idx >= 0) {
+    const log = S.workLogs[idx];
+    log.text = trimmed;
+    log.ts = Date.now();
+    return log;
+  }
+  const t = S.tasks.find(x => x.id === taskId);
+  const proj = t && t.proj ? S.projects.find(p => p.id === t.proj) : null;
+  const log = mkWorkLog({
+    date: today,
+    ts: Date.now(),
+    taskId,
+    taskTitle: t ? t.t : '',
+    projId: t && t.proj ? t.proj : '',
+    projName: proj ? proj.n : '',
+    area: t ? t.area : '',
+    text: trimmed
+  });
+  S.workLogs.push(log);
+  return log;
+}
+
+/* --- RELATÓRIO SEMANAL --- */
+function projectNameById(projId) {
+  if (!projId) return '';
+  const p = S.projects.find(x => x.id === projId);
+  return p ? p.n : '';
+}
+function reportWeekRange() {
+  const monday = weekStart(new Date());
+  monday.setDate(monday.getDate() + (reportWeekOffset || 0) * 7);
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  return {start: iso(monday), end: iso(sunday)};
+}
+function buildWeeklyReport(startDate, endDate) {
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T23:59:59.999');
+  const done = S.tasks.filter(t => t.done && t.doneAt && t.doneAt >= start.getTime() && t.doneAt <= end.getTime());
+
+  const logsByTask = {};
+  (S.workLogs || []).forEach(l => { if (l.taskId) (logsByTask[l.taskId] = logsByTask[l.taskId] || []).push(l); });
+  const summaryFor = t => {
+    const logs = (logsByTask[t.id] || []).sort((a,b) => (b.ts || 0) - (a.ts || 0));
+    const inWeek = logs.filter(l => l.date >= startDate && l.date <= endDate);
+    return (inWeek.length ? inWeek[0] : logs[0]) || null;
+  };
+
+  const items = done.map(t => {
+    const summary = summaryFor(t);
+    const projName = t.proj ? (projectNameById(t.proj) || (summary && summary.projName) || '') : '';
+    return {
+      kind: 'task', title: t.t, summary: summary ? summary.text : '',
+      summaryDate: summary ? summary.date : '',
+      projId: t.proj || '', projName, area: t.area || '', timeMinutes: taskMinutes(t)
+    };
+  });
+
+  // Registros preservados de tarefas removidas (snapshots), dentro da semana
+  const taskIds = new Set(S.tasks.map(t => t.id));
+  const orphans = (S.workLogs || []).filter(l => {
+    if (!l.taskId || taskIds.has(l.taskId)) return false;
+    const d = l.date || iso(new Date(l.ts || 0));
+    return d >= startDate && d <= endDate;
+  });
+  orphans.forEach(l => items.push({
+    kind: 'log', title: l.taskTitle || '(tarefa removida)', summary: l.text || '',
+    summaryDate: l.date || iso(new Date(l.ts || 0)), projId: l.projId || '', projName: l.projName || projectNameById(l.projId), area: l.area || '', timeMinutes: null
+  }));
+
+  const byProject = {}, byArea = {};
+  items.forEach(it => {
+    if (it.projId || it.projName) {
+      const key = it.projId || ('snapshot:' + it.projName);
+      if (!byProject[key]) byProject[key] = {projId: it.projId || '', name: it.projName || projectNameById(it.projId) || '(sem nome)', items: []};
+      byProject[key].items.push(it);
+    } else {
+      const area = it.area || '—';
+      if (!byArea[area]) byArea[area] = {area, label: areaLabel(area), items: []};
+      byArea[area].items.push(it);
+    }
+  });
+  const projects = Object.values(byProject).sort((a,b) => a.name.localeCompare(b.name));
+  const areas = Object.values(byArea).sort((a,b) => a.label.localeCompare(b.label));
+
+  const doneTasks = items.filter(it => it.kind === 'task');
+  const timeMinutes = doneTasks.reduce((a,it) => a + (it.timeMinutes || 0), 0);
+  const withTime = doneTasks.filter(it => (it.timeMinutes || 0) > 0).length;
+  const withoutTime = doneTasks.length - withTime;
+
+  return {startDate, endDate, projects, areas, metrics: {done: doneTasks.length, timeMinutes, withTime, withoutTime, orphanCount: orphans.length}};
+}
+function weeklyReportMarkdown(r) {
+  const L = [];
+  const range = r.startDate.split('-').reverse().join('/') + ' a ' + r.endDate.split('-').reverse().join('/');
+  L.push('# Relatório semanal · ' + range);
+  L.push('');
+  const line = it => {
+    const time = it.timeMinutes != null ? ' · ' + fmtMin(it.timeMinutes) : '';
+    const summary = it.summary ? ' — ' + it.summary : ' — _Sem resumo registrado._';
+    return '- **' + it.title + '**' + time + summary;
+  };
+  if (r.projects.length) {
+    L.push('## Resumo por projeto');
+    L.push('');
+    r.projects.forEach(g => {
+      L.push('### ' + g.name);
+      L.push('');
+      g.items.forEach(it => L.push(line(it)));
+      L.push('');
+    });
+  }
+  if (r.areas.length) {
+    L.push('## Atividades avulsas por área');
+    L.push('');
+    r.areas.forEach(g => {
+      L.push('### ' + g.label);
+      L.push('');
+      g.items.forEach(it => L.push(line(it)));
+      L.push('');
+    });
+  }
+  L.push('## Métricas do período');
+  L.push('');
+  L.push('- Tarefas concluídas: ' + r.metrics.done);
+  L.push('- Tempo registrado: ' + fmtMin(r.metrics.timeMinutes));
+  if (r.metrics.withoutTime) L.push('- ' + r.metrics.withoutTime + ' tarefa(s) concluída(s) sem tempo registrado.');
+  if (r.metrics.orphanCount) L.push('- ' + r.metrics.orphanCount + ' registro(s) de tarefas removidas (preservados).');
+  L.push('');
+  return L.join('\n');
 }

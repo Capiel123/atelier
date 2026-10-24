@@ -302,29 +302,32 @@ function renderFilteredTasks() {
 
   if (!list.length) return list.length ? '<div class="msg">Nada com esses filtros.</div>' : '<div class="msg">Nada ainda.</div>';
 
-  const grouped = {commitment: [], work: [], personal: []};
-  list.forEach(t => grouped[taskSection(t)].push(t));
+  const pendingTasks = list.filter(t => !t.done);
+  const doneTasks = list.filter(t => t.done);
   const compact = getTaskCompactMode();
   const sectionsCollapsed = S.cfg.sectionsCollapsed || {};
 
-  return SECTION_ORDER.map(section => {
-    const items = grouped[section];
-    if (!items.length) return '';
+  const sectionsHtml = SECTION_ORDER.map(section => {
+    const allItems = list.filter(t => taskSection(t) === section);
+    if (!allItems.length) return '';
+    const pendingItems = allItems.filter(t => !t.done);
     const meta = sectionMeta(section);
     const collapsed = !!sectionsCollapsed[section];
+    const pend = pendingItems.length;
+    const prog = sectionProgress(allItems);
+
     let ordered;
     if (S.cfg.autoPriority) {
-      ordered = items.map(t => ({t, score: computeTaskScore(t, ctx)})).sort((a,b) => {if (a.t.done !== b.t.done) return a.t.done ? 1 : -1; return b.score - a.score || (a.t.order||0) - (b.t.order||0);});
+      ordered = pendingItems.map(t => ({t, score: computeTaskScore(t, ctx)})).sort((a,b) => b.score - a.score || (a.t.order||0) - (b.t.order||0));
     } else {
-      ordered = items.map(t => ({t, score: null})).sort((a,b) => {if (a.t.done !== b.t.done) return a.t.done ? 1 : -1; return (a.t.order||0) - (b.t.order||0);});
+      ordered = pendingItems.map(t => ({t, score: null})).sort((a,b) => (a.t.order||0) - (b.t.order||0));
     }
-    const pend = items.filter(t => !t.done).length;
-    const prog = sectionProgress(items);
-    const headerHtml = `<div class="section-header" data-a="toggleSection" data-section="${section}">
+
+    const headerHtml = `<div class="section-header" data-a="toggleSection" data-section="${section}" role="button" tabindex="0" aria-expanded="${!collapsed}">
       <div class="section-header-title">
         <span style="color:${meta.color};font-size:14px">${meta.icon}</span>
         <b style="color:${meta.color}">${meta.n}</b>
-        <span class="section-header-meta">${pend} pend · ${items.length} total</span>
+        <span class="section-header-meta">${pend} pend · ${allItems.length} total</span>
       </div>
       <div class="section-header-right">
         <div class="section-progress"><div style="width:${prog.pct}%;background:${meta.color}"></div></div>
@@ -332,10 +335,37 @@ function renderFilteredTasks() {
         <span class="chev">${collapsed ? '▸' : '▾'}</span>
       </div>
     </div>`;
+
     if (collapsed) return headerHtml;
+    if (!pendingItems.length) {
+      return headerHtml + `<div class="msg" style="font-size:11.5px;color:var(--mu);margin:6px 8px 12px;opacity:0.8">✓ Todas as tarefas de ${meta.n.toLowerCase()} concluídas.</div>`;
+    }
     const cardsHtml = ordered.map(({t, score}) => compact && !expandedTasks.has(t.id) ? cardTaskCompact(t, score) : cardTask(t, score)).join('');
     return headerHtml + cardsHtml;
-  }).join('') || '<div class="msg">Nada com esses filtros.</div>';
+  }).join('');
+
+  let doneSectionHtml = '';
+  if (doneTasks.length) {
+    const doneCollapsed = S.cfg.sectionsCollapsed?.done ?? true;
+    const doneCardsHtml = doneCollapsed ? '' : `
+      <div class="done-tasks-list">
+        ${doneTasks.map(t => compact && !expandedTasks.has(t.id) ? cardTaskCompact(t, null) : cardTask(t, null)).join('')}
+      </div>`;
+    doneSectionHtml = `
+      <div class="section-header done-section-header" data-a="toggleSection" data-section="done" role="button" tabindex="0" aria-expanded="${!doneCollapsed}" style="margin-top:20px;">
+        <div class="section-header-title">
+          <span style="color:var(--ok);font-size:14px">✓</span>
+          <b style="color:var(--tx)">Concluídas <span class="done-count">(${doneTasks.length})</span></b>
+          <span class="section-header-meta">${doneTasks.length} ${doneTasks.length === 1 ? 'concluída' : 'concluídas'}</span>
+        </div>
+        <div class="section-header-right">
+          <span class="chev">${doneCollapsed ? '▸' : '▾'}</span>
+        </div>
+      </div>
+      ${doneCardsHtml}`;
+  }
+
+  return (sectionsHtml + doneSectionHtml) || '<div class="msg">Nada com esses filtros.</div>';
 }
 
 function refreshTaskList() {const el = document.getElementById('taskList'); if (el) el.innerHTML = renderFilteredTasks();}
@@ -412,6 +442,7 @@ function cardTask(t, score) {
       <button data-a="moveDown" data-id="${t.id}" title="Descer">↓</button>
       <button data-a="focusMode" data-id="${t.id}">⛶</button>
       <select class="postpone-sel" data-a="postpone" data-id="${t.id}"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
+      ${t.done ? `<button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo do trabalho">✎ resumo</button>` : ''}
       <button data-a="del" data-id="${t.id}">✕</button>
     </div>
     
@@ -468,25 +499,30 @@ function cardQueue(t) {
   const isExpanded = expandedTasks.has(t.id);
   const isSelected = selectedTaskId === t.id;
   const k = f => `tasks:${t.id}:${f}`;
-  const skillObjs = (t.skills || []).map(id => S.skills.find(s => s.id === id)).filter(Boolean);
+  const skillObjs = (t.skills || []).map(id => S.skills.find(s => s.id === id) || S.skills.find(s => s.n === id)).filter(Boolean);
+  const labelObjs = (t.labels || []).map(id => S.labels.find(l => l.id === id) || S.labels.find(l => l.n === id)).filter(Boolean);
   const borderColor = t.color || (skillObjs[0]?.color) || areaColor(t.area);
   const subsTotal = (t.subs||[]).length;
   const subsDone = (t.subs||[]).filter(s => s.d).length;
 
-  let html = `<div class="card ${isExpanded?'':'compact'} queue-card ${isSelected?'selected':''}" style="--c:${borderColor}">
-    <div class="row" style="align-items:center;cursor:pointer" data-a="toggleQueueCard" data-id="${t.id}">
-      <div class="ti" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <i class="dot" style="background:${PRC[t.pr]}"></i>
-        <span class="tt" style="font-size:15px;font-weight:500">${esc(t.t)}</span>
-        ${t.time ? `<span class="tag" style="color:var(--wr)">⏰ ${esc(t.time)}</span>` : ''}
-        ${t.est ? `<span class="tag">⏱ ${fmtMin(t.est)}</span>` : ''}
-        ${subsTotal ? `<span class="tag">${subsDone}/${subsTotal} sub</span>` : ''}
+  let html = `<div class="card ${isExpanded?'':'compact'} queue-card ${isSelected?'selected':''}" style="--c:${borderColor}" data-a="toggleQueueCard" data-id="${t.id}">
+    <div class="row" style="align-items:center;cursor:pointer;flex:1;min-width:0">
+      <div class="ti" style="min-width:0">
+        <div class="tt">${esc(t.t)}</div>
+        <div class="meta">
+          <i class="dot" style="background:${PRC[t.pr]}"></i>
+          ${t.time ? `<span class="tag" style="color:var(--wr)">⏰ ${esc(t.time)}</span>` : ''}
+          ${t.est ? `<span class="tag">⏱ ${fmtMin(t.est)}</span>` : ''}
+          ${subsTotal ? `<span class="tag">${subsDone}/${subsTotal} sub</span>` : ''}
+          ${skillObjs.map(s => `<span class="tag" style="color:${s.color}">${esc(s.n)}</span>`).join('')}
+          ${labelObjs.slice(0,4).map(l => `<span class="label-pill" style="--lc:${l.color}">${esc(l.n)}</span>`).join('')}${labelObjs.length>4 ? `<span class="label-pill">+${labelObjs.length-4}</span>` : ''}
+        </div>
       </div>
       <span class="chev" style="flex:none;margin-left:auto">${isExpanded ? '▴' : '▾'}</span>
     </div>`;
 
   if (isExpanded) {
-    html += `<div style="margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">
+    html += `<div class="queue-body" style="margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">
       <textarea data-p="${esc(k('desc'))}" placeholder="Descrição e notas da tarefa..." rows="2" style="margin-bottom:8px">${esc(t.desc||'')}</textarea>
       ${subsTotal ? renderSubs(t) : ''}
       <input data-a="sadd" data-id="${t.id}" placeholder="Nova subtarefa (Enter)" style="margin-top:6px">
@@ -506,8 +542,8 @@ function cardQueue(t) {
           <label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label>
           <label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label>
           <label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label>
-          <label class="full">Habilidades<div class="skills-box">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="color:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label>
-          <label class="full">Labels<div class="skills-box">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="color:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label>
+          <label class="full">Habilidades<div class="pill-stack">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="--pc:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label>
+          <label class="full">Labels<div class="pill-stack">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="--pc:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label>
         </div>
       </details>
     </div>`;
@@ -554,6 +590,26 @@ function viewProjects() {
     ${active.map(projectCard).join('')}
     ${archived.length ? `<details><summary>Arquivados (${archived.length})</summary>${archived.map(projectCard).join('')}</details>` : ''}`;
 }
+function renderProjectGoals(p) {
+  const goals = (p.goals || []).slice().sort((a,b) => (a.order||0) - (b.order||0));
+  const done = goals.filter(g => g.d).length;
+  const total = goals.length;
+  const rows = goals.map((g, i) => `<div class="sub">
+      <button class="chk s" data-a="pgtog" data-id="${p.id}" data-g="${g.id}" title="${g.d ? 'Marcar como pendente' : 'Marcar como concluída'}">${g.d ? '✓' : ''}</button>
+      <span class="sub-txt ${g.d ? 'x' : ''}" contenteditable="true" data-pgedit="${p.id}:${g.id}">${esc(g.t)}</span>
+      <button class="btn-sm" data-a="pgup" data-id="${p.id}" data-g="${g.id}" data-i="${i}" title="Subir">↑</button>
+      <button class="btn-sm" data-a="pgdown" data-id="${p.id}" data-g="${g.id}" data-i="${i}" title="Descer">↓</button>
+      <button class="btn-sm" data-a="pgdel" data-id="${p.id}" data-g="${g.id}" title="Excluir">✕</button>
+    </div>`).join('');
+  return `<details class="proj-goals" data-eid="pg_${p.id}" ${openEdits.has('pg_' + p.id) ? 'open' : ''}>
+    <summary>◎ Etapas <span class="badge">${done}/${total}</span></summary>
+    ${total ? `<div class="subs">${rows}</div>` : '<div class="msg" style="margin:6px 0">Nenhuma etapa ainda.</div>'}
+    <div class="add" style="margin-top:8px">
+      <input data-pgadd="${p.id}" placeholder="Nova etapa (Enter)">
+      <button data-a="pgadd" data-id="${p.id}" title="Adicionar etapa">+</button>
+    </div>
+  </details>`;
+}
 function projectCard(p) {
   const ts = S.tasks.filter(t => t.proj === p.id); const done = ts.filter(t => t.done).length, total = ts.length;
   const pctTasks = total ? Math.round(done/total*100) : 0;
@@ -568,6 +624,7 @@ function projectCard(p) {
     <div class="big"><input data-p="${esc(k('n'))}" value="${esc(p.n)}" style="font-weight:600"><button data-a="pdel" data-id="${p.id}">✕</button></div>
     ${isComplete ? `<div class="msg" style="color:var(--ok)">✓ Concluído em ${fmtDate(iso(new Date(p.completedAt)))}${earnings.total>0?` · ${fmtMoney(earnings.total, cur)}`:''}${earnings.ratePerHour>0?` · ${fmtMoney(earnings.ratePerHour, cur)}/h`:''}</div>` : ''}
     ${estTotal ? `<div class="proj-progress"><div class="pp-row"><span class="pp-label">Tarefas</span><div class="pp-bar"><div style="width:${pctTasks}%;background:${color}"></div></div><span class="pp-val">${pctTasks}%</span></div><div class="pp-row"><span class="pp-label">Tempo</span><div class="pp-bar"><div style="width:${pctTime}%;background:${color}88"></div></div><span class="pp-val">${pctTime}%</span></div></div>` : ''}
+    ${renderProjectGoals(p)}
     <div class="form">
       <label>Área<select data-p="${esc(k('area'))}">${selOptions(getAreas().map(a=>[a.id,a.n]), p.area)}</select></label>
       <label>Cliente<select data-p="${esc(k('clientId'))}"><option value="">—</option>${clients.map(c => `<option value="${c.id}" ${p.clientId===c.id?'selected':''}>${esc(c.n)}</option>`).join('')}</select></label>
@@ -658,19 +715,42 @@ function viewHistory() {
   const now = Date.now();
   const cutoff = historyFilter === '7d' ? now - 7*86400000 : historyFilter === '30d' ? now - 30*86400000 : 0;
   const filtered = done.filter(t => t.doneAt >= cutoff);
+  const logsByTask = {};
+  (S.workLogs || []).forEach(l => { if (l.taskId) (logsByTask[l.taskId] = logsByTask[l.taskId] || []).push(l); });
   const byDay = {};
-  filtered.forEach(t => {const d = iso(new Date(t.doneAt)); if (!byDay[d]) byDay[d] = []; byDay[d].push(t);});
+  filtered.forEach(t => {const d = iso(new Date(t.doneAt)); if (!byDay[d]) byDay[d] = []; byDay[d].push({type:'task', t});});
+  // Registros preservados de tarefas removidas (snapshots)
+  const taskIds = new Set(S.tasks.map(t => t.id));
+  const orphanLogs = (S.workLogs || []).filter(l => l.taskId && !taskIds.has(l.taskId) && (l.ts || 0) >= cutoff).sort((a,b) => (b.ts || 0) - (a.ts || 0));
+  orphanLogs.forEach(l => {const d = l.date || iso(new Date(l.ts)); if (!byDay[d]) byDay[d] = []; byDay[d].push({type:'log', l});});
   const days = Object.keys(byDay).sort((a,b) => b.localeCompare(a));
   const totalMin = filtered.reduce((a,t) => a + taskMinutes(t), 0);
   const totalXp = filtered.filter(t => t.xpClaimed && !isPersonalSection(t)).reduce((a,t) => a + taskBaseXp(t), 0);
-  return `<div class="filter-bar" style="flex-wrap:wrap"><button data-a="histFilter" data-v="7d" class="${historyFilter==='7d'?'on':''}">7 dias</button><button data-a="histFilter" data-v="30d" class="${historyFilter==='30d'?'on':''}">30 dias</button><button data-a="histFilter" data-v="all" class="${historyFilter==='all'?'on':''}">Tudo</button></div>
+  const range = reportWeekRange();
+  return `<div class="history-report-bar">
+      <button data-a="reportWeekPrev" title="Semana anterior">◀</button>
+      <button data-a="reportWeekToday">Esta semana</button>
+      <button data-a="reportWeekNext" title="Próxima semana">▶</button>
+      <span class="hr-range">${range.start.split('-').reverse().join('/')} – ${range.end.split('-').reverse().join('/')}</span>
+      <button data-a="reportOpen" class="hr-generate">Gerar relatório semanal</button>
+    </div>
+    <div class="filter-bar" style="flex-wrap:wrap"><button data-a="histFilter" data-v="7d" class="${historyFilter==='7d'?'on':''}">7 dias</button><button data-a="histFilter" data-v="30d" class="${historyFilter==='30d'?'on':''}">30 dias</button><button data-a="histFilter" data-v="all" class="${historyFilter==='all'?'on':''}">Tudo</button></div>
     <div class="stats"><span>${filtered.length} tarefa${filtered.length!==1?'s':''}</span><span>Tempo: <b>${fmtMin(totalMin)}</b></span><span>XP: <b>${totalXp}</b></span></div>
-    ${days.length ? days.map(d => `<div class="history-day"><div class="history-day-header"><b>${d.split('-').reverse().join('/')}</b><span class="msg" style="margin:0">${byDay[d].length} tarefa${byDay[d].length!==1?'s':''}</span></div>${byDay[d].map(t => {
-      const subs = t.subs || [];
-      const subBreakdown = subs.length ? `<details style="margin-top:4px"><summary style="font-size:11px">Fases (${subs.length})</summary>${subs.map(s => {const m = subMinutes(t, s.id); return `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11.5px;color:var(--mu)"><span>${s.d?'✓':'·'} ${esc(s.t)}</span><span style="color:var(--tx);font-variant-numeric:tabular-nums">${m?fmtMin(m):'—'}</span></div>`;}).join('')}</details>` : '';
-      const xpAwarded = t.xpClaimed && !isPersonalSection(t) ? taskBaseXp(t) : 0;
-      return `<div class="history-row"><div class="history-content"><div class="history-title">${esc(t.t)}</div><div class="history-meta"><span class="tag">${esc(areaLabel(t.area))}</span>${taskMinutes(t)>0?`<span class="tag">⏱ ${fmtMin(taskMinutes(t))}</span>`:''}${xpAwarded?`<span class="tag" style="color:var(--ac)">+${xpAwarded} XP</span>`:''}${isPersonalSection(t)?`<span class="tag" style="opacity:.6">sem XP</span>`:''}</div>${subBreakdown}</div><div class="history-actions"><button data-a="histReopen" data-id="${t.id}" title="Reabrir">↩</button><button data-a="histCopy" data-id="${t.id}" title="Copiar para hoje">⧉</button><button data-a="histDel" data-id="${t.id}" title="Excluir">✕</button></div></div>`;
-    }).join('')}</div>`).join('') : '<div class="msg">Nenhuma tarefa concluída no período.</div>'}`;
+    ${days.length ? days.map(d => `<div class="history-day"><div class="history-day-header"><b>${d.split('-').reverse().join('/')}</b><span class="msg" style="margin:0">${byDay[d].length} registro${byDay[d].length!==1?'s':''}</span></div>${byDay[d].map(entry => historyEntryHTML(entry, d, logsByTask)).join('')}</div>`).join('') : '<div class="msg">Nenhuma tarefa concluída no período.</div>'}`;
+}
+
+function historyEntryHTML(entry, dayStr, logsByTask) {
+  if (entry.type === 'log') {
+    const l = entry.l;
+    return `<div class="history-row history-row--log"><div class="history-content"><div class="history-title">${esc(l.taskTitle || '(tarefa removida)')}</div><div class="history-meta">${l.area ? `<span class="tag">${esc(areaLabel(l.area))}</span>` : ''}${l.projName ? `<span class="tag">${esc(l.projName)}</span>` : ''}<span class="tag" style="opacity:.7">📝 registro preservado</span></div><div class="history-log">${esc(l.text)}</div></div></div>`;
+  }
+  const t = entry.t;
+  const subs = t.subs || [];
+  const subBreakdown = subs.length ? `<details style="margin-top:4px"><summary style="font-size:11px">Fases (${subs.length})</summary>${subs.map(s => {const m = subMinutes(t, s.id); return `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11.5px;color:var(--mu)"><span>${s.d?'✓':'·'} ${esc(s.t)}</span><span style="color:var(--tx);font-variant-numeric:tabular-nums">${m?fmtMin(m):'—'}</span></div>`;}).join('')}</details>` : '';
+  const xpAwarded = t.xpClaimed && !isPersonalSection(t) ? taskBaseXp(t) : 0;
+  const logs = (logsByTask[t.id] || []).sort((a,b) => (b.ts || 0) - (a.ts || 0));
+  const logsHtml = logs.map(l => `<div class="history-log">📝 ${esc(l.text)}${l.date && l.date !== dayStr ? ` <span class="history-log-date">· ${fmtDate(l.date)}</span>` : ''}</div>`).join('');
+  return `<div class="history-row"><div class="history-content"><div class="history-title">${esc(t.t)}</div><div class="history-meta"><span class="tag">${esc(areaLabel(t.area))}</span>${taskMinutes(t)>0?`<span class="tag">⏱ ${fmtMin(taskMinutes(t))}</span>`:''}${xpAwarded?`<span class="tag" style="color:var(--ac)">+${xpAwarded} XP</span>`:''}${isPersonalSection(t)?`<span class="tag" style="opacity:.6">sem XP</span>`:''}</div>${logsHtml}${subBreakdown}</div><div class="history-actions"><button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo">✎</button><button data-a="histReopen" data-id="${t.id}" title="Reabrir">↩</button><button data-a="histCopy" data-id="${t.id}" title="Copiar para hoje">⧉</button><button data-a="histDel" data-id="${t.id}" title="Excluir">✕</button></div></div>`;
 }
 
 function events() {
@@ -805,9 +885,12 @@ function viewContacts(type) {
   const tagFilter = allTags.length ? `<div class="tag-filter">${allTags.map(t => `<button class="tag-pill ${filt.tags.includes(t)?'on':''}" data-a="toggleTagFilter" data-type="${type}" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}${filt.tags.length ? `<button class="tag-pill" data-a="clearTagFilter" data-type="${type}" style="color:var(--mu)">✕</button>` : ''}</div>` : '';
   const viewToggle = `<div class="view-toggle"><button class="${view==='list'?'on':''}" data-a="contactView" data-type="${type}" data-mode="list">☰ Lista</button><button class="${view==='orbit'?'on':''}" data-a="contactView" data-type="${type}" data-mode="orbit">◎ Órbita</button></div>`;
   const kpis = `<div class="contact-kpis"><div class="kpi"><div class="kpi-label">Contatos</div><div class="kpi-value">${all.filter(c => !c.archived).length}</div><div class="kpi-sub">${active30} ativos (30d)</div></div><div class="kpi"><div class="kpi-label">Atrasados</div><div class="kpi-value ${overdue?'late':''}">${overdue}</div><div class="kpi-sub">${todayCount} hoje</div></div><div class="kpi"><div class="kpi-label">Aguardando</div><div class="kpi-value">${waiting}</div><div class="kpi-sub">resposta deles</div></div><div class="kpi"><div class="kpi-label">Adiados</div><div class="kpi-value">${snoozed}</div><div class="kpi-sub">com motivo</div></div></div>`;
-  const form = `<div class="card"><div class="form"><label>Nome<input id="cN_${type}"></label><label>Categoria<select id="cCat_${type}">${categories.map(c=>`<option>${c}</option>`).join('')}</select></label><label>Onde<input id="cWhere_${type}"></label><label>Link<input id="cUrl_${type}"></label><label>Cargo<input id="cRole_${type}"></label><label>Contexto<input id="cContext_${type}"></label><label>Cadência<input id="cCadence_${type}" type="number" value="${isPro?30:21}"></label><label class="full">Última conversa<input id="cLastConv_${type}" placeholder="Falou que estava mudando pra Berlim"></label><label class="full">Tags (vírgula)<input id="cTags_${type}"></label><label class="full">Notas<textarea id="cNotes_${type}" rows="2"></textarea></label></div><button data-a="cAdd" data-type="${type}" style="margin-top:8px">Adicionar</button></div>`;
+  const form = `<details class="contact-add" data-eid="contactForm_${type}" ${openEdits.has('contactForm_' + type) ? 'open' : ''}>
+    <summary>＋ Novo contato</summary>
+    <div class="card" style="margin-top:8px"><div class="form"><label>Nome<input id="cN_${type}"></label><label>Categoria<select id="cCat_${type}">${categories.map(c=>`<option>${c}</option>`).join('')}</select></label><label>Onde<input id="cWhere_${type}"></label><label>Link<input id="cUrl_${type}"></label><label>Cargo<input id="cRole_${type}"></label><label>Contexto<input id="cContext_${type}"></label><label>Cadência<input id="cCadence_${type}" type="number" value="${isPro?30:21}"></label><label class="full">Última conversa<input id="cLastConv_${type}" placeholder="Falou que estava mudando pra Berlim"></label><label class="full">Tags (vírgula)<input id="cTags_${type}"></label><label class="full">Notas<textarea id="cNotes_${type}" rows="2"></textarea></label></div><button data-a="cAdd" data-type="${type}" style="margin-top:8px">Adicionar</button></div>
+  </details>`;
   const cardsHtml = view === 'orbit' ? renderOrbit(type, filtered) : scored.map(({c, score}) => contactCard(c, score, type)).join('');
-  return `<h3 style="margin-top:0">${isPro ? 'Rede profissional' : 'Amizades e vínculos'}</h3><div class="msg">${isPro ? 'Score = urgência de retomar contato.' : 'Score gentil: contatos pessoais pesam × 0.75.'}</div>${kpis}${viewToggle}${filterPills}${tagFilter}${form}<h3>Contatos <span class="count">(${filtered.length})</span></h3>${cardsHtml || '<div class="msg">Nenhum contato.</div>'}`;
+  return `<h3 style="margin-top:0">${isPro ? 'Rede profissional' : 'Amizades e vínculos'}</h3><div class="msg">${isPro ? 'Score = urgência de retomar contato.' : 'Score gentil: contatos pessoais pesam × 0.75.'}</div>${kpis}${viewToggle}${filterPills}${tagFilter}${form}<h3>Contatos <span class="count">(${filtered.length})</span></h3>${cardsHtml || '<div class="msg">Nenhum contato ainda. Use "＋ Novo contato" acima para adicionar.</div>'}`;
 }
 function contactCard(c, score, type) {
   const status = contactStatus(c); const scCls = scoreClass(score);
@@ -931,6 +1014,52 @@ function openInteractionSheet(contactId) {
 }
 function closeInteractionSheet() {document.getElementById('interactionSheet')?.remove();}
 
+/* --- FOLHA DE REGISTRO DE TRABALHO (resumo por tarefa) --- */
+function openWorkLogSheet(taskId) {
+  const t = S.tasks.find(x => x.id === taskId); if (!t) return;
+  closeWorkLogSheet();
+  const today = iso(new Date());
+  const existing = (S.workLogs || []).find(l => l.taskId === taskId && l.date === today);
+  const el = document.createElement('div');
+  el.id = 'workLogSheet'; el.className = 'shortcuts-modal';
+  el.innerHTML = `<div class="shortcuts-content" style="max-width:440px"><h3 style="margin-top:0;color:var(--ac)">Registro de trabalho</h3><div style="font-size:12px;color:var(--mu);margin-bottom:12px">${esc(t.t)} · ${fmtDate(today)}</div><div class="form"><label class="full">O que você fez?<textarea id="wlText" rows="4" placeholder="Resumo opcional do trabalho realizado…">${esc(existing ? existing.text : '')}</textarea></label></div><div class="acts" style="margin-top:12px"><button data-a="workLogSave" data-id="${t.id}" style="background:var(--ac);color:#000;border-color:var(--ac);flex:1">Salvar</button><button data-a="closeWorkLog">Cancelar</button></div></div>`;
+  document.body.appendChild(el);
+  setTimeout(() => document.getElementById('wlText')?.focus(), 30);
+}
+function closeWorkLogSheet() {document.getElementById('workLogSheet')?.remove();}
+
+/* --- RELATÓRIO SEMANAL (folha) --- */
+function renderWeeklyReportHTML(r) {
+  const line = it => {
+    const time = it.timeMinutes != null ? ` · <b>${fmtMin(it.timeMinutes)}</b>` : '';
+    const summary = it.summary ? `<div class="report-item-summary">${esc(it.summary)}</div>` : '<div class="report-item-summary report-item-summary--empty">Sem resumo registrado.</div>';
+    return `<div class="report-item"><div class="report-item-title">${esc(it.title)}${time}${it.kind === 'log' ? ' <span class="tag" style="opacity:.7">tarefa removida</span>' : ''}</div>${summary}</div>`;
+  };
+  let html = '';
+  if (r.projects.length) {
+    html += '<h4>Resumo por projeto</h4>';
+    r.projects.forEach(g => html += `<div class="report-group"><div class="report-group-name">▦ ${esc(g.name)}</div>${g.items.map(line).join('')}</div>`);
+  }
+  if (r.areas.length) {
+    html += '<h4>Atividades avulsas por área</h4>';
+    r.areas.forEach(g => html += `<div class="report-group"><div class="report-group-name">${esc(g.label)}</div>${g.items.map(line).join('')}</div>`);
+  }
+  const m = r.metrics;
+  html += `<h4>Métricas do período</h4><div class="report-metrics"><span>${m.done} tarefa${m.done !== 1 ? 's' : ''} concluída${m.done !== 1 ? 's' : ''}</span><span>Tempo: <b>${fmtMin(m.timeMinutes)}</b></span>${m.withoutTime ? `<span>${m.withoutTime} sem tempo registrado</span>` : ''}${m.orphanCount ? `<span>${m.orphanCount} registro(s) de tarefas removidas</span>` : ''}</div>`;
+  if (!r.projects.length && !r.areas.length && !m.done && !m.orphanCount) html = '<div class="msg">Nada registrado nesta semana.</div>';
+  return html;
+}
+function openReportSheet() {
+  const range = reportWeekRange();
+  const r = buildWeeklyReport(range.start, range.end);
+  closeReportSheet();
+  const el = document.createElement('div');
+  el.id = 'reportSheet'; el.className = 'shortcuts-modal';
+  el.innerHTML = `<div class="shortcuts-content report-content"><div class="big" style="margin:0 0 4px"><b>Relatório semanal</b><button data-a="closeReport">✕</button></div><div class="msg" style="margin-bottom:10px">${r.startDate.split('-').reverse().join('/')} a ${r.endDate.split('-').reverse().join('/')} · segunda a domingo</div><div id="reportBody">${renderWeeklyReportHTML(r)}</div><div class="acts"><button data-a="reportCopy" style="background:var(--ac);color:#000;border-color:var(--ac);flex:1">Copiar Markdown</button><button data-a="closeReport">Fechar</button></div></div>`;
+  document.body.appendChild(el);
+}
+function closeReportSheet() {document.getElementById('reportSheet')?.remove();}
+
 /* --- TIMER (widget do topo) --- */
 function renderTimer() {
   const el = $('#timerWidget'), lbl = $('#tlabel'), time = $('#ttime'), stopBtn = $('#tstop');
@@ -1038,6 +1167,20 @@ function renderFocus() {
     : (running ? 'Sessão livre' : `Bloco de ${targetMin}min`);
   const hint = firstPending && !running ? 'Iniciando na primeira subtarefa pendente' : '';
 
+  const subs = (t.subs || []).slice().sort((a,b) => (a.order||0)-(b.order||0));
+  const subsHtml = subs.length ? `
+    <div class="focus-subs">
+      <div class="focus-subs-title">Subtarefas (${subs.filter(s=>s.d).length}/${subs.length})</div>
+      ${subs.map((s) => {
+        const isRun = running && runningSubId === s.id;
+        const origIdx = (t.subs||[]).findIndex(x => x.id === s.id);
+        return `<div class="focus-sub${isRun ? ' run' : ''}">
+          <input type="checkbox" data-a="focusSub" data-sub="${s.id}" data-i="${origIdx}" ${s.d ? 'checked' : ''} title="${s.d ? 'Marcar como pendente' : 'Concluir subtarefa'}">
+          <span class="${s.d ? 'x' : ''}" style="flex:1" data-a="focusSelectSub" data-sub="${s.id}" title="${s.d ? '' : (isRun ? 'Etapa atual em andamento' : 'Focar nesta etapa')}">${isRun ? '▶ ' : ''}${esc(s.t)}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
   el.innerHTML = `
     <div class="focus-content" data-phase="${phase}">
       <button class="focus-close" data-a="closeFocus">✕</button>
@@ -1054,10 +1197,12 @@ function renderFocus() {
       ${hint ? `<div class="focus-hint" style="margin-top:6px;opacity:1;color:var(--ac);font-size:11px">${esc(hint)}</div>` : ''}
       ${cycleDots}
       ${durationsHtml}
-    <div class="focus-actions">
-          ${primaryBtn}
-          ${skipBtn}
-          <button data-a="log" data-id="${t.id}" data-m="-10" class="focus-btn ghost">-10m</button>
-          <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
-       </div>`;
+      <div class="focus-actions">
+        ${primaryBtn}
+        ${skipBtn}
+        <button data-a="log" data-id="${t.id}" data-m="-10" class="focus-btn ghost">-10m</button>
+        <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
+      </div>
+      ${subsHtml}
+    </div>`;
 }

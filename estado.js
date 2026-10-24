@@ -138,6 +138,7 @@ let saveTmr = null;
 let skillsFilter = 'all';
 let earningsFilter = 'month';
 let historyFilter = '30d';
+let reportWeekOffset = 0;
 let toastTmr = null;
 let filterState = {text:'', type:'', area:'', proj:'', labels:[], showLabels:false};
 let jobFilter = {stage:'active', area:'', text:''};
@@ -189,8 +190,9 @@ function mkContact(o={}) {return {id: uid(), n:'', type:'pro', cat:'Prospect', w
 function mkCommand(n, cat, cmd, example='') {return {id: uid(), n, cat, cmd, example, order:0, updatedAt: Date.now()};}
 function mkJob(o={}) {return {id: uid(), client:'', role:'', url:'', contactName:'', contactInfo:'', platform:'', area:'', subarea:'', ticket:0, priority:1, notes:'', stage:'prospect', stageHistory:[{stage:'prospect', at: Date.now()}], foundAt: Date.now(), appliedAt: null, firstResponseAt: null, nextFollowUp:'', lastInteractionAt: null, linkedTaskId: null, projectId: null, interactions: [], deletedAt: null, createdAt: Date.now(), updatedAt: Date.now(), ...o};}
 function mkClient(o={}) {return {id: uid(), n:'', notes:'', createdAt: Date.now(), updatedAt: Date.now(), deletedAt: null, ...o};}
-function mkProject(o={}) {return {id: uid(), n:'', area:'Carreira', due:'', reward:'', claimed:false, archived:false, clientId:'', client:'', billingType:'none', billingValue:0, actualValue:null, completedAt:null, manualHours:null, currency:'BRL', deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
+function mkProject(o={}) {return {id: uid(), n:'', area:'Carreira', due:'', reward:'', claimed:false, archived:false, clientId:'', client:'', billingType:'none', billingValue:0, actualValue:null, completedAt:null, manualHours:null, currency:'BRL', goals:[], deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
 function mkGoal(o={}) {return {id: uid(), t:'', p:0, due:'', deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
+function mkWorkLog(o={}) {return {id: uid(), date:'', ts: Date.now(), taskId:'', taskTitle:'', projId:'', projName:'', area:'', text:'', ...o};}
 function defaultLabels() {return [{id:'l_easy',n:'fácil',color:'#6a8560',order:0},{id:'l_quick',n:'rápida',color:'#8fa5b8',order:1},{id:'l_creative',n:'criativa',color:'#c9764a',order:2},{id:'l_admin',n:'burocrática',color:'#7a7580',order:3},{id:'l_deep',n:'profunda',color:'#9d6bb5',order:4},{id:'l_comm',n:'comunicação',color:'#d4a84b',order:5},{id:'l_learn',n:'aprendizado',color:'#b8a9c4',order:6},{id:'l_maint',n:'manutenção',color:'#8b2942',order:7}];}
 function defaultCommands() {
   return [
@@ -222,12 +224,12 @@ function seed() {
   const p1 = mkProject({id:'p1', n:'Prospecção internacional', area:'Carreira', reward:'Jantar fora'});
   return {
     v: VERSION,
-    cfg: {focus:50, brk:10, cap:360, logo:null, notif:false, autoPriority:true, reviewChecks:{}, weekPriority:{}, theme:'obsidian', accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false}},
+    cfg: {focus:50, brk:10, cap:360, logo:null, notif:false, autoPriority:true, reviewChecks:{}, weekPriority:{}, theme:'obsidian', accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
     areas: AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()})),
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
     goals: [mkGoal({id:'g1', t:'2-3 clientes recorrentes'})],
-    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null,
+    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, workLogs: [],
     lastModified: Date.now()
   };
 }
@@ -254,7 +256,8 @@ function migrate(raw) {
   s.cfg.defaultFocus = s.cfg.defaultFocus || 25;
   s.cfg.usdRate = s.cfg.usdRate || 5.2;
   s.cfg.currency = s.cfg.currency || 'BRL';
-  s.cfg.sectionsCollapsed = s.cfg.sectionsCollapsed || {commitment:false, work:false, personal:false};
+  s.cfg.sectionsCollapsed = s.cfg.sectionsCollapsed || {commitment:false, work:false, personal:false, done:true};
+  if (s.cfg.sectionsCollapsed.done === undefined) s.cfg.sectionsCollapsed.done = true;
   s.timer = s.timer || null;
 
   const isV1 = !s.v || s.v < 2, isV2 = !s.v || s.v < 3, isV3 = !s.v || s.v < 4;
@@ -320,7 +323,8 @@ function migrate(raw) {
     billingValue: +p.billingValue || 0,
     actualValue: (p.actualValue != null && p.actualValue !== '') ? +p.actualValue : null,
     completedAt: p.completedAt ?? null,
-    manualHours: (p.manualHours != null && p.manualHours !== '') ? +p.manualHours : null
+    manualHours: (p.manualHours != null && p.manualHours !== '') ? +p.manualHours : null,
+    goals: Array.isArray(p.goals) ? p.goals.map((g, gi) => ({id: g.id || uid(), t: String(g.t || ''), d: !!g.d, order: g.order ?? gi})) : []
   }));
   s.projects.forEach(p => {
     if (!p.completedAt && !p.archived) {
@@ -366,7 +370,8 @@ function migrate(raw) {
   s.contacts.forEach(c => {if (c.clientId === undefined) c.clientId = null;});
   s.applications.forEach(a => {if (a.projectId === undefined) a.projectId = null;});
 
-  s.cfg.sectionsCollapsed = s.cfg.sectionsCollapsed || {commitment:false, work:false, personal:false};
+  s.cfg.sectionsCollapsed = s.cfg.sectionsCollapsed || {commitment:false, work:false, personal:false, done:true};
+  if (s.cfg.sectionsCollapsed.done === undefined) s.cfg.sectionsCollapsed.done = true;
   s.tasks.forEach(t => {
     if (t.time === undefined) t.time = '';
     if (t.section === undefined) t.section = '';
@@ -379,6 +384,27 @@ function migrate(raw) {
     t.spent = t.logs.reduce((a,l) => a + (+l.minutes || 0), 0);
     t.subs.forEach(sb => {if (!Array.isArray(sb.logs)) sb.logs = []; if (sb.xpClaimed == null) sb.xpClaimed = !!sb.d;});
   });
+
+  // --- REGISTROS DE TRABALHO (workLogs) ---
+  s.workLogs = Array.isArray(s.workLogs) ? s.workLogs : [];
+  s.workLogs = s.workLogs.map(l => {
+    const log = mkWorkLog(l);
+    log.date = log.date || '';
+    log.ts = log.ts || Date.now();
+    log.taskId = log.taskId || '';
+    log.taskTitle = log.taskTitle || '';
+    log.projId = log.projId || '';
+    log.projName = log.projName || '';
+    log.area = log.area || '';
+    log.text = String(log.text || '');
+    return log;
+  });
+  // Remove registros vazios acidentais (sem resumo textual ou sem tarefa de origem)
+  s.workLogs = s.workLogs.filter(l => l.taskId && l.text.trim() !== '');
+  // Garante no máximo um registro por tarefa+data (chave lógica taskId|date), mantendo o último
+  const workLogMap = new Map();
+  s.workLogs.forEach(l => workLogMap.set(l.taskId + '|' + l.date, l));
+  s.workLogs = [...workLogMap.values()];
 
   s.v = VERSION;
   s.lastModified = s.lastModified || Date.now();

@@ -86,6 +86,48 @@
 .card{background:var(--s1);border:1px solid var(--bd);border-left:3px solid var(--c,var(--bd));border-radius:12px;padding:14px;margin-bottom:10px;transition:.2s}
 .card.done{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--s1))}
 .card.done .tt, .card.done .compact-tt{text-decoration:line-through;opacity:.55}
+
+/* Feedback visual imediato ao concluir tarefa */
+.card.task-completing{
+  background:color-mix(in srgb,var(--ok) 12%,var(--s1)) !important;
+  border-color:color-mix(in srgb,var(--ok) 40%,var(--bd)) !important;
+  opacity:0.78;
+  transform:scale(0.99);
+  transition:background .28s ease, border-color .28s ease, opacity .3s ease, transform .3s ease;
+}
+.card.task-completing .chk,
+.chk.checked{
+  background:var(--ok) !important;
+  border-color:var(--ok) !important;
+  color:var(--chk-mark,#000) !important;
+  transform:scale(1.16);
+  box-shadow:0 0 10px color-mix(in srgb,var(--ok) 50%,transparent);
+  transition:transform .18s cubic-bezier(.175,.885,.32,1.275), background .18s, border-color .18s;
+}
+.card.task-completing .tt > span:not(.tag):not(.type-icon):not(.quick-ind),
+.card.task-completing .compact-tt{
+  position:relative;
+  display:inline-block;
+  color:var(--mu);
+  transition:color .24s ease;
+}
+.card.task-completing .tt > span:not(.tag):not(.type-icon):not(.quick-ind)::after,
+.card.task-completing .compact-tt::after{
+  content:'';
+  position:absolute;
+  left:0;
+  top:50%;
+  width:0%;
+  height:2px;
+  background:var(--ok);
+  border-radius:1px;
+  animation:taskStrikeAnim .26s cubic-bezier(.25,1,.5,1) forwards;
+  pointer-events:none;
+}
+@keyframes taskStrikeAnim{
+  from{width:0%}
+  to{width:100%}
+}
 .card.next-card-in{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac) inset}
 .card.highlight{box-shadow:0 0 0 2px var(--ac);transition:box-shadow 2s}
 .card.selected{box-shadow:0 0 0 2px var(--ac);background:color-mix(in srgb,var(--ac) 8%,var(--s1))}
@@ -141,6 +183,35 @@
 .section-progress{width:60px;height:6px;background:var(--s2);border-radius:3px;overflow:hidden}
 .section-progress div{height:100%;border-radius:3px;transition:width .4s}
 .section-pct{font-size:11px;color:var(--mu);font-variant-numeric:tabular-nums;min-width:32px;text-align:right}
+
+/* Seção de tarefas concluídas */
+.done-section-header{
+  border-top:1px dashed var(--bd);
+  border-bottom:1px solid var(--bd);
+  padding:10px 8px;
+  background:color-mix(in srgb,var(--s1) 60%,transparent);
+  border-radius:8px;
+}
+.done-section-header:hover{
+  background:var(--s1);
+}
+.done-count{
+  font-size:11.5px;
+  font-weight:500;
+  color:var(--mu);
+  margin-left:4px;
+}
+.done-tasks-list{
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+}
+.done-tasks-list .card{
+  opacity:0.72;
+}
+.done-tasks-list .card:hover{
+  opacity:0.95;
+}
 
 /* --- FORMULÁRIO DE TAREFA --- */
 .form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}

@@ -127,6 +127,10 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .contact-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:12px}
 .contact-kpis .kpi{padding:8px 10px}
 .contact-kpis .kpi-value{font-size:20px}
+/* Formulário de criação recolhível */
+.contact-add{margin-bottom:12px}
+.contact-add>summary{font-size:13px;font-weight:600;color:var(--ac);padding:8px 12px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;transition:.15s}
+.contact-add>summary:hover{border-color:var(--ac)}
 
 /* Visualização "órbita" (rede de contatos) */
 .orbit-wrap{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;align-items:center}
@@ -237,7 +241,26 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .history-meta{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--mu);margin-top:2px;align-items:center}
 .history-actions{display:flex;gap:4px;flex-shrink:0}
 .history-actions button{padding:4px 8px;font-size:13px;min-width:32px;min-height:32px}
+.history-report-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:8px 10px;margin-bottom:12px}
+.history-report-bar .hr-range{font-size:12px;color:var(--mu);font-variant-numeric:tabular-nums}
+.history-report-bar .hr-generate{margin-left:auto;background:var(--ac);color:#000;border-color:var(--ac);font-weight:600}
+.history-log{font-size:12px;color:var(--mu);margin-top:4px;line-height:1.45;white-space:pre-wrap;word-break:break-word;border-left:2px solid var(--ac);padding-left:8px}
+.history-log-date{opacity:.75}
 .rate-badge{font-size:10.5px;padding:1px 7px;border-radius:5px;background:color-mix(in srgb,var(--ok) 15%,var(--s2));color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* =========================================================
+   RELATÓRIO SEMANAL (folha)
+   ========================================================= */
+.report-content{max-width:640px;max-height:82vh;overflow-y:auto}
+.report-group{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.report-group-name{font-weight:600;font-size:13px;margin-bottom:6px;color:var(--ac)}
+.report-item{padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--bd) 40%,transparent)}
+.report-item:last-child{border-bottom:none}
+.report-item-title{font-size:13px;font-weight:500;word-break:break-word}
+.report-item-summary{font-size:12px;color:var(--mu);margin-top:2px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.report-item-summary--empty{opacity:.7;font-style:italic}
+.report-metrics{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--mu)}
+.report-metrics b{color:var(--tx);font-variant-numeric:tabular-nums}
 
 /* =========================================================
    CONFIGURAÇÕES: clientes, projetos, áreas e lixeira

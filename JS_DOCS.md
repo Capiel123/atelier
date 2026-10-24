@@ -22,7 +22,7 @@ O JavaScript foi dividido em quatro arquivos. O conteúdo abaixo substitui o ant
 ### `logica.js` — regras e cálculos
 
 - XP/níveis: `xpToNextLevel`, `levelInfo`, `globalXp`, `taskBaseXp`, `subXp`, `awardTaskXp`, `awardSubXp`.
-- Tempo/métricas: `taskMinutes`, `subMinutes`, `skillMinutes`, `projMinutes`, estimativas e contagens.
+- Tempo/métricas: `taskMinutes`, `subMinutes`, `skillMinutes`, `projMinutes`, `projGoalsTotal`, `projGoalsDone`, estimativas e contagens.
 - Projetos/cliente: `projectEarnings`, `clientById`, `projectsByClient`, `clientName`.
 - Energia/prioridade: `getTodayEnergy`, `setEnergy`, `computeTaskScore`, `scoreBreakdown`, `buildCtx`, `isStuck`, `isUrgentStuck`, `isOverEstimate`.
 - Vagas: `jobStage`, `jobScore`, `changeJobStage`, `recordJobInteraction`, `createFollowUpTask`, `jobStats`.
@@ -30,6 +30,7 @@ O JavaScript foi dividido em quatro arquivos. O conteúdo abaixo substitui o ant
 - Timer: `timerElapsedSec`, `startTimer`, `pauseTimer`, `resumeTimer`, `advancePhase`, `stopTimer`, `beep`.
 - Tarefas rápidas: `parseQuickLine`, `addQuick`, `addBulk`, `postponeTask`, `reorderTask`.
 - Busca e métricas: `globalSearch`, `calibrationStats`, `heatmapData`, `networkStats`, `xpProgression`.
+- Registros de trabalho e relatório: `workLogsForTask`, `saveWorkLog`, `projectNameById`, `reportWeekRange`, `buildWeeklyReport`, `weeklyReportMarkdown`.
 
 ### `interface.js` — desenho das telas
 
@@ -37,10 +38,11 @@ O JavaScript foi dividido em quatro arquivos. O conteúdo abaixo substitui o ant
 - Busca: `openSearch`, `closeSearch`, `renderSearchResults`, `goToSearchResult`.
 - Navegação/layout: `showMoreSheet`, `renderBottomNav`, `render`, `applyLogo`.
 - Tarefas: `viewWeek`, `renderFilteredTasks`, `cardTask`, `renderSubs`, `viewQueue`, `cardQueue`.
-- Vagas/projetos/clientes/rendimento: `viewJobs`, `viewProjects`, `viewClients`, `viewEarnings` e cards associados.
+- Vagas/projetos/clientes/rendimento: `viewJobs`, `viewProjects`, `projectCard`, `renderProjectGoals`, `viewClients`, `viewEarnings` e cards associados.
 - Outras views: `viewCalendar`, `viewGoals`, `viewSkills`, `viewStats`, `viewReview`, `viewContacts`, `viewHistory`, `viewCommands`, `viewConfig`.
 - Componentes auxiliares: `renderHeatmap`, `renderOrbit`, `renderThemePreview`, `renderAreasSection`, `renderTrashSection`, `renderBackupBanner`.
 - Modais/timer: `openInteractionSheet`, `showSnoozeMenu`, `renderTimer`, `openFocus`, `renderFocus`, `closeFocus`.
+- Registro de trabalho/relatório: `historyEntryHTML`, `openWorkLogSheet`, `closeWorkLogSheet`, `renderWeeklyReportHTML`, `openReportSheet`, `closeReportSheet`.
 - `TABS` define navegação; `VIEWS` liga cada ID a uma função de view.
 
 ### `app.js` — interações e inicialização

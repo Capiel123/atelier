@@ -43,6 +43,7 @@
   .xp-hero .xp-level{font-size:34px}
   .theme-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
   .history-actions button{min-width:38px;min-height:38px}
+  .history-report-bar .hr-generate{width:100%;margin-left:0}
   .logo-text{font-size:20px}
   .logo img{max-height:28px;max-width:80px}
   .card{border:none;border-left:3px solid var(--c,var(--bd));margin-bottom:10px}
@@ -276,8 +277,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
    ========================================================= */
 @media(max-width:640px) {
   .list-actions { display: none !important; }
-  .fab { display: flex !important; }
-  .fab[hidden] { display: flex !important; }
+  .fab { display: flex !important; z-index: 60 !important; }
+  .fab[hidden] { display: none !important; }
   /* .today-hero não é mais renderizado na view semana (substituído por .week-summary-card) */
   .section-header-meta, .section-pct { display: none !important; }
 
