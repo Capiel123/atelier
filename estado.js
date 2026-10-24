@@ -140,6 +140,8 @@ let dirty = false;
 let saveTmr = null;
 let recoveryNotice = null;
 let recoveryBlocked = false;
+let saveState = 'saved';
+const saveStateListeners = [];
 let skillsFilter = 'all';
 let earningsFilter = 'month';
 let historyFilter = '30d';
@@ -417,13 +419,37 @@ function migrate(raw) {
 }
 
 /* --- PERSISTÊNCIA --- */
+function setSaveState(state) {
+  if (saveState === state) return;
+  saveState = state;
+  saveStateListeners.forEach(fn => {try {fn(state);} catch(e) {}});
+}
+function onSaveState(fn) {saveStateListeners.push(fn);}
+function refreshSaveState() {
+  if (recoveryBlocked) {setSaveState('blocked'); return 'blocked';}
+  try {
+    const mainRaw = localStorage.getItem(LS_KEY);
+    if (mainRaw && S && JSON.stringify(S) === mainRaw) {setSaveState('saved'); return 'saved';}
+  } catch(e) {}
+  setSaveState('error'); return 'error';
+}
 function save() {
-  if (recoveryBlocked) return;
+  if (recoveryBlocked) {setSaveState('blocked'); return false;}
   dirty = true;
+  setSaveState('saving');
+  const prevModified = S.lastModified;
   S.lastModified = Date.now();
-  try {localStorage.setItem(LS_KEY, JSON.stringify(S));} catch(e) {toast('Erro ao salvar', true);}
+  try {localStorage.setItem(LS_KEY, JSON.stringify(S));}
+  catch(e) {
+    S.lastModified = prevModified;
+    setSaveState('error');
+    toast('Erro ao salvar', true);
+    return false;
+  }
+  setSaveState('saved');
   clearTimeout(saveTmr);
   saveTmr = setTimeout(() => {if (!dbDoc) return; dbDoc.set({json: JSON.stringify(S)}).catch(err => console.warn('Sync offline:', err));}, 1500);
+  return true;
 }
 function backupLocal() {try {localStorage.setItem(LS_BACKUP, JSON.stringify(S));} catch(e) {}}
 
@@ -459,7 +485,7 @@ function loadStateSafely() {
   }
   // Conteúdo ilegível ou em formato inválido: preservar o original antes de tudo
   if (!preserveCorrupt(raw)) {
-    recoveryBlocked = true; recoveryNotice = {type: 'blocked'};
+    recoveryBlocked = true; recoveryNotice = {type: 'blocked'}; setSaveState('blocked');
     return {state: seed(), mode: 'blocked'};
   }
   const snap = autoSnapshotRead();
@@ -472,7 +498,7 @@ function loadStateSafely() {
       }
     } catch(e) {}
   }
-  recoveryBlocked = true; recoveryNotice = {type: 'blocked'};
+  recoveryBlocked = true; recoveryNotice = {type: 'blocked'}; setSaveState('blocked');
   return {state: seed(), mode: 'blocked'};
 }
 function readCorruptContent() {try {return localStorage.getItem(CORRUPT_KEY);} catch(e) {return null;}}
@@ -507,13 +533,14 @@ function restoreCopy(kind, confirmed) {
   } catch(e) {}
   copy.state.lastModified = Date.now();
   try {localStorage.setItem(LS_KEY, JSON.stringify(copy.state));}
-  catch(e) {return {ok: false, error: 'storage'};}
+  catch(e) {refreshSaveState(); return {ok: false, error: 'storage'};}
   S = copy.state;
   recoveryBlocked = false;
   recoveryNotice = null;
   undoStack = [];
   dirty = true;
   try {autoSnapshotWrite();} catch(e) {}
+  refreshSaveState();
   return {ok: true, restoredAt: copy.ts};
 }
 function snapshot() {undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift();}

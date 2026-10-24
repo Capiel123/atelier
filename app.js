@@ -103,6 +103,19 @@ document.addEventListener('click', ev => {
       else {copyTxt(raw); toast('Conteúdo preservado copiado');}
       return;
     }
+    case 'authSendLink': {
+      const el = document.getElementById('authEmail');
+      const email = ((el && el.value) || '').trim();
+      if (!email) {toast('Informe seu e-mail', true); return;}
+      if (typeof authSendMagicLink === 'function') authSendMagicLink(email);
+      else toast('Autenticação indisponível', true);
+      return;
+    }
+    case 'authLogout': {
+      if (typeof authLogout === 'function') authLogout();
+      else toast('Autenticação indisponível', true);
+      return;
+    }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
     case 'toggleQueueCard': {
@@ -662,8 +675,8 @@ function doImport(text) {
     const migrated = migrate(parsed);
     if (!migrated) throw new Error('Estrutura inválida');
     recoveryBlocked = false; recoveryNotice = null;
-    S = migrated; applyTheme(); save(); autoSnapshotWrite(); render();
-    toast(wasBlocked ? 'Importado.' : 'Importado. Snapshot anterior em ' + LS_BACKUP);
+    S = migrated; applyTheme(); const ok = save(); autoSnapshotWrite(); render();
+    if (ok) toast(wasBlocked ? 'Importado.' : 'Importado. Snapshot anterior em ' + LS_BACKUP);
   } catch(e) {toast('JSON inválido: ' + e.message, true);}
 }
 
@@ -671,7 +684,8 @@ function doImport(text) {
 (function init() {
   const loaded = loadStateSafely();
   S = loaded.state;
-  if (loaded.mode !== 'blocked') {save(); autoSnapshotWrite();}
+  if (loaded.mode === 'blocked') setSaveState('blocked');
+  else {save(); autoSnapshotWrite();}
   applyTheme();
   lastSlot = currentEnergySlot();
   focusTargetMin = S.cfg.defaultFocus || 25;
@@ -733,28 +747,16 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     const p = document.getElementById('syncPill');
     if (!p) return;
     p.dataset.state = state;
-    const labels = { saving: 'Salvando…', saved: 'Salvo', error: 'Erro — faça backup', offline: 'Offline' };
+    const labels = { saving: 'Salvando…', saved: 'Salvo', error: 'Falha ao salvar', blocked: 'Bloqueado', offline: 'Offline' };
     p.querySelector('.sp-text').textContent = labels[state] || state;
   }
 
-  // Wrapper no save() para refletir o estado no "sync pill" do topo
-  if (typeof save === 'function') {
-    const _orig = save;
-    save = function () {
-      setSyncState('saving');
-      try {
-        _orig.apply(this, arguments);
-        setSyncState('saved');
-      } catch (e) {
-        setSyncState('error');
-        throw e;
-      }
-    };
-  }
-
-  window.addEventListener('online', () => setSyncState('saved'));
-  window.addEventListener('offline', () => setSyncState('offline'));
-  setTimeout(() => setSyncState(navigator.onLine ? 'saved' : 'offline'), 400);
+  // Indicador reflete o resultado real de save() (ver estado.js)
+  if (typeof onSaveState === 'function') onSaveState(setSyncState);
+  setSyncState(saveState);
+  window.addEventListener('online', () => refreshSaveState());
+  window.addEventListener('offline', () => {if (saveState === 'saved') setSyncState('offline');});
+  setTimeout(() => {if (navigator.onLine) refreshSaveState(); else if (saveState === 'saved') setSyncState('offline');}, 400);
 
   if (!isHttp || !('serviceWorker' in navigator)) return;
 

@@ -6,16 +6,18 @@
    ========================================================= */
 
 /* --- SYNC PILL (indicador de sincronização) ---
-   💡 Estados: saved / saving / error / offline. */
+   💡 Estados: saved / saving / error / blocked / offline. */
 .sync-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:var(--s1);border:1px solid var(--bd);border-radius:16px;font-size:10.5px;color:var(--mu);height: 34px; transition:opacity .3s,background .2s,border-color .2s,color .2s; cursor: pointer;}
 .sync-pill .sp-dot{width:6px;height:6px;border-radius:50%;background:var(--mu);flex:none;transition:background .2s;}
 .sync-pill[data-state="saved"] .sp-dot{background:var(--ok)}
 .sync-pill[data-state="saving"] .sp-dot{background:var(--wr);animation:pwaPulse 1s infinite}
 .sync-pill[data-state="error"] .sp-dot{background:var(--er)}
+.sync-pill[data-state="blocked"] .sp-dot{background:var(--wr)}
 .sync-pill[data-state="offline"] .sp-dot{background:var(--mu)}
 .sync-pill[data-state="saved"]{opacity:.65}
-.sync-pill[data-state="saving"],.sync-pill[data-state="error"],.sync-pill[data-state="offline"]{opacity:1}
+.sync-pill[data-state="saving"],.sync-pill[data-state="error"],.sync-pill[data-state="offline"],.sync-pill[data-state="blocked"]{opacity:1}
 .sync-pill[data-state="error"]{color:var(--er);border-color:var(--er);}
+.sync-pill[data-state="blocked"]{color:var(--wr);border-color:var(--wr);}
 @keyframes pwaPulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* --- BANNERS DE AVISO (backup e atualização) --- */

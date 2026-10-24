@@ -36,4 +36,4 @@ A prioridade é evoluir a aplicação real em passos pequenos, preservando dados
 5. Faça commit pequeno e descritivo depois da revisão humana; não publique/deploy automaticamente sem autorização.
 
 ## Estado versus roadmap
-O estado implementado e o plano futuro são diferentes. Supabase, autenticação, onboarding de três telas, aba de lembretes, diário de execução e funções futuras listadas em `docs/ROADMAP.md` não devem ser tratados como recursos já existentes.
+O estado implementado e o plano futuro são diferentes. Supabase, autenticação, onboarding de três telas, aba de lembretes e as demais funções futuras listadas em `docs/ROADMAP.md` não devem ser tratados como recursos já existentes. Existe um registro mínimo de trabalho por tarefa/dia em `S.workLogs` (Fase 5), mas o "diário de execução" completo do roadmap (duração, linha do tempo diária, progresso entregue separado) ainda não existe.

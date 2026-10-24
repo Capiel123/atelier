@@ -63,7 +63,7 @@ O JavaScript foi dividido em quatro arquivos. O conteúdo abaixo substitui o ant
 - `save()` serializa `S` no `localStorage`, atualiza `lastModified` e agenda eventual gravação remota em `dbDoc`, se existir.
 - O código opcional de `window.claude` em `app.js` tenta obter usuário/banco remoto e usa `data/users/<id>/app`. Ele depende de ambiente externo; a fonte local continua sendo o comportamento básico. Não documentar como Supabase.
 - O `syncPill` mostra `Salvo` após o save local ser chamado, logo é indicador de gravação local, não recibo de servidor.
-- `migrate()` escreve a versão atual no campo `s.v`. `VERSION` no snapshot é `14.2`, embora o ZIP tenha nome `atelier 15.2`; confirmar a versão pretendida.
+- `migrate()` escreve a versão atual no campo `s.v`. `VERSION` em `estado.js` é `15.9` (o valor `14.2` era erro de digitação, corrigido).
 
 ## 4. Fluxos essenciais
 
