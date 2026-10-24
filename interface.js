@@ -711,14 +711,15 @@ function viewEarnings() {
 }
 
 function viewHistory() {
-  const done = S.tasks.filter(t => t.done && t.doneAt).sort((a,b) => b.doneAt - a.doneAt);
+  const done = S.tasks.filter(t => t.done).sort((a,b) => (b.doneAt || 0) - (a.doneAt || 0));
   const now = Date.now();
   const cutoff = historyFilter === '7d' ? now - 7*86400000 : historyFilter === '30d' ? now - 30*86400000 : 0;
-  const filtered = done.filter(t => t.doneAt >= cutoff);
+  const filtered = done.filter(t => !t.doneAt || t.doneAt >= cutoff);
+  const unknown = filtered.filter(t => !t.doneAt);
   const logsByTask = {};
   (S.workLogs || []).forEach(l => { if (l.taskId) (logsByTask[l.taskId] = logsByTask[l.taskId] || []).push(l); });
   const byDay = {};
-  filtered.forEach(t => {const d = iso(new Date(t.doneAt)); if (!byDay[d]) byDay[d] = []; byDay[d].push({type:'task', t});});
+  filtered.filter(t => t.doneAt).forEach(t => {const d = iso(new Date(t.doneAt)); if (!byDay[d]) byDay[d] = []; byDay[d].push({type:'task', t});});
   // Registros preservados de tarefas removidas (snapshots)
   const taskIds = new Set(S.tasks.map(t => t.id));
   const orphanLogs = (S.workLogs || []).filter(l => l.taskId && !taskIds.has(l.taskId) && (l.ts || 0) >= cutoff).sort((a,b) => (b.ts || 0) - (a.ts || 0));
@@ -727,6 +728,8 @@ function viewHistory() {
   const totalMin = filtered.reduce((a,t) => a + taskMinutes(t), 0);
   const totalXp = filtered.filter(t => t.xpClaimed && !isPersonalSection(t)).reduce((a,t) => a + taskBaseXp(t), 0);
   const range = reportWeekRange();
+  const knownHtml = days.length ? days.map(d => `<div class="history-day"><div class="history-day-header"><b>${d.split('-').reverse().join('/')}</b><span class="msg" style="margin:0">${byDay[d].length} registro${byDay[d].length!==1?'s':''}</span></div>${byDay[d].map(entry => historyEntryHTML(entry, d, logsByTask)).join('')}</div>`).join('') : '';
+  const unknownHtml = unknown.length ? `<div class="history-day history-day--unknown"><div class="history-day-header"><b>Data desconhecida</b><span class="msg" style="margin:0">${unknown.length} registro${unknown.length!==1?'s':''} · concluídas sem data registrada</span></div>${unknown.map(t => historyEntryHTML({type:'task', t}, 'unknown', logsByTask)).join('')}</div>` : '';
   return `<div class="history-report-bar">
       <button data-a="reportWeekPrev" title="Semana anterior">◀</button>
       <button data-a="reportWeekToday">Esta semana</button>
@@ -736,7 +739,9 @@ function viewHistory() {
     </div>
     <div class="filter-bar" style="flex-wrap:wrap"><button data-a="histFilter" data-v="7d" class="${historyFilter==='7d'?'on':''}">7 dias</button><button data-a="histFilter" data-v="30d" class="${historyFilter==='30d'?'on':''}">30 dias</button><button data-a="histFilter" data-v="all" class="${historyFilter==='all'?'on':''}">Tudo</button></div>
     <div class="stats"><span>${filtered.length} tarefa${filtered.length!==1?'s':''}</span><span>Tempo: <b>${fmtMin(totalMin)}</b></span><span>XP: <b>${totalXp}</b></span></div>
-    ${days.length ? days.map(d => `<div class="history-day"><div class="history-day-header"><b>${d.split('-').reverse().join('/')}</b><span class="msg" style="margin:0">${byDay[d].length} registro${byDay[d].length!==1?'s':''}</span></div>${byDay[d].map(entry => historyEntryHTML(entry, d, logsByTask)).join('')}</div>`).join('') : '<div class="msg">Nenhuma tarefa concluída no período.</div>'}`;
+    ${knownHtml}
+    ${unknownHtml}
+    ${!days.length && !unknown.length ? '<div class="msg">Nenhuma tarefa concluída no período.</div>' : ''}`;
 }
 
 function historyEntryHTML(entry, dayStr, logsByTask) {

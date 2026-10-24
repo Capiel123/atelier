@@ -359,6 +359,7 @@ function buildWeeklyReport(startDate, endDate) {
   const start = new Date(startDate + 'T00:00:00');
   const end = new Date(endDate + 'T23:59:59.999');
   const done = S.tasks.filter(t => t.done && t.doneAt && t.doneAt >= start.getTime() && t.doneAt <= end.getTime());
+  const unknownTasks = S.tasks.filter(t => t.done && !t.doneAt);
 
   const logsByTask = {};
   (S.workLogs || []).forEach(l => { if (l.taskId) (logsByTask[l.taskId] = logsByTask[l.taskId] || []).push(l); });
@@ -409,8 +410,10 @@ function buildWeeklyReport(startDate, endDate) {
   const timeMinutes = doneTasks.reduce((a,it) => a + (it.timeMinutes || 0), 0);
   const withTime = doneTasks.filter(it => (it.timeMinutes || 0) > 0).length;
   const withoutTime = doneTasks.length - withTime;
+  // Concluídas sem data registrada: listadas à parte, nunca atribuídas a uma semana
+  const unknown = unknownTasks.map(t => ({id: t.id, kind: 'task', title: t.t, summary: (summaryFor(t) || {}).text || '', area: t.area || '', timeMinutes: taskMinutes(t)}));
 
-  return {startDate, endDate, projects, areas, metrics: {done: doneTasks.length, timeMinutes, withTime, withoutTime, orphanCount: orphans.length}};
+  return {startDate, endDate, projects, areas, unknown, metrics: {done: doneTasks.length, timeMinutes, withTime, withoutTime, orphanCount: orphans.length, unknownCount: unknown.length}};
 }
 function weeklyReportMarkdown(r) {
   const L = [];
@@ -442,12 +445,21 @@ function weeklyReportMarkdown(r) {
       L.push('');
     });
   }
+  if (r.unknown && r.unknown.length) {
+    L.push('## Concluídas sem data registrada');
+    L.push('');
+    L.push('_(Concluídas antes de o app registrar a data; não atribuídas a uma semana.)_');
+    L.push('');
+    r.unknown.forEach(it => L.push(line(it)));
+    L.push('');
+  }
   L.push('## Métricas do período');
   L.push('');
   L.push('- Tarefas concluídas: ' + r.metrics.done);
   L.push('- Tempo registrado: ' + fmtMin(r.metrics.timeMinutes));
   if (r.metrics.withoutTime) L.push('- ' + r.metrics.withoutTime + ' tarefa(s) concluída(s) sem tempo registrado.');
   if (r.metrics.orphanCount) L.push('- ' + r.metrics.orphanCount + ' registro(s) de tarefas removidas (preservados).');
+  if (r.metrics.unknownCount) L.push('- ' + r.metrics.unknownCount + ' tarefa(s) concluída(s) sem data registrada (fora do período).');
   L.push('');
   return L.join('\n');
 }
