@@ -40,6 +40,7 @@ document.addEventListener('click', ev => {
     case 'closeMore': hideMoreSheet(); return;
     case 'toggleQuickAdd': showQuickAdd = !showQuickAdd; render(); return;
     case 'toggleFilters': showFilters = !showFilters; render(); return;
+    case 'toggleWeekSummary': weekSummaryCollapsed = !weekSummaryCollapsed; render(); return;
     case 'setTheme': S.cfg.theme = id; applyTheme(); save(); render(); toast('Tema: ' + THEMES[id].n); return;
     case 'setCustomAccent': return;
     case 'clearCustomAccent': S.cfg.accentColor = null; applyTheme(); save(); render(); toast('Accent do tema restaurado'); return;

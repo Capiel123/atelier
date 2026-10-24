@@ -47,6 +47,30 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .today-hero .th-stats b{color:var(--tx);font-variant-numeric:tabular-nums}
 .today-hero .th-stats span { background: var(--s2); padding: 2px 8px; border-radius: 6px;}
 
+/* --- CARD DE RESUMO SEMANAL UNIFICADO --- */
+.week-summary-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:10px 12px 8px;margin-bottom:12px}
+.week-summary-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.week-summary-day .th-day{font-size:17px;font-weight:700;color:var(--ac);text-transform:capitalize}
+.week-summary-day .th-date{color:var(--mu);font-size:11px;margin-left:6px}
+.week-summary-card .th-stats{display:flex;gap:6px;font-size:11px;color:var(--mu);flex-wrap:wrap;justify-content:flex-end}
+.week-summary-card .th-stats b{color:var(--tx);font-variant-numeric:tabular-nums}
+.week-summary-card .th-stats span{background:var(--s2);padding:2px 7px;border-radius:6px}
+.week-summary-card .bar{margin-bottom:6px}
+.week-summary-sections{display:flex;gap:12px;font-size:11px;color:var(--mu);flex-wrap:wrap;margin-top:2px}
+.week-summary-sections b{color:var(--tx)}
+.week-summary-sections .wss-sub{opacity:.7}
+
+/* --- TOGGLE DE REGIÃO RECOLHÍVEL --- */
+.week-toggle-btn{display:none} /* oculto por padrão — mobile ativa via responsivo.css */
+
+/* --- REGIÃO RECOLHÍVEL (conteúdo abaixo dos dias) --- */
+.week-collapsible{} /* base sem restrição — mobile pode ocultar */
+
+/* --- CONTROLES FILTROS + AUTO (linha unificada) --- */
+.week-controls-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.week-ctrl-btn{padding:5px 10px;font-size:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;cursor:pointer;color:var(--tx);display:inline-flex;align-items:center;gap:5px;user-select:none}
+.week-ctrl-btn.on{background:var(--ac);color:#000;border-color:var(--ac)}
+
 /* --- SELETOR DE DIAS DA SEMANA --- */
 .days{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
 .days button{flex:1;min-width:60px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;position:relative;background:var(--s1); border-radius:8px;}

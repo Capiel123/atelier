@@ -156,6 +156,8 @@ let selectedTaskId = null;
 let mobileFiltersOpen = false;
 let showQuickAdd = false;
 let showFilters = false;
+// Controla região recolhível abaixo dos dias no mobile; começa recolhida
+let weekSummaryCollapsed = typeof window !== 'undefined' && window.innerWidth <= 640;
 const openEdits = new Set();
 
 /* --- APLICAR TEMA (usa THEMES) --- */

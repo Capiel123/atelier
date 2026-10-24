@@ -1,215 +1,97 @@
-# Documentação do CSS — App de Gestão de Tarefas
+# Guia de CSS — Ateliê (estrutura atual)
 
-## 1. Mapa do Código (por funcionalidade / tela)
+Este arquivo substitui o mapa antigo que tratava os estilos como um conjunto menos fragmentado. No snapshot analisado, há **cinco folhas de estilo**, carregadas nesta ordem em `index.html`:
 
-### 🎨 Fundação / Base
-- `:root` — variáveis de cor e espaçamento
-- `html`, `*`, `body` — reset, tipografia, fundo
-- `h3`, `h4` — títulos de seção
-- `button`, `input`, `select`, `textarea` — estilos genéricos de controles
-- `details`, `summary` — elementos colapsáveis
+```html
+<link rel="stylesheet" href="./base.css">
+<link rel="stylesheet" href="./layout.css">
+<link rel="stylesheet" href="./componentes.css">
+<link rel="stylesheet" href="./paginas.css">
+<link rel="stylesheet" href="./responsivo.css">
+```
 
-### 🏠 Estrutura da Página
-- `.wrap` — largura máxima do conteúdo
-- `header`, `.header-right`, `.logo`, `.logo img`, `.logo-text` — topo
-- `.search-btn` — botão de busca
-- `#lvl` (e `.lb`) — barra de nível no topo
-- `.timer` — cronômetro no topo
-- `.backup-banner`, `.update-banner` — banners informativos
+A ordem define parte da cascata. `responsivo.css` contém refinamentos posteriores que sobrescrevem regras anteriores conforme a viewport.
 
-### 🧭 Navegação
-- `#nav` — navegação desktop
-- `.bottom-nav` — navegação mobile (fixa no rodapé)
-- `.more-sheet`, `.more-menu` — menu "mais" no mobile
+## Mapa por arquivo
 
-### ☀️ Tela "Hoje"
-- `.today-hero` — cabeçalho do dia
-- `.days` — seletor de dias da semana
-- `.energy-row`, `.energy-pills` — nível de energia
-- `.next-card` — próximo compromisso
-- `.bar`, `.fill` — barra de progresso do dia
-- `.fab` — botão flutuante de adicionar (mobile)
+### `base.css` — fundação global
 
-### ✅ Lista de Tarefas
-- `.card` (+ variantes: `.done`, `.compact`, `.selected`, `.highlight`)
-- `.chk` (checkbox circular), `.chk.s` (versão pequena)
-- `.row`, `.ti`, `.tt`, `.tdesc`, `.meta`, `.tag`, `.dot`, `.tm`, `.mini`
-- `.acts` — ações do card
-- `.subs`, `.sub`, `.subs-badge` — subtarefas
-- `.section-header`, `.section-progress` — cabeçalho de grupo
-- `.tasks-header`, `.tasks-header-actions`, `.list-actions`
-- `.filter-bar`, `.labels-filter`, `.tag-filter` — filtros
-- `.label-pill`, `.tag-pill`, `.type-icon`, `.score-badge`, `.color-dot`
-- `.postpone-badge`, `.parkinson-badge`, `.streak-badge`
+Responsável por tokens CSS padrão (`:root`), dimensões de base, `box-sizing`, corpo, tipografia geral, botões, inputs, selects, textareas, `details`, `summary` e títulos. É o arquivo de maior alcance: mudanças aqui podem alterar todas as telas.
 
-### 📝 Formulários
-- `.form` (grid responsivo de campos)
-- `.skills-box` (lista de checkboxes)
-- `.grid-cal`, `.cd` (minicalendário)
-- `.big`, `.badge`
+Use para: tokens globais novos, reset, estilos universais e controles padrão.
 
-### 📊 KPIs e Gráficos
-- `.kpi-grid`, `.kpi`
-- `.bar-chart`
-- `.chart`, `.chart-row`
-- `.proj-progress`
-- `.heatmap`, `.hm-cell`, `.hm-legend`
+Evite: estilos exclusivos de uma única tela e ajustes específicos de mobile.
 
-### 🔁 Revisão
-- `.review-section` e filhos
+### `layout.css` — estrutura da página
 
-### ⏱️ Modo Foco
-- `.focus-overlay`, `.focus-content`, `.focus-circle`, `.focus-btn` …
+Contém o contêiner principal, header/logo, botão de busca, barra de nível, widget do timer, navegação principal, cabeçalho/seletor de dias, áreas de título e navegação inferior/menu “Mais” mobile.
 
-### ⌨️ Modais
-- `.shortcuts-modal` (atalhos)
-- `.search-modal` (busca global)
+Use para: geometria do app, posicionamento estrutural, header e navegação.
 
-### 💼 Jobs / Prospects
-- `.job-card`, `.job-title`, `.stage-badge`, `.job-kpis`, `.prospect-cta`
+### `componentes.css` — componentes reutilizáveis
 
-### 👥 Contatos
-- `.contact-card` (+ estados `.overdue`, `.due`, `.waiting`, `.snoozed`)
-- `.contact-score` (+ `.hot`, `.warm`, `.cold`)
-- `.waiting-pill`, `.snoozed-pill`, `.response-rate`
-- `.quick-actions`, `.contact-kpis`
-- `.view-toggle` (lista / órbita)
-- `.orbit-wrap`, `.orbit-svg` — visualização orbital
-- `.interaction-row` — histórico de interações
+Agrupa estilos de elementos que aparecem em várias views: indicador `sync-pill`, banners, seletor de energia, card de próximo compromisso, formulário rápido, cards/checkboxes/ações, subtarefas, formulários, mini-calendário, toasts, filtros, badges, KPIs, gráficos, heatmap, toggles e pílulas de habilidades/labels.
 
-### 🌐 Rede / Network
-- `.network-card`, `.network-kpi`, `.depth-row`
-- `.contact-mini`, `.week-inter`, `.birthday-row`
+Use para: uma peça reutilizável usada em várias telas, sem ser específica de uma página.
 
-### 🎮 XP / Gamificação
-- `.xp-hero`, `.skill-xp-row`
+### `paginas.css` — telas e recursos
 
-### 🎨 Temas
-- `.theme-grid`, `.theme-card`, `.theme-preview`, `.custom-accent-row`
+Contém regras específicas de revisão, modo foco, modal de atalhos, busca, vagas, contatos/rede, histórico, temas, configurações, áreas e lixeira. A lista exata de seletores deve ser confirmada no arquivo, pois o CSS evolui junto das views de `interface.js`.
 
-### 📜 Histórico
-- `.history-day`, `.history-row`, `.rate-badge`
+Use para: visual exclusivo de uma feature/tela, overlays ou blocos de configuração.
 
-### ⚙️ Configurações
-- `.client-card`, `.proj-row-line`
-- `.area-row`
-- `.trash-row`
-- `.section-group`
+### `responsivo.css` — breakpoints e refinamentos
 
-### 🍞 Feedback
-- `.toast` (+ `.on`, `.err`)
+Contém regras mobile (incluindo `max-width:640px`), desktop (`min-width:1024px`), fallback quando `backdrop-filter` não está disponível, área clicável de checkboxes, comportamento do FAB, redução de movimento via `prefers-reduced-motion` e refinamentos finais. Existem vários blocos media query separados; isso não deve ser consolidado por rotina sem provar que a cascata e o visual continuarão iguais.
 
-### 🎞️ Animações
-- `pwaPulse`, `focusFlashBg`, `fadeIn`, `v141up`, `pwaSlide`
+Use para: comportamento por viewport, adaptação mobile/desktop e preferências de acessibilidade.
 
-### 📱 Responsivo
-- `@media (max-width:640px)` (vários blocos)
-- `@media (min-width:1024px)`
-- `@media (hover:hover)`
-- `@media (prefers-reduced-motion:reduce)`
-- `@supports not (backdrop-filter:blur(4px))`
+## Tokens e temas
 
-### ✨ Camada de refinamento UX (v14.1 / v15 / v16)
-- Polimento de foco, transições, `:has()` para reordenar no mobile, ajustes finos.
+Os tokens padrão aparecem em `base.css`, mas `estado.js`/`applyTheme()` substitui dinamicamente parte deles a partir de `THEMES`:
 
----
+- `--bg`: fundo global.
+- `--s1`, `--s2`, `--s3`: níveis de superfície.
+- `--bd`: borda.
+- `--tx`: texto primário.
+- `--mu`: texto secundário/muted.
+- `--ac`: cor de destaque, ajustável pelo accent personalizado.
+- `--bu`: cor secundária/brand.
+- `--ok`, `--wr`, `--er`: estados semânticos (sucesso, alerta, erro).
+- `--chk-bg`, `--chk-bd`, `--chk-done`, `--chk-mark`: checkbox temático.
 
-## 2. Tabela de Variáveis (`:root`)
+No código recebido, `THEMES` define **11 temas**: Obsidiana (`obsidian`), Vampiro (`vampire`), Oculto (`occult`), Noir (`noir`), Cianótico (`cyanotic`), Tóxico (`toxic`), Brasa (`ember`), Luar (`moonlight`), Rosa Morta (`rose`), Abismo (`abyss`) e Osso (`bone`). A logo é configurável à parte.
 
-| Variável | Valor | Onde é usada (exemplos) |
-|---|---|---|
-| `--bg` | `#0e0d11` | `body`, `.focus-overlay`, `.chk` mobile, `.hm-cell` vazia |
-| `--s1` | `#17151c` | Header, cards, `#nav`, `.kpi`, `.filter-bar`, `.list-actions` |
-| `--s2` | `#1f1c26` | Inputs base, `.tag`, `.mini`, `.badge`, `.stats` pills |
-| `--s3` | `#26222f` | Hover de `.skills-box`, `.view-toggle.on`, `.energy-pills.active` |
-| `--bd` | `#2c2835` | Bordas de quase tudo |
-| `--tx` | `#ece8e1` | Texto principal |
-| `--mu` | `#9a94a3` | Texto secundário / muted |
-| `--ac` | `#d4a84b` | Logo, botões primários, `.fill`, `.hm-cell.lvl-4`, foco |
-| `--bu` | `#9c3355` | `.add button`, `.focus-btn.pause`, `.late`, gradiente de barra |
-| `--ok` | `#4fb3a2` | `.sync-pill[saved]`, dots de dia, `.review-section.done` |
-| `--wr` | `#e0a33b` | Avisos, `.soon`, `.postpone-badge.stuck`, `energy[med]` |
-| `--er` | `#e0626a` | Erros, `.late`, `.sync-pill[error]`, `.response-rate.bad` |
-| `--cm` | `#e0a33b` | **Não usada em nenhum lugar** (mesma cor de `--wr`) |
-| `--pe` | `#a08fc0` | **Não usada em nenhum lugar** |
-| `--c` | *(definida por JS via inline style)* | Cor contextual do card (borda esquerda, progresso) |
-| `--lc` | *(definida por JS via inline style)* | Cor contextual de `.label-pill` |
-| `--r` | `12px` | Raio padrão |
-| `--sh` | `0 6px 18px #0007` | Sombra de elementos flutuantes |
-| `--ease` | `cubic-bezier(.2,.8,.2,1)` | Curva de animação padrão |
-| `color-scheme` | `dark` | Força tema escuro em controles nativos |
+Ao criar seletor visual ou componente, usar os tokens quando a cor deve acompanhar o tema. Evitar cores hardcoded em elementos gerais; cores hardcoded podem continuar apropriadas para semântica específica (por exemplo, categorias codificadas por cor), desde que isso seja intencional.
 
-> 💡 As variáveis `--c` e `--lc` **não ficam no `:root`** — são injetadas via JavaScript em cada card/label para colorir individualmente.
+## Como decidir onde colocar uma regra
 
----
+1. Aplica a tudo? `base.css`.
+2. Controla o esqueleto/posicionamento global? `layout.css`.
+3. É um componente comum entre telas? `componentes.css`.
+4. Só existe numa tela/recurso específico? `paginas.css`.
+5. Só muda por tamanho de viewport ou preferência de movimento? `responsivo.css`.
 
-## 3. Relação de Dependências (classe → classe base)
+Se a regra afeta um componente comum apenas em mobile, a regra base pode ficar em `componentes.css` e seu override em `responsivo.css`.
 
-> "X depende de Y" significa: **sem a classe base Y, o modificador X não funciona visualmente**.
+## Procedimento para uma alteração de estilo
 
-| Modificador | Depende de |
-|---|---|
-| `.card.done` / `.compact` / `.selected` / `.highlight` / `.next-card-in` | `.card` |
-| `.chk.s` | `.chk` |
-| `.sub.run` | `.sub` |
-| `.sync-pill[data-state="saved" \| "saving" \| "error" \| "offline"]` | `.sync-pill` |
-| `.energy-pills button[data-e="low" \| "med" \| "high"].active` | `.energy-pills button.active` |
-| `.label-pill.on` (em `.labels-filter`) | `.label-pill` |
-| `.type-icon.criativa` / `.profunda` / `.admin` / … | `.type-icon` |
-| `.score-badge.hot` / `.warm` / `.cold` | `.score-badge` |
-| `.contact-card.overdue` / `.due` / `.waiting` / `.snoozed` | `.contact-card` |
-| `.contact-score.hot` / `.warm` / `.cold` | `.contact-score` |
-| `.postpone-badge.stuck` / `.urgent` | `.postpone-badge` |
-| `.hm-cell.lvl-1` / `lvl-2` / `lvl-3` / `lvl-4` / `future` / `today` | `.hm-cell` |
-| `.job-card.terminal` | `.job-card` |
-| `.theme-card.on` | `.theme-card` |
-| `.more-sheet.open` | `.more-sheet` |
-| `.toast.on` / `.toast.err` | `.toast` |
-| `.area-row.archived` | `.area-row` |
-| `#lvl .lb` / `#lvl .lb div` | `#lvl` |
-| `.timer.run` | `.timer` |
-| `.bar i.lit` | `.bar i` |
-| `.view-toggle button.on` | `.view-toggle button` |
-| `.section-header-title` / `-meta` / `-right` / `-progress` / `-pct` | `.section-header` |
-| `.card.compact:hover` | `.card.compact` |
-| `.more-sheet-panel button.on` | `.more-sheet-panel` |
-| `.review-section.done` | `.review-section` |
+1. Encontre a classe no HTML template de `interface.js`.
+2. Procure o seletor nos cinco arquivos, não apenas no arquivo esperado.
+3. Entenda ordem, especificidade, estados hover/active/disabled e regras mobile.
+4. Faça alteração mínima no arquivo de responsabilidade correta.
+5. Confira desktop e mobile, pelo menos dois temas com cores diferentes e conteúdo curto/longo.
+6. Verifique clipping/overflow, foco de teclado, contraste e `prefers-reduced-motion` se houver animação.
+7. Remova regra antiga somente depois de confirmar ausência de usos.
 
----
+## Fragilidades a observar
 
-## 4. Análise de Limpeza
+- `responsivo.css` tem vários blocos para o mesmo breakpoint. A ordem pode ser deliberada; não consolidar automaticamente.
+- Overrides com `!important` e seletores mais específicos podem ser necessários hoje, mas cada adição aumenta a dificuldade de manutenção.
+- Um estilo visual baseado em cor hardcoded pode não acompanhar temas customizados.
+- Mudanças em `base.css` ou tokens devem ser testadas no aplicativo inteiro, não só numa tela.
+- Depois de publicar alteração no CSS, conferir `CACHE_VERSION` e o teste em PWA instalada.
 
-### 🧹 Variáveis não usadas
-- **`--cm: #e0a33b`** → idêntica a `--wr`. Nenhuma ocorrência de `var(--cm)` no arquivo.
-- **`--pe: #a08fc0`** → nenhuma ocorrência de `var(--pe)`.
+## Revisão da documentação antiga
 
-### 🔁 Seletores duplicados / repetidos
-- `.days button` aparece **duas vezes** (base + `@media(max-width:640px)` V15).
-- `.days button.on` idem.
-- `.today-hero` idem (base + V15 mobile).
-- `.card` idem (base + mobile V16 com `border-left-width:4px`).
-- `.chk` / `.chk.s` idem (base + mobile V14/V16).
-- Existem **4 blocos `@media (max-width:640px)`** separados — podem ser fundidos em um só.
-- Existem **2 blocos `@media (min-width:1024px)`** — podem ser fundidos.
-- Existem **2 blocos `@media (hover:hover)`** (um deles isolado) — podem ser fundidos.
-
-### ⚠️ Propriedades conflitantes (intencionais ou não)
-- `.card { padding: 14px }` vs `.card.compact { padding: 12px 14px }` → o compact sobrescreve, está OK.
-- `.today-hero .th-stats` → **renderizado** no desktop, **oculto** no mobile (V16 com `display:none !important`).
-- `.list-actions` → **renderizado** no desktop, **oculto** no mobile (V16).
-- `.fab` → `display:none` (padrão), `display:flex` no mobile (V16), e `.fab[hidden]` recebe `display:flex !important` no mobile — **a lógica de "esconder o FAB" foi anulada no mobile**, provavelmente proposital, mas vale revisar.
-- `.chk` recebe `border:1.5px solid` **e** `background:var(--bg)` no mobile, sobrescrevendo o estilo base — intencional, mas frágil (depende de `!important`).
-
-### 🗑️ Possível código em desuso
-- `.backup-banner` — presente mas não encontrei referência em outras regras. Verificar uso.
-- `.calib-block`, `.calib-headline` — parecem de uma feature antiga de "calibração". Verificar uso.
-- `.skill-xp-row`, `.network-card`, `.orbit-wrap`, `.theme-*`, `.history-*`, `.trash-row` — **provavelmente ativos** (telas específicas), mas confirmar com a renderização.
-- `.backup-banner button:last-child` — usado para botão de dispensar. OK.
-- `.big` — usado apenas 1 vez; conferir se ainda aparece no HTML.
-
-### 💡 Oportunidades de simplificação (sem alterar visual)
-1. Unificar os 4 blocos `@media(max-width:640px)` em **1 bloco único no fim**.
-2. Remover `--cm` e `--pe`.
-3. Consolidar `.chk` / `.chk.s` no mobile (o `!important` pode sair se a ordem for correta).
-4. Reaproveitar `.big`/`.badge` se não houver uso real.
-5. Migrar todos os `!important` para regras fora de `!important` (quando a ordem de cascata permitir).
+Este guia substitui a descrição antiga que tratava seletores/tokens em grandes blocos funcionais sem enfatizar a divisão atual em cinco arquivos. Ele não lista todo seletor individual, porque isso envelhece rapidamente; para localizar uma classe específica, faça busca global no repositório.

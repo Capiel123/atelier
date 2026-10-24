@@ -191,35 +191,52 @@ function viewWeek() {
   const quickAddHtml = showQuickAdd ? adder(day) : `<div class="list-actions"><button data-a="toggleQuickAdd">+ Adicionar Tarefa</button></div>`;
   const filtersHtml = showFilters ? filterBar() : '';
 
-  return `<div class="today-hero">
-    <div><span class="th-day">${DAYS_FULL[day]}</span><span class="th-date">${today.split('-').reverse().join('/')}</span></div>
-    <div class="th-stats">
-      <span>Feitas <b>${done}</b>/${total}</span>
-      <span>Est. <b class="${full?'wr':''}">${fmtMin(workProg.totalWeight)}</b></span>
-      <span>Gasto <b>${fmtMin(workSpent)}</b></span>
+  // Card de resumo unificado: today-hero + stats pessoal/compromisso + barra de progresso
+  const sectionStatsHtml = (commitmentTasks.length || personalTasks.length) ? `
+    <div class="week-summary-sections">
+      ${commitmentTasks.length ? `<span>${SECTION_META.commitment.icon} Compromissos: <b>${commitmentProg.pct}%</b> <span class="wss-sub">(${commitmentTasks.filter(t=>t.done).length}/${commitmentTasks.length})</span></span>` : ''}
+      ${personalTasks.length ? `<span>${SECTION_META.personal.icon} Pessoal: <b>${personalProg.pct}%</b> <span class="wss-sub">(${personalTasks.filter(t=>t.done).length}/${personalTasks.length})</span></span>` : ''}
+    </div>` : '';
+
+  const summaryCard = `<div class="week-summary-card">
+    <div class="week-summary-top">
+      <div class="week-summary-day"><span class="th-day">${DAYS_FULL[day]}</span><span class="th-date">${today.split('-').reverse().join('/')}</span></div>
+      <div class="th-stats">
+        <span>Feitas <b>${done}</b>/${total}</span>
+        <span>Est. <b class="${full?'wr':''}">${fmtMin(workProg.totalWeight)}</b></span>
+        <span>Gasto <b>${fmtMin(workSpent)}</b></span>
+      </div>
     </div>
-  </div>
-    ${showReviewHint ? `<div class="warn" style="border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 10%,var(--s1));padding:8px 10px;border-radius:8px;font-size:12px;margin-bottom:8px"><b style="color:var(--ac)">É dia de revisão semanal.</b> <a href="#" data-a="tab" data-t="review" style="color:var(--ac);font-weight:700">Abrir →</a></div>` : ''}
-       <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>t.done).length}/${a.length}</small></button>`;}).join('')}</div>
     ${bar(workProg.pct, total ? `${workTasks.filter(t=>t.done).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', workProg.pct>=100 ? 'Trabalho fechado.' : workProg.pct>=50 ? 'Embalou.' : workProg.pct>0 ? 'Primeira vitória.' : 'Comece pequeno.')}
-    <div class="energy-row"><span class="energy-label">${slotLabel}:</span><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${e.icon} ${e.n}</button>`).join('')}</div></div>
+    ${sectionStatsHtml}
+  </div>`;
+
+  // Controles: Filtros + Auto agrupados (mobile: mesma linha)
+  const controlsRow = `<div class="week-controls-row">
+    <button data-a="toggleFilters" class="week-ctrl-btn${showFilters?' on':''}">🔍 Filtros</button>
+    <label class="auto-prio-label week-ctrl-btn"><input type="checkbox" id="autoPriorityToggle" ${S.cfg.autoPriority?'checked':''}><span>⭐ Auto</span></label>
+  </div>`;
+
+  // Toggle para recolher/expandir a região abaixo dos dias (mobile)
+  const collapsed = weekSummaryCollapsed;
+  const toggleBtn = `<button class="week-toggle-btn" data-a="toggleWeekSummary" aria-expanded="${!collapsed}" aria-controls="weekCollapsible">${collapsed ? '▾ Ver resumo e filtros' : '▴ Ocultar'}</button>`;
+
+  return `${summaryCard}
+    ${showReviewHint ? `<div class="warn" style="border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 10%,var(--s1));padding:8px 10px;border-radius:8px;font-size:12px;margin-bottom:8px"><b style="color:var(--ac)">É dia de revisão semanal.</b> <a href="#" data-a="tab" data-t="review" style="color:var(--ac);font-weight:700">Abrir →</a></div>` : ''}
+    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>t.done).length}/${a.length}</small></button>`;}).join('')}</div>
+    ${toggleBtn}
+    <div class="week-collapsible${collapsed?' week-collapsible--hidden':''}" id="weekCollapsible">
+      <div class="energy-row"><span class="energy-label">${slotLabel}:</span><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${e.icon} ${e.n}</button>`).join('')}</div></div>
       ${nextCard}
-    ${(commitmentTasks.length || personalTasks.length) ? `<div style="display:flex;gap:16px;font-size:11.5px;color:var(--mu);margin:4px 2px 10px;flex-wrap:wrap">
-      ${commitmentTasks.length ? `<span>${SECTION_META.commitment.icon} Compromissos: <b style="color:var(--tx)">${commitmentProg.pct}%</b> <span style="opacity:.7">(${commitmentTasks.filter(t=>t.done).length}/${commitmentTasks.length})</span></span>` : ''}
-      ${personalTasks.length ? `<span>${SECTION_META.personal.icon} Pessoal: <b style="color:var(--tx)">${personalProg.pct}%</b> <span style="opacity:.7">(${personalTasks.filter(t=>t.done).length}/${personalTasks.length})</span></span>` : ''}
-    </div>` : ''}
-
-    ${quickAddHtml}
-
-    ${filtersHtml}
-
+      ${quickAddHtml}
+      ${filtersHtml}
+      ${controlsRow}
+    </div>
     <div class="tasks-header">
       <h3 style="margin:0">Tarefas <span class="count" id="taskCount"></span></h3>
       <div class="tasks-header-actions" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button data-a="toggleFilters" class="${showFilters?'on':''}" style="padding:4px 8px;font-size:12px;background:${showFilters?'var(--ac)':'var(--s2)'};color:${showFilters?'#000':'var(--tx)'};border:1px solid ${showFilters?'var(--ac)':'var(--bd)'}; border-radius: 6px;">🔍 Filtros</button>
         <button data-a="expandAll" style="padding:4px 8px;font-size:12px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;" title="Expandir todos">⊞ Expandir</button>
         <button data-a="collapseAll" style="padding:4px 8px;font-size:12px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;" title="Recolher todos">⊟ Recolher</button>
-        <label class="auto-prio-label" style="margin-left:8px"><input type="checkbox" id="autoPriorityToggle" ${S.cfg.autoPriority?'checked':''}><span>⭐ Auto</span></label>
       </div>
     </div>
     <div id="taskList">${renderFilteredTasks()}</div>`;

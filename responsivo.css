@@ -118,6 +118,97 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 /* Respeita usuários que preferem menos animação */
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
+/* =========================================================
+   V17 — Card de resumo unificado + região recolhível (mobile)
+   ========================================================= */
+
+/* Desktop: toggle invisível, conteúdo sempre expandido */
+@media(min-width:641px){
+  .week-toggle-btn{display:none!important}
+  .week-collapsible--hidden{display:block!important}
+  /* Filtros e Auto ficam no tasks-header no desktop;
+     a .week-controls-row fica visível mas compacta */
+  .week-controls-row{margin-bottom:6px}
+}
+
+@media(max-width:640px){
+  /* ---- Card de resumo unificado ---- */
+  .week-summary-card{padding:8px 10px 6px;margin-bottom:8px}
+  .week-summary-day .th-day{font-size:15px!important}
+  .week-summary-day .th-date{font-size:10px}
+  .week-summary-card .th-stats span{font-size:10px!important;padding:1px 5px!important}
+  .week-summary-card .bar{height:14px!important;margin-bottom:4px!important}
+  .week-summary-card .bar span{font-size:9px!important}
+  .week-summary-sections{gap:8px;font-size:10.5px;margin-top:3px}
+
+  /* ---- Botão de toggle ---- */
+  .week-toggle-btn{
+    display:flex;
+    width:100%;
+    justify-content:center;
+    align-items:center;
+    gap:4px;
+    padding:5px 0;
+    font-size:11.5px;
+    color:var(--mu);
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--bd);
+    border-radius:0;
+    margin-bottom:0;
+    cursor:pointer;
+    letter-spacing:.02em;
+    min-height:34px;
+  }
+  .week-toggle-btn:active{color:var(--ac)}
+
+  /* ---- Região recolhível ---- */
+  .week-collapsible{display:block}
+  .week-collapsible--hidden{display:none!important}
+
+  /* ---- Controles: Filtros + Auto lado a lado ---- */
+  .week-controls-row{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    flex-wrap:nowrap;
+    margin-bottom:10px;
+    padding:0 2px;
+  }
+  .week-ctrl-btn{
+    flex:1;
+    justify-content:center;
+    padding:7px 8px;
+    font-size:12px;
+    min-height:38px;
+  }
+  /* Auto herda o estilo de week-ctrl-btn */
+  .week-ctrl-btn.auto-prio-label{
+    background:var(--s2);
+    border:1px solid var(--bd);
+    border-radius:8px;
+    color:var(--tx);
+    font-size:12px;
+    padding:7px 8px;
+    min-height:38px;
+  }
+
+  /* V16 já ordenava os elementos; ajustamos as ordens para o novo markup */
+  #app:has(.week-summary-card) {
+    display:flex;
+    flex-direction:column;
+  }
+  #app:has(.week-summary-card) > * { order:5; }
+  /* Aviso de revisão semanal (.warn inline) aparece no topo */
+  #app:has(.week-summary-card) > .warn { order:0!important; margin-bottom:6px; }
+  #app:has(.week-summary-card) > .week-summary-card { order:1!important; }
+  #app:has(.week-summary-card) > .days             { order:2!important; }
+  #app:has(.week-summary-card) > .week-toggle-btn  { order:3!important; margin-top:0; }
+  #app:has(.week-summary-card) > .week-collapsible { order:4!important; }
+  #app:has(.week-summary-card) > .tasks-header     { order:6!important; margin-bottom:0; border-bottom:none; }
+  #app:has(.week-summary-card) > #taskList         { order:10!important; }
+}
+
 /* Banner de "nova versão disponível" no mobile */
 @media(max-width:640px){
   .update-banner{font-size:12px;padding:6px 10px}
@@ -187,7 +278,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .list-actions { display: none !important; }
   .fab { display: flex !important; }
   .fab[hidden] { display: flex !important; }
-  .today-hero .th-stats { display: none !important; }
+  /* .today-hero não é mais renderizado na view semana (substituído por .week-summary-card) */
   .section-header-meta, .section-pct { display: none !important; }
 
   .card {
@@ -202,37 +293,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     color: var(--tx) !important;
     opacity: 0.6;
   }
-
-  /* Reordena os blocos da tela "Hoje" usando flexbox
-     (o :has() garante que só aplica quando .today-hero existe) */
-  #app:has(.today-hero) {
-    display: flex;
-    flex-direction: column;
-  }
-  /* Ordem padrão dos filhos: 5 (meio) — cada um sobrescreve abaixo */
-  #app:has(.today-hero) > * { order: 5; }
-
-  #app:has(.today-hero) > .today-hero { order: 1 !important; }
-  #app:has(.today-hero) > .days { order: 2 !important; }
-  #app:has(.today-hero) > .bar { order: 3 !important; margin-top: 4px; }
-  #app:has(.today-hero) > .next-card { order: 4 !important; }
-  #app:has(.today-hero) > .tasks-header { order: 6 !important; margin-bottom: 0; border-bottom: none; }
-
-  /* Energia vira uma "cartela" colada embaixo do cabeçalho */
-  #app:has(.today-hero) > .energy-row {
-    order: 7 !important;
-    background: var(--s1);
-    padding: 8px 12px;
-    border-radius: 0 0 10px 10px;
-    border: 1px solid var(--bd);
-    border-top: none;
-    margin-top: 0;
-    margin-bottom: 12px;
-    justify-content: center;
-  }
-
-  #app:has(.today-hero) > .filter-bar { order: 8 !important; }
-  #app:has(.today-hero) > .labels-filter { order: 9 !important; }
-  #app:has(.today-hero) > #taskList { order: 10 !important; }
-  #app:has(.today-hero) > div:has(> #qa) { order: 9 !important; }
+  /* Bloco de reordenamento #app:has(.today-hero) removido em V17:
+     a view semana usa .week-summary-card e .week-collapsible agora.
+     As ordens são gerenciadas no bloco V17 via #app:has(.week-summary-card). */
 }
