@@ -1,0 +1,42 @@
+/* =========================================================
+   BASE.CSS
+   Fundação do app: variáveis de cor, reset, tipografia,
+   controles genéricos (botões, inputs, textos).
+   Mexer aqui afeta o site inteiro.
+   ========================================================= */
+
+/* --- PALETA E TOKENS DE DESIGN ---
+   💡 Para trocar a cor de destaque de todo o app, altere --ac aqui. */
+:root{
+  --bg:#0e0d11;--s1:#17151c;--s2:#1f1c26;--s3:#26222f;
+  --bd:#2c2835;--tx:#ece8e1;--mu:#9a94a3;
+  --ac:#d4a84b;--bu:#9c3355;
+  --ok:#4fb3a2;--wr:#e0a33b;--er:#e0626a;
+  --cm:#e0a33b;--pe:#a08fc0; /* ⚠ --cm e --pe não são usados no código */
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px)
+}
+
+/* Rolagem respeita notch/entalhe no topo em celulares */
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+
+/* --- ESTILO GLOBAL DO CORPO --- */
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 'DM Sans',system-ui,sans-serif;transition:background .3s ease}
+
+/* --- CONTROLES GENÉRICOS (botão, input, select, textarea) --- */
+button,input,select,textarea{font:inherit;color:inherit;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:6px 9px}
+button{cursor:pointer}button:hover{border-color:var(--ac)}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,textarea,select{width:100%}
+
+/* --- ELEMENTOS NATIVOS DE FORMULÁRIO --- */
+details{margin:4px 0}
+summary{cursor:pointer;color:var(--mu);font-size:12px;user-select:none;padding:2px 0}
+textarea{margin:6px 0;font-family:inherit;resize:vertical}
+
+/* --- TÍTULOS DE SEÇÃO --- */
+h3{margin:16px 0 8px;color:var(--ac);font-size:14px;letter-spacing:.03em}
+h3 .count{color:var(--mu);font-weight:400;font-size:12px}
+h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
