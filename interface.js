@@ -96,6 +96,15 @@ function goToSearchResult(tabName, target) {
 function renderBackupBanner() {
   const el = document.getElementById('backupBanner');
   if (!el) return;
+  if (recoveryNotice && recoveryNotice.type === 'blocked') {
+    el.innerHTML = `<div class="backup-banner"><span>Não foi possível ler os dados salvos neste navegador. O conteúdo original foi preservado e nada foi apagado. Para continuar, importe um backup em Config → Importar.</span><button data-a="tab" data-t="config">Abrir Config</button></div>`;
+    return;
+  }
+  if (recoveryNotice && recoveryNotice.type === 'recovered') {
+    const when = new Date(recoveryNotice.ts).toLocaleString('pt-BR');
+    el.innerHTML = `<div class="backup-banner"><span>Dados recuperados da cópia automática de segurança de ${when}. Se algo estiver faltando, importe seu backup mais recente.</span><button data-a="dismissRecovery" title="Ocultar">✕</button></div>`;
+    return;
+  }
   if (!shouldShowBackupReminder()) {el.innerHTML = ''; return;}
   const never = !S.cfg.lastBackupAt;
   const days = never ? 0 : Math.floor((Date.now() - S.cfg.lastBackupAt) / 86400000);
@@ -968,6 +977,10 @@ function viewConfig() {
   const themeCards = Object.entries(THEMES).map(([id, t]) => `<button class="theme-card ${id === currentTheme ? 'on' : ''}" data-a="setTheme" data-id="${id}"><div class="theme-swatch" style="background:${t.bg};border-bottom:1px solid ${t.bd}"><span class="ts-dot" style="background:${customAccent && id === currentTheme ? customAccent : t.ac};color:${customAccent && id === currentTheme ? customAccent : t.ac}"></span><span class="ts-bar" style="background:linear-gradient(90deg,${t.bu},${t.ac})"></span><span class="ts-dot" style="background:${t.bu};color:${t.bu}"></span></div><div class="theme-info"><div class="theme-name">${esc(t.n)}</div><div class="theme-desc">${esc(t.desc)}</div></div></button>`).join('');
   const customRow = `<div class="custom-accent-row"><span style="font-size:12px;color:var(--mu)">Accent customizado:</span><input type="color" value="${esc(customAccent || THEMES[currentTheme].ac)}" data-a="setCustomAccent"><button data-a="clearCustomAccent" ${customAccent ? '' : 'disabled'}>${customAccent ? 'Remover custom' : 'Usar padrão do tema'}</button>${customAccent ? `<span style="font-size:11px;color:var(--mu)">Ativo: ${esc(customAccent)}</span>` : ''}</div>`;
   const cur = S.cfg.primaryCurrency || 'BRL';
+  const snapCopy = readRestorableCopy('snapshot');
+  const prevCopy = readRestorableCopy('prev');
+  const corruptRaw = readCorruptContent();
+  const fmtCopyDate = ts => (typeof ts === 'number' && isFinite(ts)) ? new Date(ts).toLocaleString('pt-BR') : 'data desconhecida';
   return `
     <div class="section-group"><h3 style="margin-top:0">Aparência</h3><div class="msg" style="margin-bottom:10px">O tema altera fundo, superfícies e cores de destaque.</div>${renderThemePreview()}<div class="theme-grid">${themeCards}</div>${customRow}</div>
 
@@ -986,6 +999,13 @@ function viewConfig() {
     <div class="section-group"><h3 style="margin-top:0">Backup</h3><div class="msg">Último backup: ${S.cfg.lastBackupAt ? new Date(S.cfg.lastBackupAt).toLocaleString('pt-BR') : 'nunca'}</div><div class="warn" style="background:color-mix(in srgb,var(--wr) 15%,var(--s1));border:1px solid var(--wr);border-radius:8px;padding:8px 10px;font-size:12px;margin:8px 0"><b style="color:var(--wr)">Dados em localStorage.</b> Faça backups regulares.</div><textarea id="exp" rows="5" readonly>${esc(jsonStr)}</textarea><div class="acts"><button data-a="dl">Baixar JSON</button><button data-a="cpj">Copiar JSON</button></div></div>
 
     <div class="section-group"><h3 style="margin-top:0">Importar</h3><div class="form"><label class="full">Selecionar arquivo JSON<input type="file" id="importFileInput" accept=".json,application/json"></label></div><textarea id="imp" rows="4" placeholder="Ou cole o JSON do backup aqui" style="margin-top:8px"></textarea><div class="acts"><button data-a="imp">Importar texto colado</button></div><div class="msg">Snapshot do estado atual é salvo antes de substituir.</div></div>
+
+    <div class="section-group"><h3 style="margin-top:0">Restaurar cópias</h3>
+      ${snapCopy && !snapCopy.error ? `<div class="msg">Cópia automática de ${fmtCopyDate(snapCopy.ts)}.</div><div class="acts"><button data-a="restoreSnapshot">Restaurar cópia automática</button></div>` : (snapCopy && snapCopy.error ? '<div class="msg">A cópia automática existe, mas está inválida.</div>' : '<div class="msg">Nenhuma cópia automática disponível.</div>')}
+      ${prevCopy && !prevCopy.error ? `<div class="msg">Cópia anterior à importação de ${fmtCopyDate(prevCopy.ts)}.</div><div class="acts"><button data-a="restorePrev">Restaurar cópia anterior</button></div>` : (prevCopy && prevCopy.error ? '<div class="msg">A cópia anterior existe, mas está inválida.</div>' : '')}
+      ${corruptRaw ? `<div class="warn" style="background:color-mix(in srgb,var(--wr) 15%,var(--s1));border:1px solid var(--wr);border-radius:8px;padding:8px 10px;font-size:12px;margin:8px 0">Conteúdo preservado de uma leitura com problema. <b>Não é um backup válido</b> — use apenas para inspeção.</div><div class="acts"><button data-a="dlCorrupt">Baixar conteúdo preservado</button></div>` : ''}
+      <div class="msg">Restaurar substitui os dados atuais; uma cópia do estado atual é guardada antes.</div>
+    </div>
 
     <div class="section-group"><h3 style="margin-top:0">Estatísticas</h3><div class="stats"><span>Tarefas: <b>${S.tasks.length}</b></span><span>Projetos: <b>${alive(S.projects).length}</b></span><span>Clientes: <b>${alive(S.clients).length}</b></span><span>Vagas: <b>${alive(S.applications).length}</b></span><span>Contatos: <b>${alive(S.contacts).length}</b></span><span>Áreas: <b>${getAreas().length}</b></span><span>XP: <b>${Math.round(globalXp())}</b></span></div></div>`;
 }

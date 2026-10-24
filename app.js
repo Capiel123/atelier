@@ -68,6 +68,41 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'dismissBackup': S.cfg.backupReminderDismissedAt = Date.now(); save(); renderBackupBanner(); return;
+    case 'dismissRecovery': recoveryNotice = null; renderBackupBanner(); return;
+    case 'restoreSnapshot': {
+      const info = readRestorableCopy('snapshot');
+      if (!info || info.error) {toast('Cópia automática indisponível', true); return;}
+      const when = info.ts ? new Date(info.ts).toLocaleString('pt-BR') : 'data desconhecida';
+      if (!confirm(`Restaurar a cópia automática de ${when}?\n\nOs dados atuais serão substituídos. Uma cópia do estado atual será guardada antes.`)) return;
+      const res = restoreCopy('snapshot', true);
+      if (!res.ok) {
+        const msg = res.error === 'storage' ? 'Não foi possível gravar. Seus dados atuais foram mantidos.' : res.error === 'missing' ? 'A cópia não foi encontrada. Nada foi alterado.' : 'A cópia está inválida. Nada foi alterado.';
+        toast(msg, true); return;
+      }
+      applyTheme(); render(); toast('Cópia automática restaurada');
+      return;
+    }
+    case 'restorePrev': {
+      const info = readRestorableCopy('prev');
+      if (!info || info.error) {toast('Cópia anterior indisponível', true); return;}
+      const when = info.ts ? new Date(info.ts).toLocaleString('pt-BR') : 'data desconhecida';
+      if (!confirm(`Restaurar a cópia anterior à importação (${when})?\n\nOs dados atuais serão substituídos. Uma cópia do estado atual será guardada antes.`)) return;
+      const res = restoreCopy('prev', true);
+      if (!res.ok) {
+        const msg = res.error === 'storage' ? 'Não foi possível gravar. Seus dados atuais foram mantidos.' : res.error === 'missing' ? 'A cópia não foi encontrada. Nada foi alterado.' : 'A cópia está inválida. Nada foi alterado.';
+        toast(msg, true); return;
+      }
+      applyTheme(); render(); toast('Cópia anterior restaurada');
+      return;
+    }
+    case 'dlCorrupt': {
+      const raw = readCorruptContent();
+      if (!raw) {toast('Nada preservado', true); return;}
+      const fn = 'atelier-conteudo-preservado-' + iso(new Date()) + '.json';
+      if (downloadJSON(fn, raw)) toast('Conteúdo preservado baixado');
+      else {copyTxt(raw); toast('Conteúdo preservado copiado');}
+      return;
+    }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
     case 'toggleQueueCard': {
@@ -622,17 +657,21 @@ function doImport(text) {
     if (!text || !text.trim()) {toast('Nada', true); return;}
     const parsed = JSON.parse(text);
     if (!parsed.tasks || !parsed.projects) throw new Error('Estrutura inválida');
-    backupLocal();
+    const wasBlocked = recoveryBlocked;
+    if (!wasBlocked) backupLocal();
     const migrated = migrate(parsed);
-    S = migrated; applyTheme(); save(); render();
-    toast('Importado. Snapshot anterior em ' + LS_BACKUP);
+    if (!migrated) throw new Error('Estrutura inválida');
+    recoveryBlocked = false; recoveryNotice = null;
+    S = migrated; applyTheme(); save(); autoSnapshotWrite(); render();
+    toast(wasBlocked ? 'Importado.' : 'Importado. Snapshot anterior em ' + LS_BACKUP);
   } catch(e) {toast('JSON inválido: ' + e.message, true);}
 }
 
 /* --- INICIALIZAÇÃO DO APP --- */
 (function init() {
-  try {const raw = localStorage.getItem(LS_KEY); if (raw) S = JSON.parse(raw);} catch(e) {}
-  if (!S || !S.tasks) {S = seed(); save();} else {S = migrate(S); save();}
+  const loaded = loadStateSafely();
+  S = loaded.state;
+  if (loaded.mode !== 'blocked') {save(); autoSnapshotWrite();}
   applyTheme();
   lastSlot = currentEnergySlot();
   focusTargetMin = S.cfg.defaultFocus || 25;
@@ -641,11 +680,17 @@ function doImport(text) {
   // Se havia um timer em andamento antes do reload, retoma e avisa
   if (S.timer) {const elapsed = Math.round(timerElapsedSec() / 60); toast('Timer retomado: ' + elapsed + 'min'); renderTimer();}
   // Sincronização remota opcional (Claude DB) — degrada silenciosamente se indisponível
-  (async () => {
-    try {const c = window.claude; if (!c) return; const [u, d] = await Promise.all([c.use('user'), c.use('db')]); if (!u || !d) return; const id = await u.id(); if (!id) return; dbDoc = d.collection('data/users/' + id).doc('app'); const snap = await dbDoc.get(); if (snap.exists && snap.data().json && !dirty) {const remote = migrate(JSON.parse(snap.data().json)); if (remote) {S = remote; applyTheme(); save(); render();}}} catch(e) {}
-  })();
-  // Evita que o fetch remoto sobrescreva dados locais nos primeiros 500ms
-  setTimeout(() => {dirty = false;}, 500);
+  if (loaded.mode !== 'blocked') {
+    (async () => {
+      try {const c = window.claude; if (!c) return; const [u, d] = await Promise.all([c.use('user'), c.use('db')]); if (!u || !d) return; const id = await u.id(); if (!id) return; dbDoc = d.collection('data/users/' + id).doc('app'); const snap = await dbDoc.get(); if (snap.exists && snap.data().json && !dirty) {const remote = migrate(JSON.parse(snap.data().json)); if (remote) {S = remote; applyTheme(); save(); render();}}} catch(e) {}
+    })();
+    // Evita que o fetch remoto sobrescreva dados locais nos primeiros 500ms
+    setTimeout(() => {dirty = false;}, 500);
+  }
+  // Snapshot automático: ao abrir (acima), periodicamente e ao sair/ocultar a aba
+  setInterval(autoSnapshotWrite, 30 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {if (document.visibilityState === 'hidden') autoSnapshotWrite();});
+  window.addEventListener('pagehide', () => autoSnapshotWrite());
 })();
 
 /* --- API PÚBLICA (console para debug) --- */

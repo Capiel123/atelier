@@ -5,9 +5,12 @@
 // =========================================================
 
 /* --- VERSÃO E CHAVES DE ARMAZENAMENTO --- */
-const VERSION = 14.2;
+const VERSION = 15.9;
 const LS_KEY = 'atelier';
 const LS_BACKUP = 'atelier_backup_prev';
+const SNAP_KEY = 'atelier_auto_snapshot';
+const CORRUPT_KEY = 'atelier_corrupt';
+const RESTORE_GUARD_KEY = 'atelier_before_restore';
 const LEVEL_XP = 150;
 
 /* --- CONSTANTES DE DOMÍNIO (dados fixos do app) --- */
@@ -135,6 +138,8 @@ let cal = new Date();
 let dbDoc = null;
 let dirty = false;
 let saveTmr = null;
+let recoveryNotice = null;
+let recoveryBlocked = false;
 let skillsFilter = 'all';
 let earningsFilter = 'month';
 let historyFilter = '30d';
@@ -413,6 +418,7 @@ function migrate(raw) {
 
 /* --- PERSISTÊNCIA --- */
 function save() {
+  if (recoveryBlocked) return;
   dirty = true;
   S.lastModified = Date.now();
   try {localStorage.setItem(LS_KEY, JSON.stringify(S));} catch(e) {toast('Erro ao salvar', true);}
@@ -420,6 +426,96 @@ function save() {
   saveTmr = setTimeout(() => {if (!dbDoc) return; dbDoc.set({json: JSON.stringify(S)}).catch(err => console.warn('Sync offline:', err));}, 1500);
 }
 function backupLocal() {try {localStorage.setItem(LS_BACKUP, JSON.stringify(S));} catch(e) {}}
+
+/* --- SNAPSHOT AUTOMÁTICO E RECUPERAÇÃO SEGURA --- */
+function preserveCorrupt(raw) {try {localStorage.setItem(CORRUPT_KEY, raw); return true;} catch(e) {return false;}}
+function autoSnapshotRead() {
+  try {
+    const raw = localStorage.getItem(SNAP_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (!p || !p.state || !Array.isArray(p.state.tasks) || typeof p.ts !== 'number') return null;
+    return p;
+  } catch(e) {return null;}
+}
+function autoSnapshotWrite() {
+  // Só grava se o estado atual é idêntico ao que já está gravado no principal
+  if (!S || recoveryBlocked) return false;
+  try {
+    const mainRaw = localStorage.getItem(LS_KEY);
+    if (!mainRaw) return false;
+    const current = JSON.stringify(S);
+    if (current !== mainRaw) return false;
+    localStorage.setItem(SNAP_KEY, JSON.stringify({ts: Date.now(), state: S}));
+    return true;
+  } catch(e) {return false;}
+}
+function loadStateSafely() {
+  let raw = null; try {raw = localStorage.getItem(LS_KEY);} catch(e) {}
+  if (!raw) {return {state: seed(), mode: 'fresh'};}
+  let parsed = null; try {parsed = JSON.parse(raw);} catch(e) {}
+  if (parsed && Array.isArray(parsed.tasks)) {
+    try {const migrated = migrate(parsed); if (migrated) return {state: migrated, mode: 'normal'};} catch(e) {}
+  }
+  // Conteúdo ilegível ou em formato inválido: preservar o original antes de tudo
+  if (!preserveCorrupt(raw)) {
+    recoveryBlocked = true; recoveryNotice = {type: 'blocked'};
+    return {state: seed(), mode: 'blocked'};
+  }
+  const snap = autoSnapshotRead();
+  if (snap) {
+    try {
+      const migrated = migrate(snap.state);
+      if (migrated) {
+        recoveryNotice = {type: 'recovered', ts: snap.ts};
+        return {state: migrated, mode: 'recovered'};
+      }
+    } catch(e) {}
+  }
+  recoveryBlocked = true; recoveryNotice = {type: 'blocked'};
+  return {state: seed(), mode: 'blocked'};
+}
+function readCorruptContent() {try {return localStorage.getItem(CORRUPT_KEY);} catch(e) {return null;}}
+function readRestorableCopy(kind) {
+  let raw = null, ts = null;
+  if (kind === 'snapshot') {
+    let rawSnap = null; try {rawSnap = localStorage.getItem(SNAP_KEY);} catch(e) {}
+    if (!rawSnap) return null;
+    const s = autoSnapshotRead();
+    if (!s) return {error: 'invalid'};
+    raw = JSON.stringify(s.state); ts = s.ts;
+  } else {
+    try {raw = localStorage.getItem(LS_BACKUP);} catch(e) {return null;}
+    if (!raw) return null;
+  }
+  let parsed = null; try {parsed = JSON.parse(raw);} catch(e) {return {error: 'invalid'};}
+  if (!parsed || !Array.isArray(parsed.tasks)) return {error: 'invalid'};
+  let state = null; try {state = migrate(parsed);} catch(e) {return {error: 'invalid'};}
+  if (!state || !Array.isArray(state.tasks)) return {error: 'invalid'};
+  if (ts == null && typeof parsed.lastModified === 'number') ts = parsed.lastModified;
+  return {state, ts};
+}
+function restoreCopy(kind, confirmed) {
+  if (!confirmed) return {ok: false, cancelled: true};
+  const copy = readRestorableCopy(kind);
+  if (!copy) return {ok: false, error: 'missing'};
+  if (copy.error) return {ok: false, error: 'invalid'};
+  // Preserva o estado atual (se válido) antes de substituir
+  try {
+    const cur = localStorage.getItem(LS_KEY);
+    if (cur) {JSON.parse(cur); localStorage.setItem(RESTORE_GUARD_KEY, JSON.stringify({ts: Date.now(), raw: cur}));}
+  } catch(e) {}
+  copy.state.lastModified = Date.now();
+  try {localStorage.setItem(LS_KEY, JSON.stringify(copy.state));}
+  catch(e) {return {ok: false, error: 'storage'};}
+  S = copy.state;
+  recoveryBlocked = false;
+  recoveryNotice = null;
+  undoStack = [];
+  dirty = true;
+  try {autoSnapshotWrite();} catch(e) {}
+  return {ok: true, restoredAt: copy.ts};
+}
 function snapshot() {undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift();}
 function undo() {if (!undoStack.length) return toast('Nada para desfazer'); try {S = JSON.parse(undoStack.pop()); applyTheme(); save(); render(); toast('Desfeito');} catch(e) {toast('Erro', true);}}
 
