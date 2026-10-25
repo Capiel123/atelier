@@ -75,6 +75,7 @@
     } else {
       setState({ user: null, status: 'signed_out', message: '' });
     }
+    if (typeof window !== 'undefined' && window.__sync && window.__sync.onAuth) window.__sync.onAuth();
   }
 
   async function init() {

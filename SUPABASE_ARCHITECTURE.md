@@ -1,9 +1,9 @@
 # Ateliê — Arquitetura de sincronização com Supabase
 
-> **Status:** Fases 1 e 2 aplicadas/validadas; Fase 2.5 (onboarding) validada visualmente; Fase 3 (importação inicial) implementada e testada com dados fictícios. Sincronização contínua ainda não implementada.
+> **Status:** Fases 1–3 aplicadas e validadas; Fase 4 (outbox/push) implementada e testada em simulação, com validação real pendente. Pull/merge/conflitos/timer ficam para as Fases 5/6.
 > **Base:** decisões do usuário (Magic Link, local-first, timer, lixeira, IDs, modelagem híbrida, logo, segurança, migração) + código atual.
 > **Documentos relacionados:** `SUPABASE_DATA_MAPPING.md` (dados), `SUPABASE_IMPLEMENTATION_PLAN.md` (etapas).
-> **Estado atual:** schema/RLS validados; autenticação validada; onboarding implementado/validado; importação inicial em `import-data.js` (testada com dados fictícios; importação real pendente de conta de teste).
+> **Estado atual:** schema/RLS validados; autenticação validada; onboarding validado; importação inicial validada em conta de teste (2026-10-25); outbox/push (`sync.js`) implementada e testada em simulação (validação real pendente).
 
 ## 1. Decisões de arquitetura
 
@@ -220,4 +220,18 @@ Critérios detalhados e fases em `SUPABASE_IMPLEMENTATION_PLAN.md`.
 - **Idempotência:** `upsert` com `onConflict: 'user_id'` (user_settings) e `'user_id,id'` (demais).
 - **Conversões:** ms→ISO; `''`→`NULL` em FKs/datas; `where`→`where_`; `spent_minutes` somado dos logs; `doneAt` nulo preservado; `created_at`/`updated_at` pelo servidor; `client_updated_at` = `updatedAt` local.
 - **Fora do escopo desta fase:** `timer`/`active_timer` (Fase 6), `trash` (local), sincronização contínua, outbox e conflitos.
-- **Validação:** `_import_mapping_test.js` (26/26, cliente simulado). Importação real pendente: conta de teste + backup JSON atualizado + `verify()` de contagens.
+- **Correção aplicada:** campos inteiros arredondados com `int()` (XP fracionário em `skills` causava erro de tipo na importação).
+- **Validação:** `_import_mapping_test.js` (27/27, cliente simulado); importação real executada e validada na conta de teste (2026-10-25): todas as tabelas gravadas, `user_id` 100% conferente, inteiros sem erro.
+- **Fase 4:** ver seção 16.
+
+## 16. Outbox e envio — push (Fase 4)
+
+- **Arquivos:** `sync.js` (novo), `import-data.js` (expõe `mapOne`/`settingsRow`/`settingsPayload`), `estado.js` (hook `__sync.onSave()` após `save()`), `auth.js` (hook `__sync.onAuth()`), `index.html` (`cloudPill` + script), `componentes.css`, `app.js` (ações `syncFlushNow`/`syncForceFull`), `service-worker.js` (`CACHE_VERSION` v23). Teste: `_sync_outbox_test.js`.
+- **Modelo:** somente local → Supabase. Fila `atelier_sync_outbox` (`{seq, ops[]}`), mapa `atelier_sync_seen` (hash de conteúdo + `flushed`), `atelier_sync_device_id`, `atelier_sync_owner`.
+- **Detecção:** hash de conteúdo por entidade (independe de `updatedAt`; cobre `labels`/`workLogs`); o diff no `save()` gera upserts/tombstones. Entidade criada+excluída antes de enviar → descartada, sem tombstone.
+- **Coalescência:** 1 op por `(table, id)`; tombstone substitui upsert e vice-versa.
+- **Envios:** ordem de FKs; `upsert` com `onConflict user_id,id`; tombstone mínimo `{user_id, id, deleted_at, client_updated_at}`; gate por conta (`owner` == uid) e offline.
+- **Retry:** falha transiente → mantém op + backoff (5s→30min cap, jitter ±20%); falha de dados → fallback linha a linha; ops nunca descartadas.
+- **Concorrência:** `navigator.locks` serializa a leitura-escrita da outbox/seen entre abas.
+- **Segurança:** chave publishable + RLS; sem `service_role`; `sync.js` nunca escreve em `S`.
+- **Validação:** `_sync_outbox_test.js` (20/20, simulado); validação real no Supabase pendente (edição offline, reconexão, exclusão, recarga, isolamento).

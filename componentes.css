@@ -18,6 +18,15 @@
 .sync-pill[data-state="saving"],.sync-pill[data-state="error"],.sync-pill[data-state="offline"],.sync-pill[data-state="blocked"]{opacity:1}
 .sync-pill[data-state="error"]{color:var(--er);border-color:var(--er);}
 .sync-pill[data-state="blocked"]{color:var(--wr);border-color:var(--wr);}
+
+/* --- CLOUD PILL (sync local → Supabase, Fase 4) --- */
+.sync-pill[hidden]{display:none}
+.cloud-pill{opacity:1;margin-left:6px}
+.cloud-pill[data-state="sending"] .sp-dot{background:var(--wr);animation:pwaPulse 1s infinite}
+.cloud-pill[data-state="pending"] .sp-dot{background:var(--wr)}
+.cloud-pill[data-state="synced"] .sp-dot{background:var(--ok)}
+.cloud-pill[data-state="paused"] .sp-dot{background:var(--mu)}
+.cloud-pill[data-state="synced"]{opacity:.65}
 @keyframes pwaPulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* --- BANNERS DE AVISO (backup e atualização) --- */

@@ -191,15 +191,35 @@
     var summary = '';
     try { var p = preview(S); summary = p.tasks + ' tarefas · ' + p.projects + ' projetos · ' + p.contacts + ' contatos · ' + p.work_logs + ' registros'; } catch (e) {}
     if (!user) {
-      return '<div class="section-group"><h3 style="margin-top:0">Sincronização</h3><div class="msg">Entre na Conta para importar seus dados locais para o Supabase.</div></div>';
+      return '<div class="section-group"><h3 style="margin-top:0">Sincronização</h3><div class="msg">Entre na Conta para sincronizar suas alterações locais com o Supabase.</div></div>';
     }
+    var syncBlock = (typeof window !== 'undefined' && window.__sync && window.__sync.statusHTML) ? window.__sync.statusHTML() : '';
     return '<div class="section-group"><h3 style="margin-top:0">Sincronização</h3>' +
-      '<div class="msg">Importação inicial (uma vez): ' + summary + '.</div>' +
-      '<div class="acts" style="margin-top:6px"><button data-a="dataImport">Importar dados para a conta</button></div>' +
-      '<div class="msg">Repetível e segura: não duplica registros e não apaga nada localmente. A sincronização contínua vem em fases futuras.</div></div>';
+      '<div class="msg">Alterações locais são enviadas automaticamente (somente local → Supabase).</div>' +
+      (syncBlock || '<div class="msg">Sincronização automática indisponível.</div>') +
+      '<div class="msg" style="margin-top:6px">Importação inicial (uma vez): ' + summary + '.</div>' +
+      '<div class="acts" style="margin-top:6px"><button data-a="dataImport">Importar dados para a conta</button></div></div>';
   }
 
-  window.__importer = { ORDER: ORDER, mapAll: mapAll, preview: preview, importAll: importAll, verify: verify, _task: task, _project: project, _contact: contact };
+  window.__importer = {
+    ORDER: ORDER, mapAll: mapAll, preview: preview, importAll: importAll, verify: verify,
+    _task: task, _project: project, _contact: contact,
+    mapOne: function (table, entity, uid) {
+      if (table === 'tasks') return task(entity, uid);
+      if (table === 'projects') return project(entity, uid);
+      if (table === 'clients') return client(entity, uid);
+      if (table === 'contacts') return contact(entity, uid);
+      if (table === 'applications') return application(entity, uid);
+      if (table === 'skills') return skill(entity, uid);
+      if (table === 'goals') return goal(entity, uid);
+      if (table === 'labels') return label(entity, uid);
+      if (table === 'areas') return area(entity, uid);
+      if (table === 'work_logs') return workLog(entity, uid);
+      return null;
+    },
+    settingsPayload: function (S) { return { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands) }; },
+    settingsRow: function (S, uid) { return { user_id: uid, data: { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands) }, client_updated_at: int(S.lastModified, 0) }; }
+  };
   window.syncSection = syncSection;
   window.runDataImport = async function () {
     if (!confirm('Importar seus dados locais para a conta Supabase?\n\nÉ repetível (não duplica) e não apaga os dados locais.')) return;

@@ -1,6 +1,6 @@
 # Ateliê — Plano de implementação da sincronização com Supabase
 
-> **Status:** Fases 0, 1, 2 e 2.5 concluídas; Fase 3 (importação inicial) implementada e testada com dados fictícios, com importação real pendente de conta de teste. Sincronização contínua ainda não iniciada; o app continua local.
+> **Status:** Fases 0–3 concluídas e validadas; Fase 4 (outbox/push) **implementada e testada em simulação** (`_sync_outbox_test.js` 20/20), com **validação real no Supabase pendente** (conta de teste). Pull/merge/conflitos/timer ficam para as Fases 5/6.
 > **Arquitetura:** `SUPABASE_ARCHITECTURE.md` · **Dados:** `SUPABASE_DATA_MAPPING.md`
 > **Princípio:** cada fase entrega algo verificável sem quebrar o uso diário; o app permanece funcional offline e sem sync até a fase 7.
 
@@ -48,19 +48,24 @@
 - **Arquivos criados/modificados:** `import-data.js` (mapeamento + `upsert` + `verify` + seção Sincronização), `auth.js` (expõe `getClient()`), `index.html`, `interface.js`, `app.js` (ação `dataImport`), `service-worker.js` (`CACHE_VERSION` v21). Teste: `_import_mapping_test.js`.
 - **Decisões:** importação **pelo cliente autenticado** (sessão + RLS), **sem `service_role`**; `upsert` por `user_id,id`; ordem de FKs; `created_at`/`updated_at` pelo servidor; `client_updated_at` = `updatedAt` local; `spent_minutes` recalculado dos logs; `doneAt` nulo preservado; não importa `timer`/`trash`.
 - **Concluído quando:** importar um backup de teste duas vezes não duplica; contagens por tabela conferem; FKs válidas; `doneAt` nulos preservados; derivados conferem; usuário de teste isolado.
-- **Testes executados:** `_import_mapping_test.js` (26/26) com cliente simulado + `node --check` + suítes existentes.
-- **Pendente:** importação real com **conta de teste e dados controlados** (backup JSON atualizado), seguida de `verify()` e comparação de contagens; depois, autorização para dados reais.
-- **Status:** **Preparada e testada com dados fictícios; NÃO executada com dados reais.**
+- **Testes executados:** `_import_mapping_test.js` (**27/27** — inclui arredondamento de inteiros) com cliente simulado + `node --check` + suítes existentes.
+- **Correção aplicada (2026-10-25):** XP fracionário (o app divide XP entre habilidades → `xp` decimal) causava `invalid input syntax for type integer` em `skills`; o mapeador agora arredonda campos inteiros com `int()` (`xp`, `sort_order`, contadores, `client_updated_at` etc.).
+- **Status:** **Concluída e validada em 2026-10-25.** Importação real executada na conta de teste `joba.jobiel@gmail.com` com sucesso total: todas as tabelas gravadas; `user_id` de 100% dos registros confere com o UID da conta; inteiros salvos sem erro (verificado no Table Editor e SQL Editor).
 - **Critério de reversão:** backup JSON intacto; dados remotos do usuário de teste podem ser apagados sem afetar o app.
 
 ## Fase 4 — Outbox e envio (push)
 
-- **Objetivo:** toda mudança local entra numa fila persistente e é enviada quando online/autenticado.
-- **Arquivos prováveis:** novo `sync.js` (outbox, coalescência, flush, retry), gancho em `estado.js`/`app.js` após `save()`.
-- **Conteúdo:** chaves `atelier_sync_outbox`, `atelier_sync_device_id`; `upsert` idempotente; tombstones; ordem de dependências; backoff; pausa offline/auth.
-- **Concluído quando:** alterações offline ficam na fila e são enviadas na reconexão; reenvio não duplica; falhas não descartam itens; fila sobrevive a reload.
-- **Testes (futuros, isolados):** fila com falha simulada, retry, coalescência, ordem, idempotência.
-- **Não fazer:** ainda sem pull; o app não deve receber dados remotos.
+- **Objetivo:** registrar mudanças locais numa fila persistente e enviá-las (upsert/tombstone) ao Supabase quando online e autenticado — **somente local → remoto**.
+- **Arquivos criados/modificados:** `sync.js` (novo), `import-data.js` (expõe `mapOne`/`settingsRow`/`settingsPayload`), `estado.js` (hook `__sync.onSave()` após `save()`), `auth.js` (hook `__sync.onAuth()`), `index.html` (`cloudPill` + script), `componentes.css` (estados do cloud pill), `app.js` (ações `syncFlushNow`/`syncForceFull`), `service-worker.js` (`CACHE_VERSION` v23). Teste: `_sync_outbox_test.js`.
+- **Outbox:** `atelier_sync_outbox` = `{seq, ops[]}`; op = `{seq, table, id, kind: upsert|tombstone, ts, attempts, nextAttemptAt, lastError}`. **Coalescência:** 1 op por `(table, id)`.
+- **Detecção de mudanças:** `atelier_sync_seen` com **hash de conteúdo** por entidade (funciona para `labels`/`workLogs`, que não têm `updatedAt`); a cada `save()`, o diff gera upserts (novos/alterados) e tombstones (removidos de tabelas com `deleted_at`). Entidade **criada e excluída antes de enviar** → op descartada, sem tombstone.
+- **Envios:** debounce + evento `online`/`login`/`visibilitychange`; pré-condições = online + sessão + `atelier_sync_owner` == uid atual (senão **pausa**). Ordem de FKs da Fase 3, lote por tabela, `upsert` com `onConflict user_id,id` (user_settings: `user_id`); tombstone = `{user_id, id, deleted_at, client_updated_at}`.
+- **Retry/backoff:** falha transiente (rede/auth/rate) mantém ops com `attempts++` e `nextAttemptAt` (5s→20s→2min→10min→30min cap, jitter ±20%); **falha de dados** dispara fallback **linha a linha** isolando o registro ruim.
+- **Concorrência:** `navigator.locks` ('atelier_sync_v1') serializa a leitura-escrita da outbox/seen entre abas (fallback sem lock se indisponível).
+- **Reuso:** mapeadores e `ORDER` da Fase 3 (`window.__importer`); sem `service_role`; RLS no servidor; não importa `active_timer`/`trash`.
+- **Fora do escopo:** pull, merge/conflitos, timer (Fases 5/6).
+- **Testes:** `_sync_outbox_test.js` (**20/20**, cliente simulado) + `node --check` + suítes existentes.
+- **Status:** **Implementada; validação real no Supabase pendente** (editar offline → reconectar → conferir; exclusão → tombstone; recarga com fila; isolamento entre contas).
 
 ## Fase 5 — Pull, merge e conflitos
 
@@ -119,4 +124,4 @@
 
 ## Próximo passo concreto
 
-**Validar o onboarding no navegador** (desktop e celular, temas) e marcar a Fase 2.5 como concluída. Em seguida, iniciar a **Fase 3 — camada de dados + importação**, a partir de um backup JSON externo, com importação idempotente e validação de contagens, relações e datas nulas.
+**Validar a Fase 4 no navegador com a conta de teste** (editar offline → reconectar → conferir; excluir → tombstone; recarregar com fila pendente; trocar de conta → pausado) e então seguir para a **Fase 5 — pull/merge**, somente após aprovação.

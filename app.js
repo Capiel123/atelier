@@ -126,6 +126,16 @@ document.addEventListener('click', ev => {
       else toast('Importação indisponível', true);
       return;
     }
+    case 'syncFlushNow': {
+      if (typeof syncFlushNow === 'function') syncFlushNow();
+      else toast('Sincronização indisponível', true);
+      return;
+    }
+    case 'syncForceFull': {
+      if (typeof syncForceFull === 'function') syncForceFull();
+      else toast('Sincronização indisponível', true);
+      return;
+    }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
     case 'toggleQueueCard': {

@@ -447,6 +447,7 @@ function save() {
     return false;
   }
   setSaveState('saved');
+  if (typeof window !== 'undefined' && window.__sync && window.__sync.onSave) window.__sync.onSave();
   clearTimeout(saveTmr);
   saveTmr = setTimeout(() => {if (!dbDoc) return; dbDoc.set({json: JSON.stringify(S)}).catch(err => console.warn('Sync offline:', err));}, 1500);
   return true;
