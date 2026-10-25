@@ -1,6 +1,6 @@
 # Ateliê — Plano de implementação da sincronização com Supabase
 
-> **Status:** Fases 0–3 concluídas e validadas; Fase 4 (outbox/push) **implementada, testada em simulação (22/22) e validada manualmente** na conta de teste. Pull/merge/conflitos/timer ficam para as Fases 5/6.
+> **Status:** Fases 0–4 concluídas e validadas (Fase 4 encerrada com testes manuais no PC e no celular). Fase 5 (pull/merge) **em implementação** — Etapas 1–2 (merge + pull) concluídas e testadas em simulação; validação real pendente. Timer sincronizado fica para a Fase 6.
 > **Arquitetura:** `SUPABASE_ARCHITECTURE.md` · **Dados:** `SUPABASE_DATA_MAPPING.md`
 > **Princípio:** cada fase entrega algo verificável sem quebrar o uso diário; o app permanece funcional offline e sem sync até a fase 7.
 
@@ -65,18 +65,67 @@
 - **Reuso:** mapeadores e `ORDER` da Fase 3 (`window.__importer`); sem `service_role`; RLS no servidor; não importa `active_timer`/`trash`.
 - **Fora do escopo:** pull, merge/conflitos, timer (Fases 5/6).
 - **Testes:** `_sync_outbox_test.js` (**22/22**, cliente simulado) + `node --check` + suítes existentes.
-- **Validação manual (2026-10-25, conta de teste):** criação enviada; edição atualizou o mesmo registro sem duplicar; exclusão lógica com `deleted_at`; edição offline preservada e enviada após envio manual; indicador terminou em “Tudo sincronizado”.
-- **Correção aplicada (pós-auditoria):** o envio automático na reconexão estava sendo engolido por um timer de retry pendente (até 30s). `scheduleFlush` agora é “target-aware” e o evento `online` dispara flush imediato (50ms) que substitui o retry, além de atualizar o `cloudPill` na hora.
-- **Status:** **Implementada e validada manualmente.** Pendente apenas re-confirmar o envio automático na reconexão após a correção.
+- **Validação manual do usuário (2026-10-25, app publicado, PC + celular):** (1) offline detectado e indicado rapidamente; (2) edição offline → indicador de pendência; (3) reconexão → envio automático e indicador sincronizado; (4) sem sessão → sincronização pausada; (5) criação de tarefa sem login preservada; (6) login → dados offline enviados à conta com `user_id` correto (sincronização demorou, mas concluiu); (7) logout com operação pendente → fila preservada, sem perda aparente; (8) mesma conta em outro dispositivo → login OK, mas tarefas/tema do PC não aparecem e o indicador ficou pausado.
+- **Verificação de código (logout × fila):** o logout **não** limpa `atelier_sync_outbox` nem `atelier_sync_owner`; `flushOnce` só envia quando o usuário atual é o dono da fila — operações pendentes de uma conta nunca são enviadas para outra.
+- **Comportamentos conhecidos (intencionais):** tarefas/tema não aparecem em outro dispositivo porque a Fase 4 é **push-only** (pull é Fase 5); tema/cfg sincronizam **para cima** (`user_settings`) mas não **para baixo**; a fila é vinculada à conta dona — entrando com outra conta, o indicador fica “pausada” até o dono voltar (ponto do teste 8; confirmar com `window.__sync.getState()` se o teste 6 usou outra conta).
+- **Incidente Supabase (22–23/10/2026, “Elevated Mgmt API Error Rates in Multiple Regions”):** afeta a **Management API** (painel/Studio, operações de projeto, pagamentos), **separada** da API de dados (PostgREST) e do Auth. Sem evidência de impacto nos upserts/login do Ateliê (os testes acima passaram). A lentidão do teste 6 não pôde ser atribuída ao incidente (sem evidência); detalhes oficiais não totalmente legíveis (página renderizada por JS) — incerteza registrada. Nenhuma mudança de infraestrutura necessária por causa do aviso.
+- **Status:** **Concluída (encerrada em 2026-10-25).**
 
 ## Fase 5 — Pull, merge e conflitos
 
-- **Objetivo:** receber mudanças de outro dispositivo e aplicá-las com a política definida.
-- **Arquivos prováveis:** `sync.js` (cursor, polling, apply), `merge.js` (LWW + união de logs/subs/interactions).
-- **Conteúdo:** `server_updated_at` como cursor; LWW por `updated_at` + `device_id`; merge append-only; tombstones; atualização de `S` + `save()` + `render()`.
-- **Concluído quando:** dois dispositivos simulados convergem; logs de tempo não se perdem em conflito; exclusão em A remove em B; restauração vence tombstone.
-- **Testes:** cenários de conflito (mesma tarefa, logs diferentes, delete/update concorrentes), cursor sem lacunas, pull incremental.
-- **Risco principal:** relógio do dispositivo; mitigado por desempate e merge append-only.
+> **Em implementação** — Etapa 1 (merge) e Etapa 2 (pull) concluídas no código; validação real pendente.
+
+- **Objetivo:** baixar e reconciliar os dados da conta em outros dispositivos, mantendo o push (Fase 4) intacto.
+- **Arquitetura:** `sync.js` ganha `pull()` (cursor incremental por tabela + poll ~30s + eventos) e ativação inicial; novo `merge.js` (mapeamento reverso + políticas); `import-data.js` ganha `fromRow` (remoto→local).
+
+### Pull inicial seguro (nunca descarta dados)
+- **Nunca substituir indiscriminadamente.** Regra geral é **merge**: uma linha remota é aplicada só se (a) não existe local com aquele id, ou (b) o remoto vence no LWW. Entidade local sem correspondente remoto é **mantida e enfileirada para push** — jamais descartada.
+- **Gate de segurança:** o pull inicial só roda com a **outbox vazia** (flush totalmente bem-sucedido). Flush parcial/falha → pull inicial **adiado** para o próximo ciclo; nada é descartado.
+- **Único caso de substituição (seed de demonstração):** `seed()` passará a gravar um marcador **nonce** `S._seedId` (criado só no seed; nunca em `migrate()` nem em dados do usuário). Um dispositivo é tratado como seed intacto **somente se**: `S._seedId` existe e bate com `atelier_sync_seedId` registrado no dispositivo **e** a forma do conteúdo é a do seed original (1 tarefa “Bloco A: prospecção ativa”, projeto `p1` “Prospecção internacional”, meta `g1` “2-3 clientes recorrentes”, e **zero** contatos/clientes/vagas/workLogs). Coincidência de contagem **não** dispara substituição; qualquer edição real (título ou item novo) quebra a forma e cai no merge seguro.
+- **Interrupção/pull parcial:** o pull aplica por tabela e **só avança o cursor depois de aplicar todas as linhas da tabela e gravar `save()` com sucesso**. Interrompido no meio → o cursor daquela tabela não avança → as mesmas linhas são re-buscadas e re-aplicadas (LWW/união idempotentes). O `seen` só é gravado ao final; até lá o pull inicial pode ser re-executado do zero com segurança.
+- **Registros não reconciliados:** nunca apagamos entidades locais sem um tombstone mais novo; registros não confirmados permanecem em `S` e na outbox até serem enviados e re-confirmados.
+
+### LWW determinístico e relógios divergentes
+- **Regra:** vence o maior `client_updated_at` (epoch ms gravado pelo dispositivo no momento da edição). **Empate** → maior `updated_at` do servidor. **Empate final** → vence o remoto (servidor é o ponto de convergência). Função pura/determinística — não depende de hora de chegada nem da ordem de rede.
+- **O que `client_updated_at` NÃO é:** não é a ordem real das edições quando os relógios divergem — um dispositivo adiantado vence um atrasado mesmo editando depois. **Não usamos `updated_at` do servidor como ordem real** (ele reflete a chegada da escrita, não o momento da edição); serve só de desempate.
+- **Limitações aceitas:** relógio enviesado pode inverter a vitória em campos escalares. A **união de histórico** (logs/subs/interactions) protege a parte append-only, a mais provável de ser editada em paralelo. Para app pessoal, risco baixo. Mitigação futura (não agora): carimbar a edição no servidor.
+
+### Merge de conteúdo
+- LWW por entidade para campos escalares.
+- **União por id/at** para `tasks.logs`/`tasks.subs` e `contacts.interactions`/`applications.interactions`/`applications.stage_history` — histórico não se perde e não duplica (dedupe por id; no mesmo id, vence o da versão mais nova).
+- Derivados (`spent`, contadores) recalculados localmente; não são fonte de verdade.
+- **Tombstone:** ver subseção própria abaixo.
+
+### Exclusão e restauração (tombstone × restore)
+- **Toda mutação carrega um timestamp:** criação/edição usa `updatedAt`; exclusão usa o `ts` do tombstone (vira `client_updated_at` e `deleted_at`); restauração usa um `updatedAt` novo e `deleted_at = null`. Deleção é um **estado**, não um caso especial.
+- **Regra determinística:** entre local e remoto, vence o **maior `client_updated_at`** para decidir `deleted_at` (e os demais campos). Empate → `updated_at` do servidor → remoto.
+- **Ordem de chegada é irrelevante:** cada estado carrega seu próprio timestamp e comparamos por timestamp (não por chegada), então tombstone e restauração fora de ordem convergem para o mesmo vencedor.
+- **Ciclo pull→push:** o ciclo passa a ser **pull primeiro, depois flush**. Ao puxar, o merge já reconcilia o `deleted_at` (LWW). Assim o flush nunca empurra um tombstone/restauração **obsoleto**: se o remoto é mais novo, o pull o traz de volta (ou o remove) e o diff do `seen` corrige a op (tombstone vira upsert, ou vice-versa) antes de enviar — sem ressuscitar um registro mais novo excluído, nem re-excluir um mais novo restaurado.
+
+### Colisões em `work_logs`
+- `work_logs` é um **resumo diário** (snapshot por `task_id`+`date`), não um contador aditivo. O índice único `uq_work_logs_task_date (user_id, task_id, date) where task_id is not null` reflete isso: dois registros para a mesma tarefa+data são **duas versões do mesmo resumo**, não dois trabalhos distintos.
+- **Política: deduplicar por `(task_id, date)` mantendo o mais novo** (LWW por `client_updated_at`, empate `updated_at`, empate remoto). **Nunca somar** `text`/`ts`/campos.
+- **ID determinístico (preventivo):** `work_logs` novos passam a ter `id` estável derivado de `(task_id, date)` (ex.: `wl_<taskId>_<date>`); órfãos (`task_id` nulo) mantêm id aleatório. Dois dispositivos produzem o **mesmo id** para o mesmo resumo → `upsert` por `(user_id,id)` substitui; o 23505 deixa de ocorrer para registros novos.
+- **No pull:** aplicar um `work_log` remoto com mesmo `(task_id, date)` de um local → substitui o local só se o remoto for mais novo; senão ignora. Resultado: no máximo um `work_log` local por `(task_id, date)`.
+- **No push:** coalescer os locais por `(task_id, date)` mantendo o mais novo e normalizando o id determinístico (migra ids antigos).
+- **`task_id` nulo (órfão):** fora do índice único; LWW por id normalmente.
+- **Reconciliação reativa de 23505 (sem loop, sem perda silenciosa):** o fallback atual **não** resolve o 23505 — só mantém a op em backoff e repete para sempre. A Fase 5 adiciona um caminho dedicado para `work_logs`: ao receber 23505, busca a linha remota com o mesmo `(task_id, date)`, compara por LWW e (a) se o local for mais novo, re-upserta o conteúdo local **com o id determinístico** (vira uma linha só) — op resolvida; (b) se o remoto for mais novo/igual, **descarta a op local e aplica o remoto** (marca `seen`/`flushed`), sem retry. Em ambos, a op sai da outbox (sem loop) e **o conteúdo mais novo é sempre preservado**; o mais antigo é a versão anterior do mesmo resumo, não trabalho independente.
+
+### Preferências (`user_settings`)
+- LWW no `data` (tema incluído); ao aplicar, preserva `lastBackupAt`/`backupReminderDismissedAt` locais.
+
+### Cursor, isolamento e anti-loop
+- Cursor por tabela (`updated_at` do servidor), sobreposição de 1s, apply idempotente; cursor por conta (`atelier_sync_cursors`).
+- Pull só quando online + autenticado + `owner == uid`; troca de conta não baixa dados de outra conta.
+- Anti-loop: após aplicar, atualiza `seen` (hashes = estado final, `flushed=true`) e usa `updatedAt = client_updated_at` — o diff do `save()` não reenfileira o que veio do servidor.
+- **Ordem do ciclo:** pull → merge → flush (nunca empurra estado que o pull já provou ser obsoleto).
+
+- **Arquivos:** `merge.js` (mapeamento reverso `fromRow` + LWW/união/tombstone/dedupe de `work_logs`), `sync.js` (pull com cursor, ativação inicial, anti-loop, id determinístico + reconciliação 23505 de `work_logs`), `estado.js` (`_seedId` no seed), `index.html`/`service-worker.js` (carregar/precache, `CACHE_VERSION` v24). Testes: `_sync_merge_test.js`, `_sync_pull_test.js`.
+- **Decisões a aprovar (1–7):** (1) pull inicial por **merge** (nunca substituir), com substituição apenas do **seed marcado** (`_seedId` + forma intacta); (2) **LWW determinístico** `client_updated_at` → `updated_at` → remoto, com ciclo **pull→push**; (3) **exclusão/restauração** como estados com `client_updated_at` (vence o maior; sem ressuscitar/re-excluir fora de ordem); (4) **união de histórico** (`logs`/`subs`/`interactions`/`stage_history`) por id/at; (5) **`work_logs`** por id determinístico `(task_id, date)` + dedupe LWW **sem somar** + reconciliação reativa de 23505; (6) **cursor** por tabela (`updated_at`, sobreposição 1s, por conta) + poll 30s/eventos; (7) **`user_settings`** LWW com campos locais preservados.
+- **Riscos:** loop de sync (anti-loop + id determinístico de `work_logs`); relógio dos dispositivos (LWW determinístico, tolerância pessoal); colisão de `work_logs` (id determinístico + reconciliação de 23505); conflito na mesma tarefa (LWW por entidade, logs protegidos por união).
+- **Concluído quando:** os 10 cenários de aceitação passarem (simulados + validação real na conta de teste com dois dispositivos) e as suítes das Fases 3–4 continuarem verdes.
+- **Testes executados (simulados):** `_sync_merge_test.js` (**20/20**) e `_sync_pull_test.js` (**10/10**) + `node --check` + suítes existentes (12 suítes verdes).
+- **Status:** **Etapas 1–2 implementadas** (merge + pull). **Pendente:** validação real no Supabase (dois dispositivos, cenários 1–10) e eventuais ajustes de UI (estado “baixando” no pill).
 
 ## Fase 6 — Timer sincronizado
 
@@ -126,4 +175,4 @@
 
 ## Próximo passo concreto
 
-**Validar a Fase 4 no navegador com a conta de teste** (editar offline → reconectar → conferir; excluir → tombstone; recarregar com fila pendente; trocar de conta → pausado) e então seguir para a **Fase 5 — pull/merge**, somente após aprovação.
+**Aprovar a proposta da Fase 5** (decisões 1–6 acima) e, após aprovação, implementar pull + merge + testes isolados (`_sync_merge_test.js`, `_sync_pull_test.js`). A validação real com dois dispositivos na conta de teste fica para depois da implementação.

@@ -1,9 +1,9 @@
 # Ateliê — Arquitetura de sincronização com Supabase
 
-> **Status:** Fases 1–3 aplicadas e validadas; Fase 4 (outbox/push) implementada e testada em simulação, com validação real pendente. Pull/merge/conflitos/timer ficam para as Fases 5/6.
+> **Status:** Fases 1–4 concluídas e validadas; Fase 5 (pull/merge) **em implementação** (merge + pull prontos, testados em simulação; validação real pendente). Timer fica para a Fase 6.
 > **Base:** decisões do usuário (Magic Link, local-first, timer, lixeira, IDs, modelagem híbrida, logo, segurança, migração) + código atual.
 > **Documentos relacionados:** `SUPABASE_DATA_MAPPING.md` (dados), `SUPABASE_IMPLEMENTATION_PLAN.md` (etapas).
-> **Estado atual:** schema/RLS validados; autenticação validada; onboarding validado; importação inicial validada em conta de teste (2026-10-25); outbox/push (`sync.js`) implementada e testada em simulação (validação real pendente).
+> **Estado atual:** schema/RLS validados; autenticação validada; onboarding validado; importação inicial validada em conta de teste; outbox/push validada manualmente (encerrada); pull/merge (`merge.js` + `sync.js`) implementados e testados em simulação (validação real pendente).
 
 ## 1. Decisões de arquitetura
 
@@ -234,4 +234,18 @@ Critérios detalhados e fases em `SUPABASE_IMPLEMENTATION_PLAN.md`.
 - **Retry:** falha transiente → mantém op + backoff (5s→30min cap, jitter ±20%); falha de dados → fallback linha a linha; ops nunca descartadas.
 - **Concorrência:** `navigator.locks` serializa a leitura-escrita da outbox/seen entre abas.
 - **Segurança:** chave publishable + RLS; sem `service_role`; `sync.js` nunca escreve em `S`.
-- **Validação:** `_sync_outbox_test.js` (22/22, simulado) + suítes existentes; validação manual na conta de teste (2026-10-25): criação, edição sem duplicação, `deleted_at`, edição offline preservada, indicador “Tudo sincronizado”. Correção pós-auditoria: flush imediato na reconexão (antes engolido por retry pendente).
+- **Validação:** `_sync_outbox_test.js` (22/22, simulado) + suítes existentes; **validação manual do usuário no app publicado (PC + celular, 2026-10-25)**: offline detectado; edição offline com pendência; envio automático na reconexão; pausa sem sessão; criação sem login preservada e enviada no login (`user_id` correto); logout com operação pendente sem perda; mesma conta em outro dispositivo sem tarefas/tema (esperado — push-only).
+- **Verificação de código:** logout não limpa a outbox nem o dono; o envio exige `owner == uid` atual — nenhuma operação de uma conta é enviada para outra.
+- **Limitações registradas:** sem pull (Fase 5); tema/cfg sobem mas não descem; fila vinculada à conta dona (troca de conta → “pausada” até o dono voltar).
+- **Incidente Supabase (22–23/10/2026, Management API):** afeta a **Management API** (painel/Studio, operações de projeto, pagamentos), separada de PostgREST e Auth; sem evidência de impacto na sincronização; incerteza registrada (página oficial renderizada por JS, detalhes não totalmente legíveis). Nenhuma mudança de infraestrutura necessária.
+
+## 17. Pull, merge e conflitos (Fase 5 — em implementação)
+
+- **Arquivos:** `merge.js` (mapeamento reverso `fromRow` + `decide` + união + `mergeEntity`/`mergeWorkLog`), `sync.js` (pull incremental com cursor, ativação inicial, anti-loop, id determinístico + reconciliação 23505 de `work_logs`), `estado.js` (`_seedId` no seed). Testes: `_sync_merge_test.js` (20/20), `_sync_pull_test.js` (10/10).
+- **LWW determinístico:** vence o maior `client_updated_at`; empate → `updated_at` do servidor; empate final → remoto. Deleção/restauração são **estados** com `client_updated_at`.
+- **Merge de conteúdo:** campos escalares por LWW; `logs`/`subs`/`interactions`/`stage_history` por **união por id/at** (histórico append-only não se perde); derivados recalculados.
+- **Pull inicial:** merge (nunca substituir); substituição apenas do **seed marcado** (`_seedId` + forma intacta), com gate de outbox vazia; interrompido → re-executável (cursor só avança após aplicar + `save()`).
+- **Cursor:** por tabela (`updated_at`), paginação 500, por conta (`atelier_sync_cursors`); ciclo **pull → merge → flush**.
+- **Anti-loop:** após aplicar, `seen` é atualizado (hash + `flushed=true`) e `updatedAt = client_updated_at` — o `save()` não reenfileira o que veio do servidor.
+- **`work_logs`:** id determinístico `wl_<hash(task_id|date)>` (órfãos mantêm id aleatório); dedupe por `(task_id, date)` sem somar; reconciliação reativa de 23505 (local vence → renomeia/sobrescreve em uma linha; remoto vence → descarta op e aplica remoto) — sem loop, sem perda do mais novo.
+- **Validação:** simulada (`_sync_merge_test.js` + `_sync_pull_test.js`, 30 asserções); **validação real pendente** (dois dispositivos, cenários 1–10).

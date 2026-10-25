@@ -12,6 +12,9 @@
   var SEEN_KEY = 'atelier_sync_seen';
   var DEVICE_KEY = 'atelier_sync_device_id';
   var OWNER_KEY = 'atelier_sync_owner';
+  var CURSORS_KEY = 'atelier_sync_cursors';
+  var SEEDID_KEY = 'atelier_sync_seedId';
+  var SETTINGS_CU_KEY = 'atelier_sync_settings_cu';
 
   var ORDER = (window.__importer && window.__importer.ORDER) ||
     ['user_settings','labels','areas','skills','clients','projects','tasks','contacts','applications','goals','work_logs'];
@@ -193,7 +196,9 @@
           // senão, será descartada abaixo (sem linha)
           return;
         }
-        items.push({ op: o, row: rowFor(table, S, user.id, ent) });
+        var row = rowFor(table, S, user.id, ent);
+        if (table === 'work_logs' && row.task_id) row.id = window.__merge.workLogId(row.task_id, row.date || '');
+        items.push({ op: o, row: row });
       });
 
       if (!items.length) { markDone(store, seen, ops); continue; }
@@ -208,6 +213,7 @@
         for (var i = 0; i < items.length; i++) {
           var one = await tryUpsert(client, table, [items[i].row], onConflict);
           if (!one.error) { markDone(store, seen, [items[i].op]); }
+          else if (table === 'work_logs' && one.error.code === '23505') { await reconcileWorkLog23505(client, user, items[i].row, store, seen, items[i].op); }
           else { markFailed(store, items[i].op, one.error); }
         }
       } else {
@@ -233,6 +239,26 @@
         .then(function (r) { clearTimeout(timer); resolve({ error: r.error || null }); })
         .catch(function (e) { clearTimeout(timer); resolve({ error: e || { message: 'fetch' } }); });
     });
+  }
+
+  async function reconcileWorkLog23505(client, user, row, store, seen, op) {
+    try {
+      var r = await client.from('work_logs').select('*').eq('user_id', user.id).eq('task_id', row.task_id).eq('date', row.date).maybeSingle();
+      if (r.error || !r.data) { markFailed(store, op, r.error || { message: 'sem linha remota' }); return; }
+      var remote = r.data;
+      var localWins = numVal(row.client_updated_at, 0) > numVal(remote.client_updated_at, 0);
+      if (localWins) {
+        // local vence: renomeia a linha remota para o id determinístico e aplica o conteúdo local
+        var upd = await client.from('work_logs').update(Object.assign({}, row, { id: window.__merge.workLogId(row.task_id, row.date || '') })).eq('user_id', user.id).eq('id', remote.id);
+        if (upd.error) { markFailed(store, op, upd.error); return; }
+      }
+      var winner = applyWorkLogRow(localWins ? row : remote);
+      markDone(store, seen, [op]);
+      seen['work_logs'] = seen['work_logs'] || {};
+      delete seen['work_logs'][op.id];
+      if (winner && winner.id) seen['work_logs'][winner.id] = { h: hashStr(JSON.stringify(winner)), flushed: true };
+      if (typeof save === 'function') save();
+    } catch (e) { markFailed(store, op, e); }
   }
 
   function markDone(store, seen, ops) {
@@ -270,6 +296,169 @@
     finally { state.inFlight = false; }
   }
 
+  /* ---------------- FASE 5: pull ---------------- */
+  function numVal(v, d) { var n = Number(v); return isFinite(n) ? n : (d == null ? null : d); }
+  function readCursors() { return readJSON(CURSORS_KEY, {}); }
+  function writeCursors(c) { writeJSON(CURSORS_KEY, c); }
+  function cursorFor(c, uid, table) { return (c[uid] && c[uid][table]) || null; }
+  function setCursor(c, uid, table, v) { c[uid] = c[uid] || {}; c[uid][table] = v; }
+
+  function isPristineSeed() {
+    try {
+      if (!S || !S._seedId) return false;
+      if (!Array.isArray(S.tasks) || S.tasks.length !== 1) return false;
+      if (!Array.isArray(S.projects) || S.projects.length !== 1) return false;
+      if (!Array.isArray(S.goals) || S.goals.length !== 1) return false;
+      if ((S.clients || []).length || (S.contacts || []).length || (S.applications || []).length || (S.workLogs || []).length) return false;
+      return S.tasks[0].t === 'Bloco A: prospecção ativa' && S.projects[0].id === 'p1' && S.goals[0].id === 'g1';
+    } catch (e) { return false; }
+  }
+
+  function applyUserSettings(row) {
+    var cu = numVal(row.client_updated_at, 0);
+    var last = numVal(localStorage.getItem(SETTINGS_CU_KEY), 0);
+    if (last && cu <= last) return false;
+    var data = row.data || {};
+    var cfg = Object.assign({}, data.cfg || {});
+    cfg.lastBackupAt = (S.cfg && S.cfg.lastBackupAt) || null;
+    cfg.backupReminderDismissedAt = (S.cfg && S.cfg.backupReminderDismissedAt) || 0;
+    S.cfg = cfg; S.energy = data.energy || {}; S.xpPool = numVal(data.xpPool, 0);
+    S.commands = Array.isArray(data.commands) ? data.commands : [];
+    localStorage.setItem(SETTINGS_CU_KEY, String(cu));
+    return true;
+  }
+
+  function applyWorkLogRow(row) {
+    var list = S.workLogs || (S.workLogs = []);
+    var local = null;
+    if (row.task_id) {
+      local = list.find(function (l) { return l.taskId === row.task_id && l.date === (row.date || ''); }) || null;
+    } else {
+      local = list.find(function (l) { return l.id === row.id; }) || null;
+    }
+    var winner = window.__merge.mergeWorkLog(local, row);
+    S.workLogs = list.filter(function (l) { return !(row.task_id && l.taskId === row.task_id && l.date === (row.date || '')) && l.id !== winner.id; });
+    S.workLogs.push(winner);
+    return winner;
+  }
+
+  // Retorna { changed: bool, id: string|null } — id da entidade afetada (ou 'settings').
+  function applyRemoteRow(table, row) {
+    if (table === 'user_settings') { return { changed: applyUserSettings(row), id: 'settings' }; }
+    if (table === 'work_logs') { return { changed: true, id: applyWorkLogRow(row).id }; }
+    var key = S_KEYS[table];
+    if (!key) return { changed: false, id: null };
+    var list = S[key];
+    if (!Array.isArray(list)) return { changed: false, id: null };
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) { if (list[i].id === row.id) { idx = i; break; } }
+    var local = idx >= 0 ? list[idx] : null;
+    var res = window.__merge.mergeEntity(table, local, row);
+    if (res.action === 'delete') { if (idx >= 0) list.splice(idx, 1); return { changed: true, id: row.id }; }
+    if (res.action === 'set') { if (idx >= 0) list[idx] = res.entity; else list.push(res.entity); return { changed: true, id: row.id }; }
+    return { changed: false, id: row.id };
+  }
+
+  async function fetchRows(client, user, table, cursor) {
+    var q = client.from(table).select('*').eq('user_id', user.id).order('updated_at', { ascending: true }).limit(500);
+    if (cursor) q = q.gt('updated_at', cursor);
+    var r = await q;
+    if (r.error) throw r.error;
+    return r.data || [];
+  }
+
+  async function doPull(client, user) {
+    if (typeof S === 'undefined' || !S) return;
+    var seen = readJSON(SEEN_KEY, null);
+    var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
+    var changedList = [];
+
+    if (seen === null) {
+      // primeira ativação: só com a outbox vazia (flush prévio ok)
+      if (store.ops.length) { setStatus('pending'); return; }
+      var pristine = isPristineSeed();
+      for (var ti = 0; ti < ORDER.length; ti++) {
+        var table = ORDER[ti];
+        var rows = await fetchRows(client, user, table, null);
+        if (table === 'user_settings') { if (rows.length) applyUserSettings(rows[0]); continue; }
+        var key = S_KEYS[table];
+        if (!key) continue;
+        if (pristine) { S[key] = rows.map(function (r) { return window.__merge.fromRow(table, r); }); }
+        else { rows.forEach(function (r) { var x = applyRemoteRow(table, r); if (x.changed) changedList.push({ table: table, id: x.id }); }); }
+      }
+      if (typeof save === 'function') save();
+      writeJSON(SEEN_KEY, buildBaseline(S));
+      if (S._seedId) localStorage.setItem(SEEDID_KEY, S._seedId);
+      state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
+      if (typeof render === 'function') render();
+      renderSync();
+      return;
+    }
+
+    // incremental por tabela, cursor com paginação
+    var cursors = readCursors();
+    var maxByTable = {};
+    for (var t2 = 0; t2 < ORDER.length; t2++) {
+      var tb = ORDER[t2];
+      var cursor = cursorFor(cursors, user.id, tb);
+      var maxUpd = cursor;
+      while (true) {
+        var page = await fetchRows(client, user, tb, cursor);
+        if (!page.length) break;
+        for (var pi = 0; pi < page.length; pi++) {
+          var r = page[pi];
+          var x = applyRemoteRow(tb, r);
+          if (x.changed) changedList.push({ table: tb, id: x.id });
+        }
+        var last = page[page.length - 1].updated_at;
+        if (last) { cursor = last; maxUpd = last; }
+        if (page.length < 500) break;
+      }
+      if (maxUpd) setCursor(cursors, user.id, tb, maxUpd);
+    }
+
+    if (changedList.length) {
+      if (typeof save === 'function' && !save()) return; // não avança cursor se falhou a gravação
+      // anti-loop: marca seen das entidades aplicadas (flushed)
+      var seenNow = readJSON(SEEN_KEY, null) || {};
+      changedList.forEach(function (ch) {
+        if (ch.table === 'user_settings') {
+          seenNow.user_settings = seenNow.user_settings || {};
+          seenNow.user_settings.settings = { h: hashStr(JSON.stringify(window.__importer.settingsPayload(S))), flushed: true };
+          return;
+        }
+        seenNow[ch.table] = seenNow[ch.table] || {};
+        var key = S_KEYS[ch.table];
+        var e = null;
+        if (key) { var arr = S[key] || []; for (var i = 0; i < arr.length; i++) if (arr[i].id === ch.id) { e = arr[i]; break; } }
+        if (e) seenNow[ch.table][ch.id] = { h: hashStr(JSON.stringify(e)), flushed: true };
+        else delete seenNow[ch.table][ch.id];
+      });
+      writeJSON(SEEN_KEY, seenNow);
+      if (typeof render === 'function') render();
+    }
+    writeCursors(cursors);
+    state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
+    renderSync();
+  }
+
+  async function pullOnce() {
+    if (state.inFlight) return;
+    var user = authUser();
+    if (!user) { setStatus('paused'); return; }
+    var client = await getClient();
+    if (!client) return;
+    var owner = localStorage.getItem(OWNER_KEY) || null;
+    if (owner && owner !== user.id) { setStatus('paused'); return; }
+    if (!owner) localStorage.setItem(OWNER_KEY, user.id);
+    state.inFlight = true;
+    try { await doPull(client, user); }
+    catch (e) { setStatus('error', String(e && e.message || e)); }
+    finally { state.inFlight = false; }
+  }
+
+  async function syncCycle() { await pullOnce(); await flushOnce(); }
+
   function forceFullSync() {
     return withLock(function () {
       localStorage.removeItem(SEEN_KEY);
@@ -291,7 +480,7 @@
     if (state.flushTimer && state.flushAt && state.flushAt <= target) return;
     if (state.flushTimer) clearTimeout(state.flushTimer);
     state.flushAt = target;
-    state.flushTimer = setTimeout(function () { state.flushTimer = null; state.flushAt = null; withLock(flushOnce); }, delay);
+    state.flushTimer = setTimeout(function () { state.flushTimer = null; state.flushAt = null; withLock(syncCycle); }, delay);
   }
   function scheduleRetry() {
     var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
@@ -350,6 +539,7 @@
     onSave: onSave,
     onAuth: onAuth,
     flushNow: function () { withLock(flushOnce); },
+    syncNow: function () { withLock(syncCycle); },
     forceFullSync: forceFullSync,
     getState: function () { return { status: state.status, pending: state.pending, lastError: state.lastError, lastFlushAt: state.lastFlushAt, owner: state.owner, deviceId: state.deviceId }; },
     statusHTML: statusHTML,
@@ -357,10 +547,13 @@
       enqueueAll: enqueueAll, doFlush: doFlush, hashStr: hashStr, isoMs: isoMs,
       buildBaseline: buildBaseline, readJSON: readJSON, writeJSON: writeJSON,
       OUTBOX_KEY: OUTBOX_KEY, SEEN_KEY: SEEN_KEY, DEVICE_KEY: DEVICE_KEY, OWNER_KEY: OWNER_KEY,
-      ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS, scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry
+      CURSORS_KEY: CURSORS_KEY, SEEDID_KEY: SEEDID_KEY, SETTINGS_CU_KEY: SETTINGS_CU_KEY,
+      ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS,
+      scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry,
+      pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, isPristineSeed: isPristineSeed
     }
   };
-  window.syncFlushNow = function () { window.__sync.flushNow(); };
+  window.syncFlushNow = function () { window.__sync.syncNow(); };
   window.syncForceFull = function () { if (confirm('Reenviar todo o estado local para a conta?')) window.__sync.forceFullSync(); };
 
   if (typeof document !== 'undefined') {
