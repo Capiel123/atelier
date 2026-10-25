@@ -1,9 +1,9 @@
 # Ateliê — Arquitetura de sincronização com Supabase
 
-> **Status:** Fase 1 (schema + RLS) aplicada e validada no projeto de desenvolvimento; Fase 2 (auth) implementada no código, com validação real pendente. Sincronização ainda não implementada.
+> **Status:** Fases 1 e 2 aplicadas/validadas; Fase 2.5 (onboarding) validada visualmente; Fase 3 (importação inicial) implementada e testada com dados fictícios. Sincronização contínua ainda não implementada.
 > **Base:** decisões do usuário (Magic Link, local-first, timer, lixeira, IDs, modelagem híbrida, logo, segurança, migração) + código atual.
 > **Documentos relacionados:** `SUPABASE_DATA_MAPPING.md` (dados), `SUPABASE_IMPLEMENTATION_PLAN.md` (etapas).
-> **Estado atual:** schema e RLS aplicados e validados (`SUPABASE_SCHEMA.md`); autenticação Magic Link implementada em `auth.js`/`supabase-config.js` (validação pendente de configuração e navegador).
+> **Estado atual:** schema/RLS validados; autenticação validada; onboarding implementado/validado; importação inicial em `import-data.js` (testada com dados fictícios; importação real pendente de conta de teste).
 
 ## 1. Decisões de arquitetura
 
@@ -193,12 +193,31 @@ Critérios detalhados e fases em `SUPABASE_IMPLEMENTATION_PLAN.md`.
 
 ## 13. Autenticação implementada (Fase 2)
 
-- **Arquivos:** `supabase-config.js` (URL, chave publishable e redirect opcional), `auth.js` (módulo de autenticação), `index.html` (carrega os dois após `app.js`), `interface.js` (seção **Conta** em Configurações), `app.js` (ações `authSendLink`/`authLogout`), `service-worker.js` (precache e `CACHE_VERSION` v19).
+- **Arquivos:** `supabase-config.js` (URL, chave publishable e redirect), `auth.js` (módulo de autenticação), `index.html` (carrega os dois após `app.js`), `interface.js` (seção **Conta** em Configurações), `app.js` (ações `authSendLink`/`authLogout`), `service-worker.js` (precache e `CACHE_VERSION` v21 atual).
 - **Fluxo:** `signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo } })`; sessão persistida (`persistSession`), renovação automática (`autoRefreshToken`) e detecção do retorno do link (`detectSessionInUrl`); `onAuthStateChange` atualiza a UI.
 - **Restrição de cadastro:** `shouldCreateUser: false` e cadastro público desabilitado no painel; não há tela pública de registro.
 - **Logout:** `signOut()` encerra apenas a sessão; `localStorage['atelier']` e backups permanecem intactos.
 - **Offline:** o app inicia e funciona sem autenticação; a área de conta mostra aviso e tenta novamente ao voltar online.
 - **Segurança:** apenas chave publishable/anon no frontend; `service_role` nunca no navegador; tokens do Magic Link são removidos da URL após o login.
 - **Configuração manual:** preencher `supabase-config.js`; adicionar a URL de produção (e a de teste local, se usar) em Authentication → URL Configuration → Redirect URLs; manter o cadastro público desabilitado.
-- **Escopo:** o guia `ATELIE_ONBOARDING.md` prevê também apresentação/tema iniciais; isso **não** faz parte desta fase. Aqui o login/logout foi integrado a Configurações.
-- **Validação:** UI de auth coberta por `_auth_ui_test.js` (13/13); Magic Link real, persistência de sessão e offline **pendentes** de teste no navegador com o projeto Supabase.
+- **Escopo:** o login/logout foi integrado a Configurações na Fase 2; o onboarding (apresentação/tema) foi implementado na Fase 2.5 — ver seção 14.
+- **Validação:** UI de auth coberta por `_auth_ui_test.js` (13/13); Magic Link validado manualmente no desktop e no celular (2026-10-24); logout testado no celular; offline ainda não testado em dispositivo real. Limite do Supabase Auth no plano atual: 2 e-mails/hora.
+
+## 14. Onboarding implementado (Fase 2.5)
+
+- **Referência:** `ATELIE_ONBOARDING.md` (guia externo ao repositório, em `...\Docs`).
+- **Arquivos:** `onboarding.js`, `paginas.css` (overlay `.ob-*`), `index.html`, `app.js` (ação `onboardingOpen`), `interface.js` (seção **Ajuda**), `service-worker.js` (`CACHE_VERSION` v20). Teste: `_onboarding_test.js`.
+- **Fluxo:** overlay com 3 passos — **login opcional** (Magic Link), **apresentação** (logo + Tarefas/Projetos, Planejamento, Pomodoro) e **escolha de tema**; “Pular” em qualquer etapa; conclusão salva em `localStorage['atelier_onboarding_v1']`; botão “Rever apresentação inicial” em Configurações.
+- **Decisões:** login não bloqueia o app (pode continuar sem conta); estado de onboarding é local por dispositivo (sincronização por conta fica para a fase de sync); tema usa `S.cfg.theme`/`applyTheme()` existentes; “Rever” permite testar novamente.
+- **Limitações:** conclusão não sincronizada entre dispositivos; um usuário existente verá o onboarding uma vez após esta atualização (pode pular). Validação visual concluída (desktop e celular, 2026-10-24).
+- **Validação:** `_onboarding_test.js` (12/12) e suítes existentes; nenhum Magic Link foi solicitado nos testes automatizados; validado visualmente no desktop e no celular.
+
+## 15. Importação inicial (Fase 3)
+
+- **Arquivos:** `import-data.js` (mapeamento + `upsert` + `verify` + seção **Sincronização**), `auth.js` (expõe `__auth.getClient()`), `index.html`, `interface.js`, `app.js` (ação `dataImport`), `service-worker.js` (`CACHE_VERSION` v21). Teste: `_import_mapping_test.js`.
+- **Modelo:** executa **no navegador, com a sessão do usuário autenticado** e a chave publishable; o RLS autoriza cada linha (`auth.uid() = user_id`). **Nenhuma `service_role`** é usada, em nenhum arquivo.
+- **Ordem:** `user_settings` → `labels` → `areas` → `skills` → `clients` → `projects` → `tasks` → `contacts` → `applications` → `goals` → `work_logs`.
+- **Idempotência:** `upsert` com `onConflict: 'user_id'` (user_settings) e `'user_id,id'` (demais).
+- **Conversões:** ms→ISO; `''`→`NULL` em FKs/datas; `where`→`where_`; `spent_minutes` somado dos logs; `doneAt` nulo preservado; `created_at`/`updated_at` pelo servidor; `client_updated_at` = `updatedAt` local.
+- **Fora do escopo desta fase:** `timer`/`active_timer` (Fase 6), `trash` (local), sincronização contínua, outbox e conflitos.
+- **Validação:** `_import_mapping_test.js` (26/26, cliente simulado). Importação real pendente: conta de teste + backup JSON atualizado + `verify()` de contagens.

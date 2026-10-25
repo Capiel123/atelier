@@ -280,3 +280,18 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .trash-row .trash-title{font-weight:500;word-break:break-word}
 .trash-row .trash-meta{font-size:10.5px;color:var(--mu);margin-top:1px}
 .trash-row button{padding:3px 8px;font-size:11px;flex:none}
+
+/* =========================================================
+   ONBOARDING (primeira utilização: login, apresentação, tema)
+   ========================================================= */
+.ob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:1000}
+.ob-card{position:relative;background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:24px 22px;width:min(560px,94vw);max-height:90vh;overflow:auto;color:var(--tx);box-shadow:0 18px 50px rgba(0,0,0,.5)}
+.ob-close{position:absolute;top:8px;right:8px;background:transparent;border:0;color:var(--mu);font-size:16px;cursor:pointer;padding:6px}
+.ob-step h2{margin:0 0 8px;font-size:20px}
+.ob-logo{display:block;height:64px;width:auto;margin:0 auto 12px}
+.ob-list{margin:8px 0 16px;padding-left:20px;color:var(--mu);line-height:1.6}
+.ob-list li{margin:4px 0}
+.ob-step .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ob-step .msg{margin:8px 0}
+.ob-card .theme-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+@media (max-width:640px){.ob-card{padding:18px 16px}.ob-step h2{font-size:18px}}

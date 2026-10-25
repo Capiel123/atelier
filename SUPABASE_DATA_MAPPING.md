@@ -1,6 +1,6 @@
 # Ateliê — Mapeamento de dados para o Supabase
 
-> **Status:** documento de planejamento. Nada foi implementado no Supabase, nenhum SQL foi criado e o aplicativo continua usando `localStorage['atelier']`.
+> **Status:** mapeamento de planejamento + mecanismo de importação inicial implementado em `import-data.js` (Fase 3). A sincronização contínua ainda não existe; o app continua usando `localStorage['atelier']` como fonte local.
 > **Fonte de verdade:** código atual (`estado.js`, `logica.js`) e o relatório de auditoria de persistência. Campos marcados como “aparente” derivam da leitura das fábricas e do `migrate()`.
 > **Data:** 2026-10-24 · **Versão do estado local:** `v = 15.9`
 
@@ -100,3 +100,13 @@ O app persiste um único objeto `S` em `localStorage['atelier']`. O objeto cont�
 - **Pendência:** formato final do `logo` (data URI vs Storage) fica para a implementação; a v1 usa data URI comprimido.
 - **Pendência:** sincronizar a lixeira no futuro (fora da v1).
 - **Fora de escopo:** notificações push, colaboração em tempo real, PIN local.
+
+## 8. Importação inicial (Fase 3 — implementada)
+
+- **Mecanismo:** `import-data.js` (script clássico, sem build) lê o estado local `S` e faz `upsert` nas tabelas pela **sessão do usuário autenticado**. Não usa `service_role`; o RLS autoriza cada inserção (`auth.uid() = user_id`).
+- **Ordem (dependências):** `user_settings` → `labels` → `areas` → `skills` → `clients` → `projects` → `tasks` → `contacts` → `applications` → `goals` → `work_logs`.
+- **Conflito:** `upsert` com `onConflict: 'user_id'` em `user_settings` e `'user_id,id'` nas demais (idempotente por chave).
+- **Conversões:** epoch ms → `timestamptz` (ISO); strings vazias em FKs/datas → `NULL` (`proj`, `clientId`, `linkedTaskId`, `due`, `time`, `lastContact`, `nextContact`, `snoozedUntil`, `nextFollowUp`…); `where` → `where_`; `spent_minutes` recalculado da soma de `logs[].minutes` (não copia o derivado); `doneAt = null` preservado.
+- **`created_at`/`updated_at`:** deixados para o servidor (default `now()` / trigger); `client_updated_at` recebe `updatedAt` local (LWW). Registros sem `updatedAt` (labels) usam `0`.
+- **Não importado nesta fase:** `timer`/`active_timer` (Fase 6), `trash` (local-only), `lastModified`/`v`.
+- **Validação:** `verify()` compara contagens locais × remotas por tabela; `_import_mapping_test.js` cobre mapeamento, ordem, conversões, idempotência e o contrato de upsert com cliente simulado (26/26). Importação real ainda não executada.

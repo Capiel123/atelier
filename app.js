@@ -116,6 +116,16 @@ document.addEventListener('click', ev => {
       else toast('Autenticação indisponível', true);
       return;
     }
+    case 'onboardingOpen': {
+      if (typeof openOnboarding === 'function') openOnboarding({ force: true });
+      else toast('Apresentação indisponível', true);
+      return;
+    }
+    case 'dataImport': {
+      if (typeof runDataImport === 'function') runDataImport();
+      else toast('Importação indisponível', true);
+      return;
+    }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
     case 'toggleQueueCard': {

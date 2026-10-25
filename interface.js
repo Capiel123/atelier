@@ -984,6 +984,8 @@ function viewConfig() {
   return `
     ${typeof authSection === 'function' ? authSection() : ''}
 
+    ${typeof syncSection === 'function' ? syncSection() : ''}
+
     <div class="section-group"><h3 style="margin-top:0">Aparência</h3><div class="msg" style="margin-bottom:10px">O tema altera fundo, superfícies e cores de destaque.</div>${renderThemePreview()}<div class="theme-grid">${themeCards}</div>${customRow}</div>
 
     <div class="section-group"><h3 style="margin-top:0">Logo</h3><div class="msg">Opcional. PNG, SVG ou WEBP (máx 500KB). O texto "ATELIER" continua aparecendo ao lado, em fonte gótica.</div>${S.cfg.logo ? `<div style="margin:8px 0;display:flex;align-items:center;gap:8px"><img src="${esc(S.cfg.logo)}" alt="Logo" style="max-height:44px;max-width:160px;background:var(--s2);padding:6px;border-radius:8px"><span style="font-family:'Grenze Gotisch',serif;font-size:24px;color:var(--ac);font-weight:700">ATELIER</span></div>` : ''}<div class="form"><label class="full">Enviar logo<input type="file" id="logoInput" accept="image/png,image/svg+xml,image/webp"></label></div>${S.cfg.logo ? `<div class="acts" style="margin-top:6px"><button data-a="logoRemove">Remover logo</button></div>` : ''}</div>
@@ -1008,6 +1010,8 @@ function viewConfig() {
       ${corruptRaw ? `<div class="warn" style="background:color-mix(in srgb,var(--wr) 15%,var(--s1));border:1px solid var(--wr);border-radius:8px;padding:8px 10px;font-size:12px;margin:8px 0">Conteúdo preservado de uma leitura com problema. <b>Não é um backup válido</b> — use apenas para inspeção.</div><div class="acts"><button data-a="dlCorrupt">Baixar conteúdo preservado</button></div>` : ''}
       <div class="msg">Restaurar substitui os dados atuais; uma cópia do estado atual é guardada antes.</div>
     </div>
+
+    <div class="section-group"><h3 style="margin-top:0">Ajuda</h3><div class="msg">Apresentação inicial, login e escolha de tema.</div><div class="acts"><button data-a="onboardingOpen">Rever apresentação inicial</button></div></div>
 
     <div class="section-group"><h3 style="margin-top:0">Estatísticas</h3><div class="stats"><span>Tarefas: <b>${S.tasks.length}</b></span><span>Projetos: <b>${alive(S.projects).length}</b></span><span>Clientes: <b>${alive(S.clients).length}</b></span><span>Vagas: <b>${alive(S.applications).length}</b></span><span>Contatos: <b>${alive(S.contacts).length}</b></span><span>Áreas: <b>${getAreas().length}</b></span><span>XP: <b>${Math.round(globalXp())}</b></span></div></div>`;
 }

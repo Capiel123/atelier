@@ -1,6 +1,6 @@
 # Ateliê — Plano de implementação da sincronização com Supabase
 
-> **Status:** Fases 0 e 1 concluídas; Fase 2 implementada no código, com validação real pendente de configuração/navegador. O app continua local (sem sync).
+> **Status:** Fases 0, 1, 2 e 2.5 concluídas; Fase 3 (importação inicial) implementada e testada com dados fictícios, com importação real pendente de conta de teste. Sincronização contínua ainda não iniciada; o app continua local.
 > **Arquitetura:** `SUPABASE_ARCHITECTURE.md` · **Dados:** `SUPABASE_DATA_MAPPING.md`
 > **Princípio:** cada fase entrega algo verificável sem quebrar o uso diário; o app permanece funcional offline e sem sync até a fase 7.
 
@@ -28,17 +28,29 @@
 - **Arquivos criados/modificados:** `supabase-config.js` (URL/chave publishable/redirect), `auth.js` (módulo de auth), `index.html` (carregamento), `interface.js` (seção Conta em Configurações), `app.js` (ações de login/logout), `service-worker.js` (precache + `CACHE_VERSION` v19). Teste: `_auth_ui_test.js` (fora do app).
 - **Decisões:** import dinâmico ESM do `@supabase/supabase-js` v2 (jsDelivr, sem build); apenas chave publishable/anon; `shouldCreateUser: false`; `persistSession`, `autoRefreshToken`, `detectSessionInUrl`; logout apenas encerra a sessão.
 - **Concluído quando:** Magic Link funciona; sessão persiste entre recarregamentos; logout funciona; app continua utilizável offline; nenhuma escrita remota de dados de tarefas.
-- **Testes:** UI de auth isolada (`_auth_ui_test.js`, 13/13) e suítes existentes; **pendente** teste real de Magic Link, persistência/renovação de sessão e offline em navegador com o projeto Supabase.
-- **Status:** **Código implementado e configurado (`supabase-config.js` com URL, chave publishable e redirect de produção); NÃO concluída.** Falta cadastrar a Redirect URL no painel Supabase e validar o Magic Link no navegador real.
+- **Testes:** UI de auth isolada (`_auth_ui_test.js`, 13/13) e suítes existentes; **validação manual concluída** no desktop e no celular (login/logout); offline ainda não testado em dispositivo real.
+- **Status:** **Concluída em 2026-10-24.** Login validado no desktop e no celular (mesma conta); logout testado no celular; sessão persistente. Limite do Supabase Auth no plano atual: 2 e-mails/hora. Não valida sincronização de dados.
 - **Risco principal:** configuração de URL de redirecionamento e restrição de cadastro.
+
+## Fase 2.5 — Onboarding (primeira utilização)
+
+- **Objetivo:** apresentar o app, permitir login opcional e escolher tema uma única vez, sem bloquear o uso local.
+- **Referência:** `ATELIE_ONBOARDING.md` (guia externo ao repositório).
+- **Arquivos criados/modificados:** `onboarding.js`, `paginas.css` (overlay), `index.html`, `app.js` (ação `onboardingOpen`), `interface.js` (seção Ajuda), `service-worker.js` (`CACHE_VERSION` v20). Teste: `_onboarding_test.js`.
+- **Conteúdo:** 3 passos — login opcional (Magic Link), apresentação (logo + Tarefas/Projetos, Planejamento, Pomodoro), escolha de tema reutilizando `THEMES`; pular em qualquer etapa; conclusão em `localStorage['atelier_onboarding_v1']`; botão “Rever apresentação inicial”.
+- **Decisões:** login não bloqueia o app; estado de onboarding local (sync por conta fica para a fase de sync); tema em `S.cfg.theme`/`applyTheme()`.
+- **Status:** **Concluída em 2026-10-24** — validada visualmente no desktop e celular (fluxo e temas).
+- **Testes:** `_onboarding_test.js` (12/12) e suítes existentes; nenhum Magic Link solicitado.
 
 ## Fase 3 — Camada de dados + importação inicial
 
-- **Objetivo:** mapear `S` ↔ linhas e importar um backup JSON de forma idempotente.
-- **Arquivos prováveis:** `supabase.js` (funções de leitura/escrita), novo `sync-map.js` (normalização/mapeamento), script de importação fora do app (`scripts/import-backup.js`, executado localmente com a service role em ambiente de teste — nunca no navegador).
-- **Conteúdo:** conversão de datas/epoch; `''` → `NULL`; ordem de importação; `upsert` por `(user_id, id)`; `work_logs` com snapshots.
-- **Concluído quando:** importar o JSON de teste duas vezes não duplica; contagens por tabela conferem; FKs válidas; `doneAt` nulos preservados; somas derivadas conferem.
-- **Testes:** contagens, integridade referencial, idempotência, amostras de datas e valores; rollback apagando apenas o usuário de teste.
+- **Objetivo:** mapear `S` ↔ linhas e importar o estado local de forma idempotente e verificável.
+- **Arquivos criados/modificados:** `import-data.js` (mapeamento + `upsert` + `verify` + seção Sincronização), `auth.js` (expõe `getClient()`), `index.html`, `interface.js`, `app.js` (ação `dataImport`), `service-worker.js` (`CACHE_VERSION` v21). Teste: `_import_mapping_test.js`.
+- **Decisões:** importação **pelo cliente autenticado** (sessão + RLS), **sem `service_role`**; `upsert` por `user_id,id`; ordem de FKs; `created_at`/`updated_at` pelo servidor; `client_updated_at` = `updatedAt` local; `spent_minutes` recalculado dos logs; `doneAt` nulo preservado; não importa `timer`/`trash`.
+- **Concluído quando:** importar um backup de teste duas vezes não duplica; contagens por tabela conferem; FKs válidas; `doneAt` nulos preservados; derivados conferem; usuário de teste isolado.
+- **Testes executados:** `_import_mapping_test.js` (26/26) com cliente simulado + `node --check` + suítes existentes.
+- **Pendente:** importação real com **conta de teste e dados controlados** (backup JSON atualizado), seguida de `verify()` e comparação de contagens; depois, autorização para dados reais.
+- **Status:** **Preparada e testada com dados fictícios; NÃO executada com dados reais.**
 - **Critério de reversão:** backup JSON intacto; dados remotos do usuário de teste podem ser apagados sem afetar o app.
 
 ## Fase 4 — Outbox e envio (push)
@@ -107,4 +119,4 @@
 
 ## Próximo passo concreto
 
-**Fase 2 (validação):** preencher `supabase-config.js` com a URL e a chave publishable do projeto; cadastrar a URL real do app em Authentication → URL Configuration → Redirect URLs; testar o Magic Link no navegador (login, recarregar, logout, offline). Só depois marcar a Fase 2 como concluída e iniciar a Fase 3.
+**Validar o onboarding no navegador** (desktop e celular, temas) e marcar a Fase 2.5 como concluída. Em seguida, iniciar a **Fase 3 — camada de dados + importação**, a partir de um backup JSON externo, com importação idempotente e validação de contagens, relações e datas nulas.

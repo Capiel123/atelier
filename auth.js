@@ -169,6 +169,7 @@
   window.authLogout = logout;
   window.__auth = {
     getState: function () { return Object.assign({}, state, { client: undefined }); },
+    getClient: function () { return ensureClient(); },
     sendMagicLink: sendMagicLink,
     logout: logout,
     init: init,
