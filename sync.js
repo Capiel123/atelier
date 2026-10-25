@@ -279,17 +279,37 @@
     o.lastError = String((err && err.message) || err || 'erro');
   }
 
+  /* ---------------- propriedade da conta ---------------- */
+  // Adota uma nova conta: limpa apenas metadados de sync por-conta; NÃO toca em S
+  // nem na outbox. Cursores já são por-account (isolados por uid), sem necessidade de limpeza.
+  function adoptAccount(newUid) {
+    localStorage.setItem(OWNER_KEY, newUid);
+    localStorage.removeItem(SEEN_KEY);        // força re-baseline via pull inicial (merge seguro)
+    localStorage.removeItem(SETTINGS_CU_KEY); // nova conta: user_settings podem aplicar
+    localStorage.removeItem(SEEDID_KEY);      // reavalia o seed para a nova conta
+    state.owner = newUid;
+  }
+  // Resolve o dono da fila. Retorna { owner, blocked }.
+  // Regra: outbox vazia → adota o novo UID; outbox pendente → pausa (preserva a fila).
+  function resolveOwner(user) {
+    var owner = localStorage.getItem(OWNER_KEY) || null;
+    if (!owner) { localStorage.setItem(OWNER_KEY, user.id); state.owner = user.id; return { owner: user.id, blocked: false }; }
+    if (owner === user.id) { state.owner = owner; return { owner: owner, blocked: false }; }
+    var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
+    if (!store.ops.length) { adoptAccount(user.id); return { owner: user.id, blocked: false }; }
+    state.owner = owner;
+    return { owner: owner, blocked: true };
+  }
+
   async function flushOnce() {
     if (state.inFlight) return;
     var user = authUser();
     if (!user) { setStatus('paused'); return; }
     var client = await getClient();
     if (!client) { setStatus(navigator && navigator.onLine === false ? 'offline' : 'paused'); scheduleRetry(); return; }
-    // isolamento por conta
-    var owner = localStorage.getItem(OWNER_KEY) || null;
-    if (owner && owner !== user.id) { state.owner = owner; setStatus('paused'); return; }
-    if (!owner) { localStorage.setItem(OWNER_KEY, user.id); owner = user.id; }
-    state.owner = owner;
+    // isolamento por conta (mesma regra em push e pull)
+    var own = resolveOwner(user);
+    if (own.blocked) { setStatus('paused-account'); return; }
     state.inFlight = true;
     try { await doFlush(client, user); }
     catch (e) { setStatus('error', String(e && e.message || e)); }
@@ -448,9 +468,8 @@
     if (!user) { setStatus('paused'); return; }
     var client = await getClient();
     if (!client) return;
-    var owner = localStorage.getItem(OWNER_KEY) || null;
-    if (owner && owner !== user.id) { setStatus('paused'); return; }
-    if (!owner) localStorage.setItem(OWNER_KEY, user.id);
+    var own = resolveOwner(user);
+    if (own.blocked) { setStatus('paused-account'); return; }
     state.inFlight = true;
     try { await doPull(client, user); }
     catch (e) { setStatus('error', String(e && e.message || e)); }
@@ -503,6 +522,7 @@
     var st = state.status;
     if (st === 'sending') { el.dataset.state = 'sending'; el.querySelector('.sp-text').textContent = 'Sincronizando…'; el.hidden = false; }
     else if (st === 'error') { el.dataset.state = 'error'; el.querySelector('.sp-text').textContent = 'Erro de sync'; el.hidden = false; }
+    else if (st === 'paused-account') { el.dataset.state = 'paused'; el.querySelector('.sp-text').textContent = 'Pausada: outra conta'; el.hidden = false; }
     else if (st === 'paused') { el.dataset.state = 'paused'; el.querySelector('.sp-text').textContent = 'Sync pausada'; el.hidden = false; }
     else if (navigator && navigator.onLine === false) { el.dataset.state = 'offline'; el.querySelector('.sp-text').textContent = 'Offline'; el.hidden = false; }
     else if (p > 0) { el.dataset.state = 'pending'; el.querySelector('.sp-text').textContent = p + ' pendente' + (p === 1 ? '' : 's'); el.hidden = false; }
@@ -516,7 +536,7 @@
     if (!user) return '<div class="msg">Entre na Conta para sincronizar as alterações locais.</div>';
     var st = state.status;
     if (navigator && navigator.onLine === false) st = 'offline';
-    var label = { synced: 'Tudo sincronizado.', pending: p + ' alteração(ões) pendente(s).', sending: 'Enviando…', paused: 'Sincronização pausada (conta diferente).', error: 'Erro ao sincronizar: ' + (state.lastError || ''), offline: 'Sem conexão. As alterações ficam na fila.' }[st] || '';
+    var label = { synced: 'Tudo sincronizado.', pending: p + ' alteração(ões) pendente(s).', sending: 'Enviando…', paused: 'Sincronização pausada (sem conta).', 'paused-account': 'Sincronização pausada: há operações pendentes de outra conta. Entre com a conta dona para enviá-las.', error: 'Erro ao sincronizar: ' + (state.lastError || ''), offline: 'Sem conexão. As alterações ficam na fila.' }[st] || '';
     return '<div class="msg">' + label + '</div>' +
       '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button></div>';
   }
@@ -538,10 +558,10 @@
   window.__sync = {
     onSave: onSave,
     onAuth: onAuth,
-    flushNow: function () { withLock(flushOnce); },
-    syncNow: function () { withLock(syncCycle); },
+    flushNow: function () { return withLock(flushOnce); },
+    syncNow: function () { return withLock(syncCycle); },
     forceFullSync: forceFullSync,
-    getState: function () { return { status: state.status, pending: state.pending, lastError: state.lastError, lastFlushAt: state.lastFlushAt, owner: state.owner, deviceId: state.deviceId }; },
+    getState: function () { return { status: state.status, pending: state.pending, lastError: state.lastError, lastFlushAt: state.lastFlushAt, owner: state.owner, deviceId: state.deviceId, inFlight: state.inFlight }; },
     statusHTML: statusHTML,
     _test: {
       enqueueAll: enqueueAll, doFlush: doFlush, hashStr: hashStr, isoMs: isoMs,
@@ -550,10 +570,11 @@
       CURSORS_KEY: CURSORS_KEY, SEEDID_KEY: SEEDID_KEY, SETTINGS_CU_KEY: SETTINGS_CU_KEY,
       ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS,
       scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry,
-      pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, isPristineSeed: isPristineSeed
+      pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, isPristineSeed: isPristineSeed,
+      resolveOwner: resolveOwner, adoptAccount: adoptAccount
     }
   };
-  window.syncFlushNow = function () { window.__sync.syncNow(); };
+  window.syncFlushNow = function () { return window.__sync.syncNow(); };
   window.syncForceFull = function () { if (confirm('Reenviar todo o estado local para a conta?')) window.__sync.forceFullSync(); };
 
   if (typeof document !== 'undefined') {
