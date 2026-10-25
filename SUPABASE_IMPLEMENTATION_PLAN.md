@@ -1,6 +1,6 @@
 # Ateliê — Plano de implementação da sincronização com Supabase
 
-> **Status:** Fases 0–3 concluídas e validadas; Fase 4 (outbox/push) **implementada e testada em simulação** (`_sync_outbox_test.js` 20/20), com **validação real no Supabase pendente** (conta de teste). Pull/merge/conflitos/timer ficam para as Fases 5/6.
+> **Status:** Fases 0–3 concluídas e validadas; Fase 4 (outbox/push) **implementada, testada em simulação (22/22) e validada manualmente** na conta de teste. Pull/merge/conflitos/timer ficam para as Fases 5/6.
 > **Arquitetura:** `SUPABASE_ARCHITECTURE.md` · **Dados:** `SUPABASE_DATA_MAPPING.md`
 > **Princípio:** cada fase entrega algo verificável sem quebrar o uso diário; o app permanece funcional offline e sem sync até a fase 7.
 
@@ -64,8 +64,10 @@
 - **Concorrência:** `navigator.locks` ('atelier_sync_v1') serializa a leitura-escrita da outbox/seen entre abas (fallback sem lock se indisponível).
 - **Reuso:** mapeadores e `ORDER` da Fase 3 (`window.__importer`); sem `service_role`; RLS no servidor; não importa `active_timer`/`trash`.
 - **Fora do escopo:** pull, merge/conflitos, timer (Fases 5/6).
-- **Testes:** `_sync_outbox_test.js` (**20/20**, cliente simulado) + `node --check` + suítes existentes.
-- **Status:** **Implementada; validação real no Supabase pendente** (editar offline → reconectar → conferir; exclusão → tombstone; recarga com fila; isolamento entre contas).
+- **Testes:** `_sync_outbox_test.js` (**22/22**, cliente simulado) + `node --check` + suítes existentes.
+- **Validação manual (2026-10-25, conta de teste):** criação enviada; edição atualizou o mesmo registro sem duplicar; exclusão lógica com `deleted_at`; edição offline preservada e enviada após envio manual; indicador terminou em “Tudo sincronizado”.
+- **Correção aplicada (pós-auditoria):** o envio automático na reconexão estava sendo engolido por um timer de retry pendente (até 30s). `scheduleFlush` agora é “target-aware” e o evento `online` dispara flush imediato (50ms) que substitui o retry, além de atualizar o `cloudPill` na hora.
+- **Status:** **Implementada e validada manualmente.** Pendente apenas re-confirmar o envio automático na reconexão após a correção.
 
 ## Fase 5 — Pull, merge e conflitos
 

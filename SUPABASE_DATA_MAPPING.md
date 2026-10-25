@@ -92,6 +92,7 @@ O app persiste um único objeto `S` em `localStorage['atelier']`. O objeto cont�
 9. **`logo`:** data URI em `user_settings.data.logo`; limite flexível ~2 MB, compressão no cliente; Storage apenas se necessário.
 10. **Timer:** uma única sessão ativa por conta; `active_timer` com uma linha por usuário; ao parar/concluir fase, os minutos entram em `tasks.logs` e o timer é limpo.
 11. **Lixeira:** local na v1; futura tabela `trash` (`id`, `user_id`, `task jsonb`, `deleted_at`) sem reescrever o restante.
+12. **`day` (dia da semana):** índice **0=Segunda … 6=Domingo** (`DAYS`/`DAYS_FULL` em `estado.js`; `todayI()` = `(new Date().getDay()+6)%7`). O banco guarda esse índice (`smallint`) e a UI exibe `DAYS[day]` — **terça-feira = 1**. Consistente entre save/mapa/interface; a Fase 5 (pull) deve reusar a mesma convenção.
 
 ## 7. Hipóteses e pendências
 

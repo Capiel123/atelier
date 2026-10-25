@@ -20,7 +20,7 @@
   var S_KEYS = { user_settings: null, labels: 'labels', areas: 'areas', skills: 'skills', clients: 'clients', projects: 'projects', tasks: 'tasks', contacts: 'contacts', applications: 'applications', goals: 'goals', work_logs: 'workLogs' };
   var HAS_DELETED = { user_settings: false, labels: false, areas: false, skills: true, clients: true, projects: true, tasks: true, contacts: true, applications: true, goals: true, work_logs: false };
 
-  var state = { status: 'idle', pending: 0, lastError: null, lastFlushAt: null, owner: null, deviceId: null, inFlight: false, enqTimer: null, flushTimer: null };
+  var state = { status: 'idle', pending: 0, lastError: null, lastFlushAt: null, owner: null, deviceId: null, inFlight: false, enqTimer: null, flushTimer: null, flushAt: null };
 
   /* ---------------- storage ---------------- */
   function readJSON(key, dflt) { try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : dflt; } catch (e) { return dflt; } }
@@ -285,16 +285,20 @@
   /* ---------------- agendamento e UI ---------------- */
   function scheduleEnqueue() { if (state.enqTimer) return; state.enqTimer = setTimeout(function () { state.enqTimer = null; withLock(enqueueAll); }, 80); }
   function scheduleFlush(ms) {
-    if (state.flushTimer) return;
-    state.flushTimer = setTimeout(function () { state.flushTimer = null; withLock(flushOnce); }, (ms == null ? 1200 : ms));
+    var delay = (ms == null ? 1200 : ms);
+    var target = Date.now() + delay;
+    // Se já há um flush agendado para antes, mantém (debounce).
+    if (state.flushTimer && state.flushAt && state.flushAt <= target) return;
+    if (state.flushTimer) clearTimeout(state.flushTimer);
+    state.flushAt = target;
+    state.flushTimer = setTimeout(function () { state.flushTimer = null; state.flushAt = null; withLock(flushOnce); }, delay);
   }
   function scheduleRetry() {
     var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
     var earliest = null;
     store.ops.forEach(function (o) { if (o.nextAttemptAt && (earliest === null || o.nextAttemptAt < earliest)) earliest = o.nextAttemptAt; });
-    var delay = earliest ? Math.max(5000, earliest - Date.now()) : 30000;
-    if (state.flushTimer) return; // já agendado
-    state.flushTimer = setTimeout(function () { state.flushTimer = null; withLock(flushOnce); }, Math.min(delay, 30000));
+    if (!earliest) return; // nada em backoff: não deixa um polling pendente
+    scheduleFlush(Math.max(5000, Math.min(earliest - Date.now(), 30000)));
   }
 
   function setStatus(status, error) {
@@ -353,7 +357,7 @@
       enqueueAll: enqueueAll, doFlush: doFlush, hashStr: hashStr, isoMs: isoMs,
       buildBaseline: buildBaseline, readJSON: readJSON, writeJSON: writeJSON,
       OUTBOX_KEY: OUTBOX_KEY, SEEN_KEY: SEEN_KEY, DEVICE_KEY: DEVICE_KEY, OWNER_KEY: OWNER_KEY,
-      ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS
+      ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS, scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry
     }
   };
   window.syncFlushNow = function () { window.__sync.flushNow(); };
@@ -364,7 +368,7 @@
     else init();
   }
   if (typeof window !== 'undefined' && window.addEventListener) {
-    window.addEventListener('online', function () { scheduleFlush(50); });
+    window.addEventListener('online', function () { scheduleFlush(50); renderSync(); });
     window.addEventListener('offline', function () { setStatus('offline'); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) scheduleFlush(100); });
   }

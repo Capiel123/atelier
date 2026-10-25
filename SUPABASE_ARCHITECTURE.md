@@ -234,4 +234,4 @@ Critérios detalhados e fases em `SUPABASE_IMPLEMENTATION_PLAN.md`.
 - **Retry:** falha transiente → mantém op + backoff (5s→30min cap, jitter ±20%); falha de dados → fallback linha a linha; ops nunca descartadas.
 - **Concorrência:** `navigator.locks` serializa a leitura-escrita da outbox/seen entre abas.
 - **Segurança:** chave publishable + RLS; sem `service_role`; `sync.js` nunca escreve em `S`.
-- **Validação:** `_sync_outbox_test.js` (20/20, simulado); validação real no Supabase pendente (edição offline, reconexão, exclusão, recarga, isolamento).
+- **Validação:** `_sync_outbox_test.js` (22/22, simulado) + suítes existentes; validação manual na conta de teste (2026-10-25): criação, edição sem duplicação, `deleted_at`, edição offline preservada, indicador “Tudo sincronizado”. Correção pós-auditoria: flush imediato na reconexão (antes engolido por retry pendente).
