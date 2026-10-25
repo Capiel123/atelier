@@ -13,6 +13,9 @@
 
   function iso(ms) { return (typeof ms === 'number' && isFinite(ms)) ? new Date(ms).toISOString() : null; }
   function num(v, d) { var n = Number(v); return isFinite(n) ? n : (d == null ? null : d); }
+  // Colunas inteiras (integer/smallint/bigint) não aceitam decimais:
+  // arredonda para evitar "invalid input syntax for type integer/bigint".
+  function int(v, d) { return Math.round(num(v, d)); }
   function text(v, d) { return (v == null || v === '') ? (d == null ? '' : d) : String(v); }
   function nullStr(v) { return (v == null || v === '') ? null : String(v); }
   function arr(v) { return Array.isArray(v) ? v : []; }
@@ -22,17 +25,17 @@
     return {
       user_id: uid, id: t.id,
       title: text(t.t), description: text(t.desc),
-      priority: num(t.pr, 1), estimate_minutes: num(t.est, 0),
-      spent_minutes: logs.reduce(function (a, l) { return a + num(l.minutes, 0); }, 0),
-      day: (t.day == null) ? null : num(t.day, 0),
-      sort_order: num(t.order, 0), is_next: !!t.next, done: !!t.done,
+      priority: int(t.pr, 1), estimate_minutes: int(t.est, 0),
+      spent_minutes: logs.reduce(function (a, l) { return a + int(l.minutes, 0); }, 0),
+      day: (t.day == null) ? null : int(t.day, 0),
+      sort_order: int(t.order, 0), is_next: !!t.next, done: !!t.done,
       done_at: iso(t.doneAt), area: text(t.area, 'Carreira'),
       skills: arr(t.skills), project_id: nullStr(t.proj),
       due_date: nullStr(t.due), due_time: nullStr(t.time), section: text(t.section),
       subs: arr(t.subs), logs: logs, xp_claimed: !!t.xpClaimed,
       type: text(t.type), color: text(t.color), labels: arr(t.labels),
-      postponed_count: num(t.postponedCount, 0), last_postponed_at: iso(t.lastPostponedAt),
-      deleted_at: null, client_updated_at: num(t.updatedAt, 0)
+      postponed_count: int(t.postponedCount, 0), last_postponed_at: iso(t.lastPostponedAt),
+      deleted_at: null, client_updated_at: int(t.updatedAt, 0)
     };
   }
 
@@ -46,26 +49,26 @@
       completed_at: iso(p.completedAt),
       manual_hours: (p.manualHours == null || p.manualHours === '') ? null : num(p.manualHours, 0),
       currency: text(p.currency, 'BRL'), goals: arr(p.goals),
-      deleted_at: iso(p.deletedAt), client_updated_at: num(p.updatedAt, 0)
+      deleted_at: iso(p.deletedAt), client_updated_at: int(p.updatedAt, 0)
     };
   }
 
   function client(c, uid) {
-    return { user_id: uid, id: c.id, name: text(c.n), notes: text(c.notes), deleted_at: iso(c.deletedAt), client_updated_at: num(c.updatedAt, 0) };
+    return { user_id: uid, id: c.id, name: text(c.n), notes: text(c.notes), deleted_at: iso(c.deletedAt), client_updated_at: int(c.updatedAt, 0) };
   }
 
   function contact(c, uid) {
     return {
       user_id: uid, id: c.id, name: text(c.n), type: text(c.type, 'pro'), category: text(c.cat, 'Prospect'),
       where_: text(c.where), url: text(c.url), role: text(c.role), context: text(c.context),
-      interests: text(c.interests), notes: text(c.notes), priority: num(c.priority, 1),
+      interests: text(c.interests), notes: text(c.notes), priority: int(c.priority, 1),
       last_contact: nullStr(c.lastContact), next_contact: nullStr(c.nextContact), next_action: text(c.nextAction),
-      cadence: num(c.cadence, 30), archived: !!c.archived, last_conversation: text(c.lastConversation),
+      cadence: int(c.cadence, 30), archived: !!c.archived, last_conversation: text(c.lastConversation),
       waiting_for: !!c.waitingFor, waiting_since: iso(c.waitingSince), tags: arr(c.tags),
       birthday: text(c.birthday), important_dates: arr(c.importantDates),
       snoozed_until: nullStr(c.snoozedUntil), snooze_reason: text(c.snoozeReason),
-      interactions: arr(c.interactions), sent_count: num(c.sentCount, 0), received_count: num(c.receivedCount, 0),
-      client_id: nullStr(c.clientId), deleted_at: iso(c.deletedAt), client_updated_at: num(c.updatedAt, 0)
+      interactions: arr(c.interactions), sent_count: int(c.sentCount, 0), received_count: int(c.receivedCount, 0),
+      client_id: nullStr(c.clientId), deleted_at: iso(c.deletedAt), client_updated_at: int(c.updatedAt, 0)
     };
   }
 
@@ -73,33 +76,33 @@
     return {
       user_id: uid, id: a.id, client: text(a.client), role: text(a.role), url: text(a.url),
       contact_name: text(a.contactName), contact_info: text(a.contactInfo), platform: text(a.platform),
-      area: text(a.area), subarea: text(a.subarea), ticket: num(a.ticket, 0), priority: num(a.priority, 1),
+      area: text(a.area), subarea: text(a.subarea), ticket: num(a.ticket, 0), priority: int(a.priority, 1),
       notes: text(a.notes), stage: text(a.stage, 'prospect'), stage_history: arr(a.stageHistory),
       found_at: iso(a.foundAt) || new Date().toISOString(), applied_at: iso(a.appliedAt), first_response_at: iso(a.firstResponseAt),
       next_follow_up: nullStr(a.nextFollowUp), last_interaction_at: iso(a.lastInteractionAt),
       linked_task_id: nullStr(a.linkedTaskId), project_id: nullStr(a.projectId), interactions: arr(a.interactions),
-      deleted_at: iso(a.deletedAt), client_updated_at: num(a.updatedAt, 0)
+      deleted_at: iso(a.deletedAt), client_updated_at: int(a.updatedAt, 0)
     };
   }
 
   function skill(s, uid) {
-    return { user_id: uid, id: s.id, name: text(s.n), color: text(s.color, '#9a94a3'), archived: !!s.archived, xp: num(s.xp, 0), sort_order: num(s.order, 0), deleted_at: iso(s.deletedAt), client_updated_at: num(s.updatedAt, 0) };
+    return { user_id: uid, id: s.id, name: text(s.n), color: text(s.color, '#9a94a3'), archived: !!s.archived, xp: int(s.xp, 0), sort_order: int(s.order, 0), deleted_at: iso(s.deletedAt), client_updated_at: int(s.updatedAt, 0) };
   }
 
   function goal(g, uid) {
-    return { user_id: uid, id: g.id, title: text(g.t), progress: num(g.p, 0), due_date: nullStr(g.due), deleted_at: iso(g.deletedAt), client_updated_at: num(g.updatedAt, 0) };
+    return { user_id: uid, id: g.id, title: text(g.t), progress: int(g.p, 0), due_date: nullStr(g.due), deleted_at: iso(g.deletedAt), client_updated_at: int(g.updatedAt, 0) };
   }
 
   function label(l, uid) {
-    return { user_id: uid, id: l.id, name: text(l.n), color: text(l.color), sort_order: num(l.order, 0), client_updated_at: 0 };
+    return { user_id: uid, id: l.id, name: text(l.n), color: text(l.color), sort_order: int(l.order, 0), client_updated_at: 0 };
   }
 
   function area(a, uid) {
-    return { user_id: uid, id: a.id, name: text(a.n), color: text(a.color), archived: !!a.archived, sort_order: num(a.order, 0), client_updated_at: num(a.updatedAt, 0) };
+    return { user_id: uid, id: a.id, name: text(a.n), color: text(a.color), archived: !!a.archived, sort_order: int(a.order, 0), client_updated_at: int(a.updatedAt, 0) };
   }
 
   function workLog(w, uid) {
-    return { user_id: uid, id: w.id, date: nullStr(w.date), ts: iso(w.ts) || new Date().toISOString(), task_id: nullStr(w.taskId), task_title: text(w.taskTitle), project_id: nullStr(w.projectId), project_name: text(w.projName), area: text(w.area), text: text(w.text), client_updated_at: num(w.ts, 0) };
+    return { user_id: uid, id: w.id, date: nullStr(w.date), ts: iso(w.ts) || new Date().toISOString(), task_id: nullStr(w.taskId), task_title: text(w.taskTitle), project_id: nullStr(w.projectId), project_name: text(w.projName), area: text(w.area), text: text(w.text), client_updated_at: int(w.ts, 0) };
   }
 
   function cfgForImport(cfg) {
@@ -113,8 +116,8 @@
     var tables = {};
     tables.user_settings = [{
       user_id: uid,
-      data: { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: num(S.xpPool, 0), commands: arr(S.commands) },
-      client_updated_at: num(S.lastModified, 0)
+      data: { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands) },
+      client_updated_at: int(S.lastModified, 0)
     }];
     tables.labels = arr(S.labels).map(function (l) { return label(l, uid); });
     tables.areas = arr(S.areas).map(function (a) { return area(a, uid); });
