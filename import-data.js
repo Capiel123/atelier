@@ -109,6 +109,8 @@
     var c = Object.assign({}, cfg || {});
     delete c.lastBackupAt;
     delete c.backupReminderDismissedAt;
+    delete c.theme;       // preferência LOCAL por dispositivo (não sincroniza)
+    delete c.accentColor; // preferência LOCAL por dispositivo (não sincroniza)
     return c;
   }
 

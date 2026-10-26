@@ -327,7 +327,10 @@
       localStorage.removeItem(SEEDID_KEY);
       localStorage.removeItem(CURSORS_KEY);
       state.pending = 0;
+      var keepTheme = (typeof S !== 'undefined' && S && S.cfg && S.cfg.theme) || 'obsidian';
+      var keepAccent = (typeof S !== 'undefined' && S && S.cfg) ? S.cfg.accentColor : null;
       if (typeof S !== 'undefined' && typeof seed === 'function') { try { S = seed(); } catch (e) {} }
+      if (S && S.cfg) { S.cfg.theme = keepTheme; S.cfg.accentColor = keepAccent; } // preferências locais
       if (typeof applyTheme === 'function') applyTheme();
       if (typeof save === 'function') save();
       if (typeof render === 'function') render();
@@ -383,8 +386,13 @@
     var cfg = Object.assign({}, data.cfg || {});
     cfg.lastBackupAt = (S.cfg && S.cfg.lastBackupAt) || null;
     cfg.backupReminderDismissedAt = (S.cfg && S.cfg.backupReminderDismissedAt) || 0;
+    // preferências visuais são LOCAIS: não sobrescrever com o valor remoto
+    var localTheme = (S.cfg && S.cfg.theme) || 'obsidian';
+    var localAccent = (S.cfg && S.cfg.accentColor != null) ? S.cfg.accentColor : null;
     S.cfg = cfg; S.energy = data.energy || {}; S.xpPool = numVal(data.xpPool, 0);
     S.commands = Array.isArray(data.commands) ? data.commands : [];
+    S.cfg.theme = localTheme;
+    S.cfg.accentColor = localAccent;
     localStorage.setItem(SETTINGS_CU_KEY, String(cu));
     return true;
   }
