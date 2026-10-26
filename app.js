@@ -141,6 +141,11 @@ document.addEventListener('click', ev => {
       else toast('Sincronização indisponível', true);
       return;
     }
+    case 'syncResetLocal': {
+      if (typeof syncResetLocal === 'function') syncResetLocal();
+      else toast('Sincronização indisponível', true);
+      return;
+    }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
     case 'toggleQueueCard': {

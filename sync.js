@@ -313,6 +313,24 @@
     state.owner = null;
     setStatus('pending');
   }
+  // Reconstroi o estado local a partir da conta autenticada: descarta o S local
+  // (dados de teste/offline) e os metadados de sync, preserva autenticação/deviceId/owner,
+  // e re-puxa o remoto (pull inicial com seed → substituição). NÃO altera o Supabase.
+  function resetLocalData() {
+    var user = authUser();
+    if (!user) { setStatus('paused'); return; }
+    localStorage.removeItem(OUTBOX_KEY);
+    localStorage.removeItem(SEEN_KEY);
+    localStorage.removeItem(SETTINGS_CU_KEY);
+    localStorage.removeItem(SEEDID_KEY);
+    localStorage.removeItem(CURSORS_KEY);
+    state.pending = 0;
+    if (typeof S !== 'undefined' && typeof seed === 'function') { try { S = seed(); } catch (e) {} }
+    if (typeof applyTheme === 'function') applyTheme();
+    if (typeof save === 'function') save();
+    if (typeof render === 'function') render();
+    scheduleFlush(50);
+  }
 
   async function flushOnce() {
     if (state.inFlight) return;
@@ -423,6 +441,7 @@
       writeJSON(SEEN_KEY, buildBaseline(S));
       if (S._seedId) localStorage.setItem(SEEDID_KEY, S._seedId);
       state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
+      if (typeof applyTheme === 'function') applyTheme();
       if (typeof render === 'function') render();
       renderSync();
       return;
@@ -468,6 +487,7 @@
         else delete seenNow[ch.table][ch.id];
       });
       writeJSON(SEEN_KEY, seenNow);
+      if (typeof applyTheme === 'function') applyTheme();
       if (typeof render === 'function') render();
     }
     writeCursors(cursors);
@@ -555,7 +575,7 @@
         '<div class="msg">Apaga apenas a fila pendente da conta anterior; seus dados locais e os dados do Supabase não são alterados.</div>'
       : '';
     return '<div class="msg">' + label + '</div>' + unlock +
-      '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button></div>';
+      '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button><button data-a="syncResetLocal">Restaurar dados da conta</button></div>';
   }
 
   function onSave() { scheduleEnqueue(); scheduleFlush(); }
@@ -578,6 +598,7 @@
     flushNow: function () { return withLock(flushOnce); },
     syncNow: function () { return withLock(syncCycle); },
     clearSyncQueue: clearSyncQueue,
+    resetLocalData: resetLocalData,
     forceFullSync: forceFullSync,
     getState: function () { return { status: state.status, pending: state.pending, lastError: state.lastError, lastFlushAt: state.lastFlushAt, owner: state.owner, deviceId: state.deviceId, inFlight: state.inFlight }; },
     statusHTML: statusHTML,
@@ -589,7 +610,7 @@
       ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS,
       scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry,
       pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, isPristineSeed: isPristineSeed,
-      resolveOwner: resolveOwner, adoptAccount: adoptAccount, clearSyncQueue: clearSyncQueue
+      resolveOwner: resolveOwner, adoptAccount: adoptAccount, clearSyncQueue: clearSyncQueue, resetLocalData: resetLocalData
     }
   };
   window.syncFlushNow = function () { return window.__sync.syncNow(); };
@@ -597,6 +618,11 @@
     if (confirm('Descartar a fila de sincronização pendente e usar a conta atual? Os dados locais NÃO são apagados.')) {
       window.__sync.clearSyncQueue();
       window.__sync.syncNow();
+    }
+  };
+  window.syncResetLocal = function () {
+    if (confirm('Apagar TODOS os dados locais deste dispositivo e baixar novamente da conta Supabase?\n\nIsso NÃO altera os dados do Supabase. Dados locais de teste serão perdidos.')) {
+      window.__sync.resetLocalData();
     }
   };
   window.syncForceFull = function () { if (confirm('Reenviar todo o estado local para a conta?')) window.__sync.forceFullSync(); };

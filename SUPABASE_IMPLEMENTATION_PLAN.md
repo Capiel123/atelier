@@ -127,6 +127,7 @@
 - **Testes executados (simulados):** `_sync_merge_test.js` (**20/20**) e `_sync_pull_test.js` (**10/10**) + `node --check` + suítes existentes (12 suítes verdes).
 - **Status:** **Etapas 1–2 implementadas** (merge + pull) + **correção de propriedade** (reatribuição de conta). **Pendente:** validação real no Supabase (dois dispositivos, cenários 1–10) e eventuais ajustes de UI (estado “baixando” no pill).
 - **Correção de propriedade (2026-10-25/26):** `atelier_sync_owner` era “write-once” e travava em “Sync pausado” ao trocar de conta. Agora: outbox vazia + owner diferente → **adota o novo UID** (reseta `seen`/`settings_cu`/`seed`, sem tocar em `S` nem na outbox); outbox pendente + owner diferente → **pausa preservada** (`paused-account`) sem envio cruzado. **Escape hatch:** ação “Descartar fila pendente e usar esta conta” (`clearSyncQueue`, com confirmação) remove outbox/owner/`seen`/`settings_cu`/`seed` (sem tocar em `S` nem no remoto) e retoma a sync para a conta atual. Cursores já são por-conta (isolados por uid). Teste: `_sync_owner_test.js` (23/23).
+- **Reset local controlado (2026-10-26):** ação “Restaurar dados da conta” (`resetLocalData`, com confirmação) descarta o `S` local (volta a `seed()`), limpa outbox/`seen`/cursores/`settings_cu`/`seed` (preserva autenticação, `owner` e `deviceId`) e re-puxa o remoto (pull inicial com seed → substituição). **Não altera o Supabase.** Útil para descartar dados locais de teste e alinhar o dispositivo à conta. Teste: `_sync_reset_test.js` (13/13).
 
 ## Fase 6 — Timer sincronizado
 
