@@ -26,11 +26,11 @@
 /* =========================================================
    MODO FOCO (tela cheia de foco)
    ========================================================= */
-.focus-overlay{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;transition:background .2s}
+.focus-overlay{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;padding:20px;overflow-y:auto;overflow-x:hidden;transition:background .2s}
 /* Flash verde quando o ciclo é concluído (polimento) */
 .focus-overlay.flash{animation:focusFlashBg 1.2s ease}
 @keyframes focusFlashBg{0%{background:var(--bg)}20%{background:color-mix(in srgb,var(--ok) 22%,var(--bg))}40%{background:var(--bg)}60%{background:color-mix(in srgb,var(--ok) 22%,var(--bg))}100%{background:var(--bg)}}
-.focus-content{width:100%;max-width:480px;text-align:center;position:relative;padding:20px 0}
+.focus-content{width:100%;max-width:480px;text-align:center;position:relative;padding:20px 0;margin:auto}
 .focus-close{position:absolute;top:0;right:0;background:transparent;border:1px solid var(--bd);border-radius:50%;width:36px;height:36px;font-size:16px;color:var(--mu);padding:0}
 .focus-eyebrow{font-size:11px;color:var(--ac);letter-spacing:.15em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
 .focus-eyebrow[data-phase="rest"]{color:var(--ok)}
@@ -51,6 +51,7 @@
 .focus-subs{margin-top:24px;text-align:left;background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:12px}
 .focus-subs-title{font-size:11px;color:var(--mu);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
 .focus-sub{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:14px;cursor:pointer;color:var(--tx);border-left:3px solid transparent;padding-left:6px;margin-left:-6px;border-radius:0 6px 6px 0}
+.focus-sub span{min-width:0;word-break:break-word;overflow-wrap:anywhere}
 .focus-sub.run{border-left-color:var(--ac);background:color-mix(in srgb,var(--ac) 8%,transparent)}
 .focus-sub input{width:auto;margin:0}
 .focus-sub .x{text-decoration:line-through;opacity:.5}

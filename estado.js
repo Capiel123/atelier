@@ -236,7 +236,7 @@ function seed() {
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
     goals: [mkGoal({id:'g1', t:'2-3 clientes recorrentes'})],
-    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, workLogs: [],
+    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, timerStoppedAt: 0, workLogs: [],
     _seedId: uid(),
     lastModified: Date.now()
   };
@@ -355,9 +355,11 @@ function migrate(raw) {
       phase: s.timer.phase || null,
       focusMin: s.timer.focusMin || s.timer.targetMin || null,
       restMin: s.timer.restMin || s.cfg.brk || 10,
-      cycleCount: s.timer.cycleCount || 0
+      cycleCount: s.timer.cycleCount || 0,
+      updatedAt: s.timer.updatedAt || s.timer.startedAt || Date.now()
     };
   }
+  s.timerStoppedAt = s.timerStoppedAt || 0;
 
   if (!Array.isArray(s.areas) || !s.areas.length) {
     s.areas = AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()}));

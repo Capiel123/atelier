@@ -16,12 +16,14 @@
   var SEEDID_KEY = 'atelier_sync_seedId';
   var SETTINGS_CU_KEY = 'atelier_sync_settings_cu';
 
-  var ORDER = (window.__importer && window.__importer.ORDER) ||
-    ['user_settings','labels','areas','skills','clients','projects','tasks','contacts','applications','goals','work_logs'];
+  var ORDER = (window.__importer && window.__importer.ORDER
+    ? window.__importer.ORDER.slice()
+    : ['user_settings','labels','areas','skills','clients','projects','tasks','contacts','applications','goals','work_logs']);
+  if (ORDER.indexOf('active_timer') === -1) ORDER.push('active_timer');
 
-  // Tabela → chave da coleção em S; null = caso especial (user_settings).
-  var S_KEYS = { user_settings: null, labels: 'labels', areas: 'areas', skills: 'skills', clients: 'clients', projects: 'projects', tasks: 'tasks', contacts: 'contacts', applications: 'applications', goals: 'goals', work_logs: 'workLogs' };
-  var HAS_DELETED = { user_settings: false, labels: false, areas: false, skills: true, clients: true, projects: true, tasks: true, contacts: true, applications: true, goals: true, work_logs: false };
+  // Tabela → chave da coleção em S; null = caso especial (linha única por usuário).
+  var S_KEYS = { user_settings: null, active_timer: null, labels: 'labels', areas: 'areas', skills: 'skills', clients: 'clients', projects: 'projects', tasks: 'tasks', contacts: 'contacts', applications: 'applications', goals: 'goals', work_logs: 'workLogs' };
+  var HAS_DELETED = { user_settings: false, active_timer: false, labels: false, areas: false, skills: true, clients: true, projects: true, tasks: true, contacts: true, applications: true, goals: true, work_logs: false };
 
   var state = { status: 'idle', pending: 0, lastError: null, lastFlushAt: null, owner: null, deviceId: null, inFlight: false, enqTimer: null, flushTimer: null, flushAt: null };
 
@@ -64,12 +66,13 @@
   /* ---------------- entidades ---------------- */
   function entitiesFor(table, S) {
     if (table === 'user_settings') return [{ id: 'settings', obj: S }];
+    if (table === 'active_timer') return [{ id: 'timer', obj: S }];
     var arr = S[S_KEYS[table]];
     if (!Array.isArray(arr)) return [];
     return arr.map(function (e) { return { id: e.id, obj: e }; });
   }
   function findEntity(table, S, id) {
-    if (table === 'user_settings') return S;
+    if (table === 'user_settings' || table === 'active_timer') return S;
     var arr = S[S_KEYS[table]];
     if (!Array.isArray(arr)) return null;
     for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i];
@@ -79,10 +82,14 @@
     if (table === 'user_settings') {
       try { return hashStr(JSON.stringify(window.__importer.settingsPayload(S))); } catch (e) { return hashStr(JSON.stringify(S.cfg)); }
     }
+    if (table === 'active_timer') {
+      try { return hashStr(JSON.stringify(window.__importer.timerPayload(S))); } catch (e) { return hashStr(JSON.stringify(S.timer)); }
+    }
     return hashStr(JSON.stringify(obj));
   }
   function rowFor(table, S, uid, entity) {
     if (table === 'user_settings') return window.__importer.settingsRow(S, uid);
+    if (table === 'active_timer') return window.__importer.timerRow(S, uid);
     return window.__importer.mapOne(table, entity, uid);
   }
 
@@ -203,7 +210,7 @@
 
       if (!items.length) { markDone(store, seen, ops); continue; }
 
-      var onConflict = (table === 'user_settings') ? 'user_id' : 'user_id,id';
+      var onConflict = (table === 'user_settings' || table === 'active_timer') ? 'user_id' : 'user_id,id';
       var batch = await tryUpsert(client, table, items.map(function (i) { return i.row; }), onConflict);
 
       if (!batch.error) { markDone(store, seen, ops); continue; }
@@ -288,6 +295,9 @@
     localStorage.removeItem(SETTINGS_CU_KEY); // nova conta: user_settings podem aplicar
     localStorage.removeItem(SEEDID_KEY);      // reavalia o seed para a nova conta
     state.owner = newUid;
+    // Troca de conta: desvincula a sessão de timer local (não vaza para a nova conta).
+    // O pull inicial da nova conta reaplicará a sessão remota correspondente.
+    if (typeof S !== 'undefined' && S) { S.timer = null; S.timerStoppedAt = Date.now(); if (typeof save === 'function') save(); }
   }
   // Resolve o dono da fila. Retorna { owner, blocked }.
   // Regra: outbox vazia → adota o novo UID; outbox pendente → pausa (preserva a fila).
@@ -397,6 +407,17 @@
     return true;
   }
 
+  // Aplica a sessão de timer remota (LWW por client_updated_at). Não registra minutos:
+  // os minutos são gravados apenas pelo dispositivo que encerra a fase localmente.
+  function applyTimerRow(row) {
+    var remoteCu = numVal(row.client_updated_at, 0);
+    var localTimer = (S && S.timer) || null;
+    var localCu = localTimer ? numVal(localTimer.updatedAt, 0) : numVal((S && S.timerStoppedAt) || 0, 0);
+    if (remoteCu <= localCu) return false; // local vence ou empate → mantém
+    S.timer = window.__merge.fromTimer(row); // null = sem sessão
+    return true;
+  }
+
   function applyWorkLogRow(row) {
     var list = S.workLogs || (S.workLogs = []);
     var local = null;
@@ -414,6 +435,7 @@
   // Retorna { changed: bool, id: string|null } — id da entidade afetada (ou 'settings').
   function applyRemoteRow(table, row) {
     if (table === 'user_settings') { return { changed: applyUserSettings(row), id: 'settings' }; }
+    if (table === 'active_timer') { return { changed: applyTimerRow(row), id: 'timer' }; }
     if (table === 'work_logs') { return { changed: true, id: applyWorkLogRow(row).id }; }
     var key = S_KEYS[table];
     if (!key) return { changed: false, id: null };
@@ -454,6 +476,7 @@
         var table = ORDER[ti];
         var rows = await fetchRows(client, user, table, null);
         if (table === 'user_settings') { if (rows.length) applyUserSettings(rows[0]); continue; }
+        if (table === 'active_timer') { if (rows.length) applyTimerRow(rows[0]); continue; }
         var key = S_KEYS[table];
         if (!key) continue;
         if (pristine) { S[key] = rows.map(function (r) { return window.__merge.fromRow(table, r); }); }
@@ -499,6 +522,11 @@
         if (ch.table === 'user_settings') {
           seenNow.user_settings = seenNow.user_settings || {};
           seenNow.user_settings.settings = { h: hashStr(JSON.stringify(window.__importer.settingsPayload(S))), flushed: true };
+          return;
+        }
+        if (ch.table === 'active_timer') {
+          seenNow.active_timer = seenNow.active_timer || {};
+          seenNow.active_timer.timer = { h: versionOf('active_timer', S, S), flushed: true };
           return;
         }
         seenNow[ch.table] = seenNow[ch.table] || {};
@@ -631,7 +659,8 @@
       CURSORS_KEY: CURSORS_KEY, SEEDID_KEY: SEEDID_KEY, SETTINGS_CU_KEY: SETTINGS_CU_KEY,
       ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS,
       scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry,
-      pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, isPristineSeed: isPristineSeed,
+      pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, applyTimerRow: applyTimerRow, isPristineSeed: isPristineSeed,
+      versionOf: versionOf, rowFor: rowFor,
       resolveOwner: resolveOwner, adoptAccount: adoptAccount, clearSyncQueue: clearSyncQueue, resetLocalData: resetLocalData
     }
   };

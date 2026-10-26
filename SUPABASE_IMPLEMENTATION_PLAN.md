@@ -1,6 +1,8 @@
 # Ateliê — Plano de implementação da sincronização com Supabase
 
-> **Status:** Fases 0–4 concluídas e validadas (Fase 4 encerrada com testes manuais no PC e no celular). Fase 5 (pull/merge) **em implementação** — Etapas 1–2 (merge + pull) concluídas e testadas em simulação; validação real pendente. Timer sincronizado fica para a Fase 6.
+> **Contexto central:** [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) · índice: [`docs/README.md`](docs/README.md) · roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md).
+>
+> **Status:** Fases 0–6 concluídas. A **Fase 6 (timer sincronizado)** está implementada e testada automaticamente (`_sync_timer_test.js`); **validação manual em PC + celular pendente**. Tema e accent são locais por dispositivo; ver `docs/TIMER.md` e `docs/TABS.md`.
 > **Arquitetura:** `SUPABASE_ARCHITECTURE.md` · **Dados:** `SUPABASE_DATA_MAPPING.md`
 > **Princípio:** cada fase entrega algo verificável sem quebrar o uso diário; o app permanece funcional offline e sem sync até a fase 7.
 

@@ -1,6 +1,8 @@
 # Ateliê — Arquitetura de sincronização com Supabase
 
-> **Status:** Fases 1–4 concluídas e validadas; Fase 5 (pull/merge) **em implementação** (merge + pull prontos, testados em simulação; validação real pendente). Timer fica para a Fase 6.
+> **Contexto central:** [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) · índice: [`docs/README.md`](docs/README.md).
+>
+> **Status:** Fases 1–6 concluídas. **Fase 6 (timer)** implementada: `active_timer` sincroniza como linha única por usuário (LWW por `client_updated_at`); validação manual em dois dispositivos pendente. Tema e accent são locais por dispositivo.
 > **Base:** decisões do usuário (Magic Link, local-first, timer, lixeira, IDs, modelagem híbrida, logo, segurança, migração) + código atual.
 > **Documentos relacionados:** `SUPABASE_DATA_MAPPING.md` (dados), `SUPABASE_IMPLEMENTATION_PLAN.md` (etapas).
 > **Estado atual:** schema/RLS validados; autenticação validada; onboarding validado; importação inicial validada em conta de teste; outbox/push validada manualmente (encerrada); pull/merge (`merge.js` + `sync.js`) implementados e testados em simulação (validação real pendente).

@@ -100,6 +100,18 @@
       projName: str(r.project_name), area: str(r.area), text: str(r.text)
     };
   }
+  // active_timer → S.timer (ou null quando task_id é nulo = "sem sessão").
+  function fromTimer(r) {
+    if (r == null || r.task_id == null || r.task_id === '') return null;
+    return {
+      taskId: str(r.task_id), subId: nullStr(r.sub_id) || null,
+      startedAt: isoMs(r.started_at), accumulated: num(r.accumulated_seconds, 0),
+      paused: !!r.paused, targetMin: (r.target_min == null) ? null : num(r.target_min, 0),
+      phase: nullStr(r.phase) || null, focusMin: (r.focus_min == null) ? null : num(r.focus_min, 0),
+      restMin: (r.rest_min == null) ? null : num(r.rest_min, 0), cycleCount: num(r.cycle_count, 0),
+      updatedAt: num(r.client_updated_at, 0)
+    };
+  }
 
   function fromRow(table, row) {
     switch (table) {
@@ -113,6 +125,7 @@
       case 'labels': return fromLabel(row);
       case 'areas': return fromArea(row);
       case 'work_logs': return fromWorkLog(row);
+      case 'active_timer': return fromTimer(row);
     }
     return null;
   }
@@ -206,9 +219,9 @@
   }
 
   window.__merge = {
-    decide: decide, fromRow: fromRow, mergeEntity: mergeEntity, mergeWorkLog: mergeWorkLog,
+    decide: decide, fromRow: fromRow, fromTimer: fromTimer, mergeEntity: mergeEntity, mergeWorkLog: mergeWorkLog,
     workLogId: workLogId, workLogKey: workLogKey,
     unionLogs: unionLogs, unionSubs: unionSubs,
-    _test: { fromTask: fromTask, fromProject: fromProject, fromContact: fromContact, fromWorkLog: fromWorkLog }
+    _test: { fromTask: fromTask, fromProject: fromProject, fromContact: fromContact, fromWorkLog: fromWorkLog, fromTimer: fromTimer }
   };
 })();

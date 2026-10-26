@@ -189,16 +189,56 @@ function contactResponseRate(c) {if (!c.sentCount) return null; return c.receive
 function upcomingBirthdays(withinDays = 14) {const out = []; const today = new Date(); const todayIso = iso(today); alive(S.contacts).forEach(c => {if (!c.birthday || c.archived) return; const parts = c.birthday.split('-'); if (parts.length < 2) return; const mm = +parts[parts.length - 2], dd = +parts[parts.length - 1]; if (!mm || !dd) return; const y = today.getFullYear(); let next = new Date(y, mm - 1, dd); if (iso(next) < todayIso) next = new Date(y + 1, mm - 1, dd); const days = Math.round((next - today) / 86400000); if (days <= withinDays) out.push({contact: c, days, date: iso(next)});}); return out.sort((a,b) => a.days - b.days);}
 
 /* --- TIMER --- */
+function tfnv(s) { var h = 0x811c9dc5; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; } return h.toString(36); }
+// Identidade determinística de um bloco de timer (idempotência dos logs entre
+// dispositivos e em repetições). Usa campos absolutos que sincronizam: a fase
+// começou em (startedAt - accumulated*1000) e o ciclo diferencia blocos do Pomodoro.
+function timerBlockId(timer, taskId, subId) {
+  var phaseStart = Math.round(((timer && timer.startedAt) || Date.now()) - (((timer && timer.accumulated) || 0) * 1000));
+  return 'tmr_' + tfnv(String(taskId || '') + '|' + String(subId || '') + '|' + phaseStart + '|' + ((timer && timer.cycleCount) || 0));
+}
+// Divide [startMs, endMs) nas fronteiras de meia-noite local (datas corretas).
+function splitByLocalDay(startMs, endMs) {
+  var out = []; var cur = startMs;
+  while (cur < endMs) {
+    var d = new Date(cur); d.setHours(0, 0, 0, 0);
+    var b = new Date(d); b.setDate(d.getDate() + 1);
+    var segEnd = Math.min(endMs, b.getTime());
+    out.push({ start: cur, end: segEnd });
+    cur = segEnd;
+  }
+  return out.length ? out : [{ start: startMs, end: endMs }];
+}
+// Registra minutos em t.logs com id determinístico, dedupe por id e quebra por dia local.
+function recordTimerMinutes(t, minutes, subId, note, timer) {
+  if (!t || !(minutes > 0)) return;
+  var end = Date.now();
+  var start = end - Math.round(minutes * 60000);
+  var parts = splitByLocalDay(start, end);
+  var baseId = timerBlockId(timer, t.id, subId);
+  var rest = minutes;
+  parts.forEach(function (p, idx) {
+    var dur = Math.round((p.end - p.start) / 60000);
+    if (idx === parts.length - 1) dur = rest; // último segmento fecha o total exato
+    if (dur <= 0) return;
+    rest -= dur;
+    var id = baseId + (parts.length > 1 ? '_' + idx : '');
+    if (t.logs.some(function (l) { return l.id === id; })) return; // idempotência
+    t.logs.push({ id: id, minutes: dur, start: p.start, end: p.end, subId: subId || null, note: note });
+  });
+  t.spent = taskMinutes(t);
+  touch(t);
+}
 function timerElapsedSec() {if (!S.timer) return 0; const acc = S.timer.accumulated || 0; const run = S.timer.startedAt ? (Date.now() - S.timer.startedAt) / 1000 : 0; return acc + run;}
-function startTimer(taskId, subId, targetMin) {if (S.timer) {toast('Timer já rodando', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 10, cycleCount: 0}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
-function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulated = timerElapsedSec(); S.timer.startedAt = null; S.timer.paused = true; save(); renderTimer(); if (focusTaskId) renderFocus(); toast('⏸ Pausado');}
-function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.paused = false; save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
+function startTimer(taskId, subId, targetMin) {if (S.timer) {toast('Timer já rodando', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 10, cycleCount: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
+function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulated = timerElapsedSec(); S.timer.startedAt = null; S.timer.paused = true; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('⏸ Pausado');}
+function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.paused = false; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
 function advancePhase() {
   if (!S.timer) return;
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   if (S.timer.phase === 'focus') {
     const el = Math.round(timerElapsedSec() / 60);
-    if (t && el > 0) {const now = Date.now(); t.logs.push({id: uid(), minutes: el, start: now - el*60000, end: now, subId: S.timer.subId || null, note: 'pomodoro'}); t.spent = taskMinutes(t); touch(t); toast('+' + el + 'min de foco registrados');}
+    if (t && el > 0) { recordTimerMinutes(t, el, S.timer.subId, 'pomodoro', S.timer); toast('+' + el + 'min de foco registrados'); }
     S.timer.phase = 'rest'; S.timer.targetMin = S.timer.restMin || 10;
     S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
     S.timer.cycleCount = (S.timer.cycleCount || 0) + 1;
@@ -210,6 +250,7 @@ function advancePhase() {
     beep();
     toast('☀ Descanso acabou · de volta ao foco');
   }
+  S.timer.updatedAt = Date.now();
   save(); renderTimer();
   if (focusTaskId) {renderFocus(); const overlay = document.getElementById('focusOverlay'); if (overlay) {overlay.classList.remove('flash'); void overlay.offsetWidth; overlay.classList.add('flash'); setTimeout(() => overlay.classList.remove('flash'), 1250);}}
 }
@@ -217,7 +258,8 @@ function stopTimer(override) {
   if (!S.timer) return;
   const elapsed = override != null ? override : Math.round(timerElapsedSec() / 60);
   const t = S.tasks.find(x => x.id === S.timer.taskId);
-  if (t && elapsed > 0) {t.logs.push({id: uid(), minutes: elapsed, start: Date.now() - elapsed*60000, end: Date.now(), subId: S.timer.subId || null, note: ''}); t.spent = taskMinutes(t); touch(t); toast('+' + elapsed + 'min');}
+  if (t && elapsed > 0) { recordTimerMinutes(t, elapsed, S.timer.subId, '', S.timer); toast('+' + elapsed + 'min'); }
+  S.timerStoppedAt = Date.now();
   S.timer = null; save(); renderTimer();
   if (['week','skills','proj','stats'].includes(tab)) render();
 }
