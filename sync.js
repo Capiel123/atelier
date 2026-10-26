@@ -300,6 +300,19 @@
     state.owner = owner;
     return { owner: owner, blocked: true };
   }
+  // Destrava a sincronização para a conta atual: descarta a fila pendente da conta
+  // anterior e os metadados de sync por-conta. NÃO toca em S nem nos dados remotos.
+  // Só deve ser chamado após confirmação explícita do usuário.
+  function clearSyncQueue() {
+    localStorage.removeItem(OUTBOX_KEY);
+    localStorage.removeItem(OWNER_KEY);
+    localStorage.removeItem(SEEN_KEY);
+    localStorage.removeItem(SETTINGS_CU_KEY);
+    localStorage.removeItem(SEEDID_KEY);
+    state.pending = 0;
+    state.owner = null;
+    setStatus('pending');
+  }
 
   async function flushOnce() {
     if (state.inFlight) return;
@@ -536,8 +549,12 @@
     if (!user) return '<div class="msg">Entre na Conta para sincronizar as alterações locais.</div>';
     var st = state.status;
     if (navigator && navigator.onLine === false) st = 'offline';
-    var label = { synced: 'Tudo sincronizado.', pending: p + ' alteração(ões) pendente(s).', sending: 'Enviando…', paused: 'Sincronização pausada (sem conta).', 'paused-account': 'Sincronização pausada: há operações pendentes de outra conta. Entre com a conta dona para enviá-las.', error: 'Erro ao sincronizar: ' + (state.lastError || ''), offline: 'Sem conexão. As alterações ficam na fila.' }[st] || '';
-    return '<div class="msg">' + label + '</div>' +
+    var label = { synced: 'Tudo sincronizado.', pending: p + ' alteração(ões) pendente(s).', sending: 'Enviando…', paused: 'Sincronização pausada (sem conta).', 'paused-account': 'Sincronização pausada: há operações pendentes de outra conta.', error: 'Erro ao sincronizar: ' + (state.lastError || ''), offline: 'Sem conexão. As alterações ficam na fila.' }[st] || '';
+    var unlock = (st === 'paused-account')
+      ? '<div class="acts" style="margin-top:6px"><button data-a="syncClearQueue">Descartar fila pendente e usar esta conta</button></div>' +
+        '<div class="msg">Apaga apenas a fila pendente da conta anterior; seus dados locais e os dados do Supabase não são alterados.</div>'
+      : '';
+    return '<div class="msg">' + label + '</div>' + unlock +
       '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button></div>';
   }
 
@@ -560,6 +577,7 @@
     onAuth: onAuth,
     flushNow: function () { return withLock(flushOnce); },
     syncNow: function () { return withLock(syncCycle); },
+    clearSyncQueue: clearSyncQueue,
     forceFullSync: forceFullSync,
     getState: function () { return { status: state.status, pending: state.pending, lastError: state.lastError, lastFlushAt: state.lastFlushAt, owner: state.owner, deviceId: state.deviceId, inFlight: state.inFlight }; },
     statusHTML: statusHTML,
@@ -571,10 +589,16 @@
       ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS,
       scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry,
       pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, isPristineSeed: isPristineSeed,
-      resolveOwner: resolveOwner, adoptAccount: adoptAccount
+      resolveOwner: resolveOwner, adoptAccount: adoptAccount, clearSyncQueue: clearSyncQueue
     }
   };
   window.syncFlushNow = function () { return window.__sync.syncNow(); };
+  window.syncClearQueue = function () {
+    if (confirm('Descartar a fila de sincronização pendente e usar a conta atual? Os dados locais NÃO são apagados.')) {
+      window.__sync.clearSyncQueue();
+      window.__sync.syncNow();
+    }
+  };
   window.syncForceFull = function () { if (confirm('Reenviar todo o estado local para a conta?')) window.__sync.forceFullSync(); };
 
   if (typeof document !== 'undefined') {

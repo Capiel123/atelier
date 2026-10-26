@@ -136,6 +136,11 @@ document.addEventListener('click', ev => {
       else toast('Sincronização indisponível', true);
       return;
     }
+    case 'syncClearQueue': {
+      if (typeof syncClearQueue === 'function') syncClearQueue();
+      else toast('Sincronização indisponível', true);
+      return;
+    }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
     case 'toggleQueueCard': {

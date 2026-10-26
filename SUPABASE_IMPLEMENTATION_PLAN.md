@@ -126,7 +126,7 @@
 - **Concluído quando:** os 10 cenários de aceitação passarem (simulados + validação real na conta de teste com dois dispositivos) e as suítes das Fases 3–4 continuarem verdes.
 - **Testes executados (simulados):** `_sync_merge_test.js` (**20/20**) e `_sync_pull_test.js` (**10/10**) + `node --check` + suítes existentes (12 suítes verdes).
 - **Status:** **Etapas 1–2 implementadas** (merge + pull) + **correção de propriedade** (reatribuição de conta). **Pendente:** validação real no Supabase (dois dispositivos, cenários 1–10) e eventuais ajustes de UI (estado “baixando” no pill).
-- **Correção de propriedade (2026-10-25):** `atelier_sync_owner` era “write-once” e travava em “Sync pausado” ao trocar de conta. Agora: outbox vazia + owner diferente → **adota o novo UID** (reseta `seen`/`settings_cu`/`seed`, sem tocar em `S` nem na outbox); outbox pendente + owner diferente → **pausa preservada** (`paused-account`) sem envio cruzado. Cursores já são por-conta (isolados por uid). Teste: `_sync_owner_test.js` (16/16).
+- **Correção de propriedade (2026-10-25/26):** `atelier_sync_owner` era “write-once” e travava em “Sync pausado” ao trocar de conta. Agora: outbox vazia + owner diferente → **adota o novo UID** (reseta `seen`/`settings_cu`/`seed`, sem tocar em `S` nem na outbox); outbox pendente + owner diferente → **pausa preservada** (`paused-account`) sem envio cruzado. **Escape hatch:** ação “Descartar fila pendente e usar esta conta” (`clearSyncQueue`, com confirmação) remove outbox/owner/`seen`/`settings_cu`/`seed` (sem tocar em `S` nem no remoto) e retoma a sync para a conta atual. Cursores já são por-conta (isolados por uid). Teste: `_sync_owner_test.js` (23/23).
 
 ## Fase 6 — Timer sincronizado
 
