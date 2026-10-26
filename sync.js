@@ -316,20 +316,30 @@
   // Reconstroi o estado local a partir da conta autenticada: descarta o S local
   // (dados de teste/offline) e os metadados de sync, preserva autenticação/deviceId/owner,
   // e re-puxa o remoto (pull inicial com seed → substituição). NÃO altera o Supabase.
+  // Roda sob o lock e faz o pull diretamente (sem depender de timer), com retry em falha.
   function resetLocalData() {
-    var user = authUser();
-    if (!user) { setStatus('paused'); return; }
-    localStorage.removeItem(OUTBOX_KEY);
-    localStorage.removeItem(SEEN_KEY);
-    localStorage.removeItem(SETTINGS_CU_KEY);
-    localStorage.removeItem(SEEDID_KEY);
-    localStorage.removeItem(CURSORS_KEY);
-    state.pending = 0;
-    if (typeof S !== 'undefined' && typeof seed === 'function') { try { S = seed(); } catch (e) {} }
-    if (typeof applyTheme === 'function') applyTheme();
-    if (typeof save === 'function') save();
-    if (typeof render === 'function') render();
-    scheduleFlush(50);
+    return withLock(async function () {
+      var user = authUser();
+      if (!user) { setStatus('paused'); return; }
+      localStorage.removeItem(OUTBOX_KEY);
+      localStorage.removeItem(SEEN_KEY);
+      localStorage.removeItem(SETTINGS_CU_KEY);
+      localStorage.removeItem(SEEDID_KEY);
+      localStorage.removeItem(CURSORS_KEY);
+      state.pending = 0;
+      if (typeof S !== 'undefined' && typeof seed === 'function') { try { S = seed(); } catch (e) {} }
+      if (typeof applyTheme === 'function') applyTheme();
+      if (typeof save === 'function') save();
+      if (typeof render === 'function') render();
+      var client = await getClient();
+      if (!client) { setStatus(navigator && navigator.onLine === false ? 'offline' : 'paused'); scheduleFlush(30000); return; }
+      var own = resolveOwner(user);
+      if (own.blocked) { setStatus('paused-account'); return; }
+      state.inFlight = true;
+      try { await doPull(client, user); }
+      catch (e) { setStatus('error', String(e && e.message || e)); scheduleFlush(30000); }
+      finally { state.inFlight = false; }
+    });
   }
 
   async function flushOnce() {
@@ -410,12 +420,16 @@
     return { changed: false, id: row.id };
   }
 
-  async function fetchRows(client, user, table, cursor) {
+  function fetchRows(client, user, table, cursor) {
     var q = client.from(table).select('*').eq('user_id', user.id).order('updated_at', { ascending: true }).limit(500);
     if (cursor) q = q.gt('updated_at', cursor);
-    var r = await q;
-    if (r.error) throw r.error;
-    return r.data || [];
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () { reject({ message: 'timeout no pull de ' + table }); }, 20000);
+      Promise.resolve(q).then(function (r) {
+        clearTimeout(timer);
+        if (r.error) reject(r.error); else resolve(r.data || []);
+      }).catch(function (e) { clearTimeout(timer); reject(e); });
+    });
   }
 
   async function doPull(client, user) {
@@ -496,20 +510,20 @@
   }
 
   async function pullOnce() {
-    if (state.inFlight) return;
+    if (state.inFlight) return true;
     var user = authUser();
-    if (!user) { setStatus('paused'); return; }
+    if (!user) { setStatus('paused'); return true; }
     var client = await getClient();
-    if (!client) return;
+    if (!client) { setStatus(navigator && navigator.onLine === false ? 'offline' : 'paused'); scheduleFlush(30000); return false; }
     var own = resolveOwner(user);
-    if (own.blocked) { setStatus('paused-account'); return; }
+    if (own.blocked) { setStatus('paused-account'); return true; }
     state.inFlight = true;
-    try { await doPull(client, user); }
-    catch (e) { setStatus('error', String(e && e.message || e)); }
+    try { await doPull(client, user); return true; }
+    catch (e) { setStatus('error', String(e && e.message || e)); scheduleFlush(30000); return false; }
     finally { state.inFlight = false; }
   }
 
-  async function syncCycle() { await pullOnce(); await flushOnce(); }
+  async function syncCycle() { var ok = await pullOnce(); if (ok) await flushOnce(); }
 
   function forceFullSync() {
     return withLock(function () {
