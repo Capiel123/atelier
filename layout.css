@@ -54,7 +54,7 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .week-summary-day .th-date{color:var(--mu);font-size:11px;margin-left:6px}
 .week-summary-card .th-stats{display:flex;gap:6px;font-size:11px;color:var(--mu);flex-wrap:wrap;justify-content:flex-end}
 .week-summary-card .th-stats b{color:var(--tx);font-variant-numeric:tabular-nums}
-.week-summary-card .th-stats span{background:var(--s2);padding:2px 7px;border-radius:6px}
+.week-summary-card .th-stats > span{background:var(--s2);padding:2px 7px;border-radius:6px}
 .week-summary-card .bar{margin-bottom:6px}
 .week-summary-sections{display:flex;gap:12px;font-size:11px;color:var(--mu);flex-wrap:wrap;margin-top:2px}
 .week-summary-sections b{color:var(--tx)}
@@ -68,8 +68,16 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 
 /* --- CONTROLES FILTROS + AUTO (linha unificada) --- */
 .week-controls-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
-.week-ctrl-btn{padding:5px 10px;font-size:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;cursor:pointer;color:var(--tx);display:inline-flex;align-items:center;gap:5px;user-select:none}
+.week-ctrl-btn{padding:5px 10px;font-size:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;cursor:pointer;color:var(--mu);display:inline-flex;align-items:center;gap:5px;user-select:none}
 .week-ctrl-btn.on{background:var(--ac);color:#000;border-color:var(--ac)}
+.week-add-btn{padding:6px 14px;font-size:13px;font-weight:600;background:var(--ac);color:#000;border:1px solid var(--ac);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.week-add-btn:hover{filter:brightness(1.05)}
+
+/* Indicadores compactos de prioridade (alta/média/baixa) */
+.pr-group{display:inline-flex;gap:5px;align-items:center}
+.pr-ind{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums}
+.pr-ind .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.week-summary-sections .lvl-ind{opacity:.85}
 
 /* --- SELETOR DE DIAS DA SEMANA --- */
 .days{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}

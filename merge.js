@@ -136,14 +136,17 @@
   function stageKey(s) { return (s.stage || '') + '|' + (s.at || ''); }
 
   function unionLogs(a, b) { return unionById(a, b, logKey); }
-  function unionSubs(a, b) {
+  function unionSubs(a, b, winnerIsA) {
     var map = {};
     arr(a).forEach(function (s) { if (s.id != null) map[s.id] = s; });
     arr(b).forEach(function (s) {
       if (s.id == null) return;
       if (map[s.id]) {
         var prev = map[s.id];
-        var merged = Object.assign({}, prev, s, { logs: unionById(prev.logs, s.logs, logKey) });
+        // logs são append-only; demais campos seguem o vencedor LWW da tarefa (não reverte reordenação).
+        var merged = winnerIsA
+          ? Object.assign({}, s, prev, { logs: unionById(prev.logs, s.logs, logKey) })
+          : Object.assign({}, prev, s, { logs: unionById(prev.logs, s.logs, logKey) });
         // Tombstone de exclusão: subtarefa excluída não deve "ressuscitar" por uma versão antiga.
         if (prev.deletedAt || s.deletedAt) merged.deletedAt = Math.max(prev.deletedAt || 0, s.deletedAt || 0);
         map[s.id] = merged;
@@ -176,7 +179,7 @@
       merged.doneAt = Math.max(num(local.doneAt, 0), num(remote.doneAt, 0));
     }
     merged.logs = unionLogs(local.logs, remote.logs);
-    merged.subs = unionSubs(local.subs, remote.subs);
+    merged.subs = unionSubs(local.subs, remote.subs, d >= 0);
     merged.spent = merged.logs.reduce(function (a, l) { return a + num(l.minutes, 0); }, 0);
     return merged;
   }

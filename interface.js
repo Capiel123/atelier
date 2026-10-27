@@ -196,16 +196,20 @@ function viewWeek() {
   const showReviewHint = isReviewDay && !reviewDone;
   const nextCard = nextTask ? `<div class="next-card"><div><div class="nc-label">⭐ Próxima</div><div class="nc-title">${esc(nextTask.t)}</div><div class="nc-meta">${PR[nextTask.pr]} · ${esc(areaLabel(nextTask.area))}${nextTask.est?' · '+fmtMin(nextTask.est):''}</div></div><div class="nc-actions"><button class="go" data-a="focusMode" data-id="${nextTask.id}">⛶ Focar</button><button data-a="setnext" data-id="${nextTask.id}">✕</button></div></div>` : '';
   const compact = getTaskCompactMode();
+  const prCounts = [0,1,2].map(pr => ts.filter(t => !isDoneThisWeek(t) && t.pr === pr).length);
+  const gxp = globalXp(); const lvlInfo = levelInfo(gxp);
 
-  const quickAddHtml = showQuickAdd ? adder(day) : `<div class="list-actions"><button data-a="toggleQuickAdd">+ Adicionar Tarefa</button></div>`;
+  const quickAddHtml = showQuickAdd ? adder(day) : '';
   const filtersHtml = showFilters ? filterBar() : '';
 
   // Card de resumo unificado: today-hero + stats pessoal/compromisso + barra de progresso
-  const sectionStatsHtml = (commitmentTasks.length || personalTasks.length) ? `
+  const prInds = prCounts.map((n, i) => `<span class="pr-ind" title="${PR[i]}" style="${n===0?'opacity:.35':''}"><i class="dot" style="background:${PRC[i]}"></i>${n}</span>`).join('');
+  const sectionStatsHtml = `
     <div class="week-summary-sections">
       ${commitmentTasks.length ? `<span>${SECTION_META.commitment.icon} Compromissos: <b>${commitmentProg.pct}%</b> <span class="wss-sub">(${commitmentTasks.filter(t=>isDoneThisWeek(t)).length}/${commitmentTasks.length})</span></span>` : ''}
       ${personalTasks.length ? `<span>${SECTION_META.personal.icon} Pessoal: <b>${personalProg.pct}%</b> <span class="wss-sub">(${personalTasks.filter(t=>isDoneThisWeek(t)).length}/${personalTasks.length})</span></span>` : ''}
-    </div>` : '';
+      <span class="lvl-ind">Nv ${lvlInfo.lv} · ${Math.round(gxp)} XP</span>
+    </div>`;
 
   const summaryCard = `<div class="week-summary-card">
     <div class="week-summary-top">
@@ -214,14 +218,16 @@ function viewWeek() {
         <span>Feitas <b>${done}</b>/${total}</span>
         <span>Est. <b class="${full?'wr':''}">${fmtMin(workProg.totalWeight)}</b></span>
         <span>Gasto <b>${fmtMin(workSpent)}</b></span>
+        <span class="pr-group" title="Prioridade (alta · média · baixa)">${prInds}</span>
       </div>
     </div>
-    ${bar(workProg.pct, total ? `${workTasks.filter(t=>isDoneThisWeek(t)).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', workProg.pct>=100 ? 'Trabalho fechado.' : workProg.pct>=50 ? 'Embalou.' : workProg.pct>0 ? 'Primeira vitória.' : 'Comece pequeno.')}
+    ${bar(workProg.pct, total ? `${workTasks.filter(t=>isDoneThisWeek(t)).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', '')}
     ${sectionStatsHtml}
   </div>`;
 
-  // Controles: Filtros + Auto agrupados (mobile: mesma linha)
+  // Controles: Adicionar (primário) + Filtros + Auto (secundários), na mesma linha
   const controlsRow = `<div class="week-controls-row">
+    <button data-a="toggleQuickAdd" class="week-add-btn">+ Adicionar Tarefa</button>
     <button data-a="toggleFilters" class="week-ctrl-btn${showFilters?' on':''}">🔍 Filtros</button>
     <label class="auto-prio-label week-ctrl-btn"><input type="checkbox" id="autoPriorityToggle" ${S.cfg.autoPriority?'checked':''}><span>⭐ Auto</span></label>
   </div>`;
@@ -387,8 +393,7 @@ function cardTaskCompact(t, score) {
   const spent = taskMinutes(t);
   const isQuick = t.est && t.est <= 10;
   const runningThis = S.timer && S.timer.taskId === t.id;
-  const subsTotal = (t.subs||[]).length;
-  const subsDone = (t.subs||[]).filter(s => s.d).length;
+  const _as = activeSubs(t); const subsTotal = _as.length; const subsDone = _as.filter(s => s.d).length;
   const isSelected = selectedTaskId === t.id;
   const doneNow = isDoneThisWeek(t);
   return `<div class="card compact ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-a="expandTask" data-id="${t.id}">
@@ -415,7 +420,7 @@ function cardTask(t, score) {
   const borderColor = t.color || (skillObjs[0]?.color) || areaColor(t.area);
   const type = TASK_TYPES.find(x => x.id === t.type); const proj = S.projects.find(p => p.id === t.proj);
   const spent = taskMinutes(t); const pctT = t.est ? Math.min(100, Math.round(spent / t.est * 100)) : 0;
-  const subsDone = (t.subs || []).filter(s => s.d).length; const subsTotal = (t.subs || []).length;
+  const _as = activeSubs(t); const subsDone = _as.filter(s => s.d).length; const subsTotal = _as.length;
   const subPct = subsTotal ? Math.round(subsDone / subsTotal * 100) : 0;
   const runningThis = S.timer && S.timer.taskId === t.id && !S.timer.subId;
   const isQuick = t.est && t.est <= 10;
@@ -516,8 +521,7 @@ function cardQueue(t) {
   const skillObjs = (t.skills || []).map(id => S.skills.find(s => s.id === id) || S.skills.find(s => s.n === id)).filter(Boolean);
   const labelObjs = (t.labels || []).map(id => S.labels.find(l => l.id === id) || S.labels.find(l => l.n === id)).filter(Boolean);
   const borderColor = t.color || (skillObjs[0]?.color) || areaColor(t.area);
-  const subsTotal = (t.subs||[]).length;
-  const subsDone = (t.subs||[]).filter(s => s.d).length;
+  const _as = activeSubs(t); const subsTotal = _as.length; const subsDone = _as.filter(s => s.d).length;
 
   let html = `<div class="card ${isExpanded?'':'compact'} queue-card ${isSelected?'selected':''}" style="--c:${borderColor}" data-a="toggleQueueCard" data-id="${t.id}">
     <div class="row" style="align-items:center;cursor:pointer;flex:1;min-width:0">
