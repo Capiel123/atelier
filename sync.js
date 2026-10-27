@@ -490,6 +490,7 @@
       writeJSON(SEEN_KEY, buildBaseline(S));
       if (S._seedId) localStorage.setItem(SEEDID_KEY, S._seedId);
       state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
+      if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
       if (typeof applyTheme === 'function') applyTheme();
       if (typeof render === 'function') render();
       renderSync();
@@ -546,6 +547,7 @@
     }
     writeCursors(cursors);
     state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
+    if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
     renderSync();
   }
 

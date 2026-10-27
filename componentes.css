@@ -182,6 +182,9 @@
 .sub .btn-sm{padding:0 6px;font-size:11px;background:none;border:none;color:var(--mu);cursor:pointer}
 .sub .btn-sm:hover{color:var(--ac)}
 .sub .btn-sm.run{color:var(--bu)}
+.sub .sub-drag{cursor:grab;color:var(--mu);font-size:13px;padding:0 4px;user-select:none;flex:none;opacity:.7;touch-action:none}
+.sub .sub-drag:hover{color:var(--ac)}
+.sub.dragging{opacity:.45;background:var(--s2)}
 
 /* Cabeçalho de grupo de tarefas */
 .section-header{display:flex;justify-content:space-between;align-items:center;padding:10px 6px;margin-top:16px;border-bottom:1px solid var(--bd);cursor:pointer;user-select:none;transition:background .15s;border-radius:8px 8px 0 0}

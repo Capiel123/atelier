@@ -13,7 +13,7 @@ O app persiste um único objeto `S` em `localStorage['atelier']`. O objeto cont�
 | Entidade / coleção | Campos (tipos aparentes) | Observações |
 |---|---|---|
 | `tasks` | `id` text, `t` text, `desc` text, `pr` 0–2, `est` min, `spent` min (derivado), `day` 0–6 ou `null`, `order` int, `next` bool, `done` bool, `doneAt` ms ou `null`, `area` text, `skills[]` IDs, `proj` ID ou `''`, `due` `YYYY-MM-DD`, `time` `HH:MM`, `section` `work`/`commitment`/`personal`/`''`, `subs[]`, `logs[]`, `xpClaimed` bool, `type` text, `color` text, `labels[]` IDs, `createdAt`/`updatedAt` ms, `postponedCount` int, `lastPostponedAt` ms | Tarefas são hard delete no app. Sem `deletedAt` local. |
-| `tasks.subs[]` | `id`, `t`, `d` bool, `xpClaimed` bool, `est` min, `order` int, `logs[]` | Aninhado dentro da tarefa. |
+| `tasks.subs[]` | `id`, `t`, `d` bool, `xpClaimed` bool, `est` min, `order` int, `deletedAt` (tombstone), `logs[]` | Aninhado dentro da tarefa. |
 | `tasks.logs[]` | `id`, `minutes` num, `start`/`end` ms ou `null`, `subId` ID ou `null`, `note` text | Logs migrados de v1 podem ter `start`/`end` nulos. Fonte do tempo. |
 | `projects` | `id`, `n`, `area`, `due`, `reward`, `claimed` bool, `archived` bool, `clientId`, `client` text (legado), `billingType` `none`/`fixed`/`hourly`/`minute`, `billingValue` num, `actualValue` num/null, `completedAt` ms/null, `manualHours` num/null, `currency` text, `goals[]`, `deletedAt`, `createdAt`/`updatedAt` | `completedAt` pode ser automático. |
 | `projects.goals[]` | `id`, `t`, `d` bool, `order` int | Etapas independentes de tarefas. |

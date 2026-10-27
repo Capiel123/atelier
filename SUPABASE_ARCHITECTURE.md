@@ -103,7 +103,7 @@ Para um único usuário em vários dispositivos, a regra é **Last-Write-Wins po
 1. Cada registro tem `client_updated_at` (epoch ms do cliente, o `updatedAt` local).
 2. Vence o maior `client_updated_at`; empate → maior `updated_at` do servidor.
 3. Campos **append-only** são mesclados antes da decisão, para não perder informação:
-   - `tasks.logs[]` e `tasks.subs[]`: união por `id`; para o mesmo `id`, vence o item com `updated_at`/timestamp maior; logs nunca são removidos por conflito.
+   - `tasks.logs[]` e `tasks.subs[]`: união por `id`; para o mesmo `id`, vence o item com `updated_at`/timestamp maior; logs nunca são removidos por conflito. Subtarefas usam `deletedAt` (tombstone) e **não ressuscitam** quando excluídas.
    - `contacts.interactions[]`: união por `at/type/direction/note` (mantendo os mais recentes até o limite de 100).
 4. `user_settings.data`: LWW do objeto inteiro pelo `updated_at`; conflito é raro (preferências). O perdedor pode ser guardado em um backup local de conflito (opcional) para inspeção.
 5. `active_timer`: LWW; ver seção 7.

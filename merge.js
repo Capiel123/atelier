@@ -143,7 +143,10 @@
       if (s.id == null) return;
       if (map[s.id]) {
         var prev = map[s.id];
-        map[s.id] = Object.assign({}, prev, s, { logs: unionById(prev.logs, s.logs, logKey) });
+        var merged = Object.assign({}, prev, s, { logs: unionById(prev.logs, s.logs, logKey) });
+        // Tombstone de exclusão: subtarefa excluída não deve "ressuscitar" por uma versão antiga.
+        if (prev.deletedAt || s.deletedAt) merged.deletedAt = Math.max(prev.deletedAt || 0, s.deletedAt || 0);
+        map[s.id] = merged;
       } else {
         map[s.id] = s;
       }
@@ -151,13 +154,27 @@
     return Object.keys(map).map(function (k) { return map[k]; });
   }
 
-  // Merge de uma tarefa: campos escalares por LWW; logs/subs por união (append-only).
+  // Merge de uma tarefa: campos escalares por LWW; logs/subs por união (append-only, com tombstone em subs).
   function mergeTask(local, remoteRow) {
     var remote = fromTask(remoteRow);
     if (!local) return remote;
     var d = decide(local.updatedAt, 0, remote.updatedAt, remoteRow.updated_at);
     var base = (d >= 0) ? local : remote; // >=0 → local vence; -1 → remoto vence; empate 0 → local (empate final: local não é pior; escalares idênticos)
     var merged = Object.assign({}, base);
+    // Estado de conclusão é "final": versão antiga não reabre uma tarefa já concluída.
+    // done:true carrega doneAt; done:false (reaberta) carrega updatedAt — vence o mais recente.
+    var ld = !!local.done, rd = !!remote.done;
+    if (ld !== rd) {
+      var doneSide = ld ? local : remote;
+      var notDoneSide = ld ? remote : local;
+      var doneAt = num(doneSide.doneAt, 0);
+      var notUpd = num(notDoneSide.updatedAt, 0);
+      var keepDone = doneAt >= notUpd;
+      merged.done = keepDone;
+      merged.doneAt = keepDone ? doneAt : null;
+    } else if (ld && rd) {
+      merged.doneAt = Math.max(num(local.doneAt, 0), num(remote.doneAt, 0));
+    }
     merged.logs = unionLogs(local.logs, remote.logs);
     merged.subs = unionSubs(local.subs, remote.subs);
     merged.spent = merged.logs.reduce(function (a, l) { return a + num(l.minutes, 0); }, 0);

@@ -480,8 +480,9 @@ function taskAreaOptions(t) {
 
 function renderSubs(t) {
   const runningSub = S.timer && S.timer.taskId === t.id ? S.timer.subId : null;
-  const subsDone = (t.subs||[]).filter(s => s.d).length;
-  const subsTotal = (t.subs||[]).length;
+  const actives = activeSubs(t);
+  const subsDone = actives.filter(s => s.d).length;
+  const subsTotal = actives.length;
   const subPct = subsTotal ? Math.round(subsDone / subsTotal * 100) : 0;
   return `<div class="subs">
     <div style="display:flex;gap:6px;margin-bottom:4px;align-items:stretch">
@@ -491,9 +492,9 @@ function renderSubs(t) {
       </div>
       <button data-a="collapseCard" data-id="${t.id}" title="Recolher card" style="padding:0 12px;font-size:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--mu);cursor:pointer;flex:none;font-weight:600">⊟</button>
     </div>
-    ${(t.subs||[]).sort((a,b)=>(a.order||0)-(b.order||0)).map((s,i) => {
+    ${actives.map((s) => {
       const mins = subMinutes(t, s.id); const isRunning = runningSub === s.id;
-      return `<div class="sub ${isRunning?'run':''}"><button class="chk s" data-a="stog" data-id="${t.id}" data-i="${i}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?'▶ ':''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="stopTimer">⏸</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" ${S.timer?'disabled':''}>▶</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-i="${i}">↑</button><button class="btn-sm" data-a="sdel" data-id="${t.id}" data-i="${i}">✕</button></div>`;
+      return `<div class="sub ${isRunning?'run':''}"><span class="sub-drag" draggable="true" data-dragsub="${t.id}:${s.id}" title="Arrastar para reordenar">⠿</span><button class="chk s" data-a="stog" data-id="${t.id}" data-sub="${s.id}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?'▶ ':''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="stopTimer">⏸</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" ${S.timer?'disabled':''}>▶</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-sub="${s.id}" title="Subir">↑</button><button class="btn-sm" data-a="subDown" data-id="${t.id}" data-sub="${s.id}" title="Descer">↓</button><button class="btn-sm" data-a="sdel" data-id="${t.id}" data-sub="${s.id}">✕</button></div>`;
     }).join('')}</div>`;
 }
 
@@ -1172,7 +1173,7 @@ function renderFocus() {
   const durations = getFocusDurations();
   const runningSubId = running ? S.timer.subId : null;
   const runningSub = runningSubId ? t.subs.find(s => s.id === runningSubId) : null;
-  const firstPending = (t.subs||[]).filter(s => !s.d).sort((a,b) => (a.order||0)-(b.order||0))[0];
+  const firstPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
 
   const ringColor = !running ? 'var(--bu)' : (phase === 'rest' ? 'var(--ok)' : (isPaused ? 'var(--wr)' : 'var(--ac)'));
   let eyebrow;
@@ -1198,8 +1199,8 @@ function renderFocus() {
     : (running ? 'Sessão livre' : `Bloco de ${targetMin}min`);
   const hint = firstPending && !running ? 'Iniciando na primeira subtarefa pendente' : '';
 
-  const subs = (t.subs || []).slice().sort((a,b) => (a.order||0)-(b.order||0));
-  const subsHtml = subs.length ? `
+  const subs = activeSubs(t);
+  const subsHtml = `
     <div class="focus-subs">
       <div class="focus-subs-title">Subtarefas (${subs.filter(s=>s.d).length}/${subs.length})</div>
       ${subs.map((s) => {
@@ -1210,7 +1211,8 @@ function renderFocus() {
           <span class="${s.d ? 'x' : ''}" style="flex:1" data-a="focusSelectSub" data-sub="${s.id}" title="${s.d ? '' : (isRun ? 'Etapa atual em andamento' : 'Focar nesta etapa')}">${isRun ? '▶ ' : ''}${esc(s.t)}</span>
         </div>`;
       }).join('')}
-    </div>` : '';
+      <input data-a="sadd" data-id="${t.id}" placeholder="Nova subtarefa (Enter)" style="margin-top:8px;width:100%">
+    </div>`;
 
   el.innerHTML = `
     <div class="focus-content" data-phase="${phase}">

@@ -280,7 +280,7 @@ function migrate(raw) {
       if (t.sub && t.skills.length === 0) {let sk = s.skills.find(x => x.n.toLowerCase() === String(t.sub).toLowerCase()); if (!sk) {sk = mkSkill(t.sub, '#9a94a3'); s.skills.push(sk);} t.skills = [sk.id];}
       delete t.sub;
       if (typeof t.spent === 'number' && t.spent > 0 && t.logs.length === 0) t.logs.push({id: uid(), minutes: t.spent, start: null, end: null, subId: null, note: 'v1', migrated: true});
-      t.subs = t.subs.map((sb, si) => {if (typeof sb === 'string') sb = {t: sb, d: false}; return {id: sb.id || uid(), t: sb.t || '', d: !!sb.d, xpClaimed: !!sb.d, est: +sb.est || 0, order: sb.order ?? si, logs: Array.isArray(sb.logs) ? sb.logs : []};});
+      t.subs = t.subs.map((sb, si) => {if (typeof sb === 'string') sb = {t: sb, d: false}; return {id: sb.id || uid(), t: sb.t || '', d: !!sb.d, xpClaimed: !!sb.d, est: +sb.est || 0, order: sb.order ?? si, deletedAt: sb.deletedAt || null, logs: Array.isArray(sb.logs) ? sb.logs : []};});
       t.xpClaimed = !!t.done; delete t.spent;
     });
     if (Array.isArray(s.people)) {

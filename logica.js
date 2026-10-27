@@ -263,6 +263,31 @@ function stopTimer(override) {
   S.timer = null; save(); renderTimer();
   if (['week','skills','proj','stats'].includes(tab)) render();
 }
+// Consistência timer × tarefa: se a tarefa vinculada ao timer foi concluída ou removida,
+// encerra o timer localmente (registra os minutos, sem duplicar) e desvincula a referência.
+function reconcileTimerTask() {
+  if (!S.timer) return;
+  const t = S.tasks.find(x => x.id === S.timer.taskId);
+  if (!t || t.done) stopTimer();
+}
+// Subtarefas ativas (não excluídas), ordenadas.
+function activeSubs(t) { return ((t && t.subs) || []).filter(s => !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0)); }
+function subIndex(t, subId) { return activeSubs(t).findIndex(s => s.id === subId); }
+// Move a subtarefa subId para a posição toIndex (entre as ativas) e persiste a ordem.
+function moveSubTo(t, subId, toIndex) {
+  if (!t || !Array.isArray(t.subs)) return;
+  const active = activeSubs(t);
+  const deleted = (t.subs || []).filter(s => s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0));
+  const from = active.findIndex(s => s.id === subId);
+  if (from < 0) return;
+  const target = Math.max(0, Math.min(active.length - 1, toIndex));
+  const [moved] = active.splice(from, 1);
+  active.splice(target, 0, moved);
+  active.forEach((s, ix) => s.order = ix);
+  deleted.forEach((s, ix) => s.order = active.length + ix);
+  t.subs = active.concat(deleted);
+  touch(t); save(); render();
+}
 function beep() {try {const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 720; g.gain.setValueAtTime(0.15, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.5); o.start(); o.stop(a.currentTime + 0.5);} catch(e) {}}
 
 /* --- HELPERS DE TAREFA --- */

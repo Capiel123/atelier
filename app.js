@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','cp','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','toggleSection','resetXp']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','toggleSection','resetXp']);
 
 /* --- RASTREAR <details> ABERTOS (para persistir após render) --- */
 // 💡 Sem isso, cada re-render fecharia o painel "Editar" que o usuário abriu.
@@ -25,7 +25,7 @@ document.addEventListener('click', ev => {
 
   const btn = ev.target.closest('[data-a]');
   if (!btn || btn.tagName === 'INPUT' || btn.tagName === 'SELECT') return;
-  const a = btn.dataset.a; const id = btn.dataset.id; const i = btn.dataset.i;
+  const a = btn.dataset.a; const id = btn.dataset.id; const i = btn.dataset.i; const sub = btn.dataset.sub;
   const t = id && T(id); const c = id && S.contacts.find(x => x.id === id);
 
   // Card da Fila: alterna só quando o clique não é em controle interno nem no corpo expandido
@@ -267,7 +267,7 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'histReopen': {const tt = T(id); if (tt && tt.done) {tt.done = false; tt.doneAt = null; touch(tt); toast('Tarefa reaberta');} break;}
-    case 'histCopy': {const tt = T(id); if (!tt) return; const copy = {...tt, id: uid(), done: false, doneAt: null, xpClaimed: false, next: false, order: 0, spent: 0, logs: [], subs: (tt.subs||[]).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[]})), day: todayI(), createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; S.tasks.push(copy); toast('Copiada para hoje'); break;}
+    case 'histCopy': {const tt = T(id); if (!tt) return; const copy = {...tt, id: uid(), done: false, doneAt: null, xpClaimed: false, next: false, order: 0, spent: 0, logs: [], skills: Array.isArray(tt.skills)?[...tt.skills]:[], labels: Array.isArray(tt.labels)?[...tt.labels]:[], subs: (tt.subs||[]).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: todayI(), createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; S.tasks.push(copy); toast('Copiada para hoje'); break;}
     case 'histDel': if (!confirm('Excluir tarefa permanentemente do histórico?')) return; S.tasks = S.tasks.filter(x => x.id !== id); break;
     case 'earnFilter': earningsFilter = btn.dataset.v; render(); return;
     case 'histFilter': historyFilter = btn.dataset.v; render(); return;
@@ -316,7 +316,7 @@ document.addEventListener('click', ev => {
         break;
       }
     }
-    case 'stog': {if (!t) break; const sb = t.subs[+i]; if (!sb) break; sb.d = !sb.d; if (sb.d && !isPersonalSection(t)) {const xp = subXp(sb, t); if (awardSubXp(t, sb)) toast('+' + xp + ' XP');} else if (sb.d) {awardSubXp(t, sb);} touch(t); break;}
+    case 'stog': {if (!t) break; const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break; sb.d = !sb.d; if (sb.d && !isPersonalSection(t)) {const xp = subXp(sb, t); if (awardSubXp(t, sb)) toast('+' + xp + ' XP');} else if (sb.d) {awardSubXp(t, sb);} touch(t); break;}
     case 'log': if (!t) break; t.logs.push({id: uid(), minutes: +btn.dataset.m, start: Date.now(), end: Date.now(), subId: null, note: 'manual'}); t.spent = taskMinutes(t); touch(t); break;
     case 'startTimer': if (!t) break; startTimer(t.id, null); return;
     case 'startSubTimer': startTimer(t.id, btn.dataset.sub, S.cfg.defaultFocus || 25); return;
@@ -324,10 +324,11 @@ document.addEventListener('click', ev => {
     case 'setnext': if (!t) break; if (t.next) {t.next = false; touch(t);} else {S.tasks.forEach(x => {if (x.next) {x.next = false; touch(x);}}); t.next = true; touch(t); toast('⭐');} break;
     case 'moveUp': case 'moveDown': if (!t) break; reorderTask(t, a === 'moveUp' ? -1 : 1); break;
     case 'setTaskColor': if (!t) break; t.color = btn.dataset.color || ''; touch(t); break;
-    case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], subs: t.subs.map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[]})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
+    case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: t.subs.map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
     case 'del': if (!t) break; S.tasks = S.tasks.filter(x => x.id !== id); break;
-    case 'sdel': {if (!t) break; t.subs.splice(+i, 1); touch(t); break;}
-    case 'subUp': {if (!t) break; const subs = [...t.subs].sort((a,b) => (a.order||0)-(b.order||0)); const idx = +i; if (idx <= 0) break; [subs[idx-1], subs[idx]] = [subs[idx], subs[idx-1]]; subs.forEach((s, ix) => s.order = ix); t.subs = subs; touch(t); break;}
+    case 'sdel': {if (!t) break; const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break; sb.deletedAt = Date.now(); touch(t); break;}
+    case 'subUp': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) - 1); break;}
+    case 'subDown': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) + 1); break;}
     case 'qa': {const el = $('#qa'); if (el && el.value.trim()) {addQuick(dv(el.dataset.d), el.value); el.value = '';} break;}
     case 'bulk': {const el = $('#bulk'); if (el && el.value.trim()) {addBulk(dv(btn.dataset.d), el.value); el.value = '';} break;}
     case 'setEnergy': setEnergy(currentEnergySlot(), btn.dataset.e); break;
@@ -548,7 +549,7 @@ document.addEventListener('change', ev => {
         sb.d = el.checked;
         if (sb.d) awardSubXp(t, sb);
         if (sb.d && S.timer && S.timer.taskId === t.id && S.timer.subId === sb.id) {
-          const nextPending = (t.subs||[]).filter(s => !s.d).sort((a,b)=>(a.order||0)-(b.order||0))[0];
+          const nextPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b)=>(a.order||0)-(b.order||0))[0];
           S.timer.subId = nextPending ? nextPending.id : null;
           renderTimer();
         }
@@ -621,14 +622,14 @@ document.addEventListener('keydown', ev => {
   if (el.id === 'qa') {if (el.value.trim()) {addQuick(dv(el.dataset.d), el.value); el.value = ''; save(); render();} ev.preventDefault();}
   else if (el.id === 'qaJob') {if (el.value.trim()) {const job = parseJobLine(el.value); if (job) S.applications.push(job); el.value = ''; save(); render();} ev.preventDefault();}
   else if (el.id === 'clientN') {if (el.value.trim()) {snapshot(); S.clients.push(mkClient({n: el.value.trim()})); el.value=''; save(); render();} ev.preventDefault();}
-  else if (el.dataset.a === 'sadd' && el.value.trim()) {const t = T(el.dataset.id); if (t) {t.subs = t.subs || []; t.subs.push({id: uid(), t: el.value.trim(), d:false, xpClaimed:false, est:0, order:t.subs.length, logs:[]}); touch(t); el.value = ''; save(); render();} ev.preventDefault();}
+  else if (el.dataset.a === 'sadd' && el.value.trim()) {const t = T(el.dataset.id); if (t) {t.subs = t.subs || []; t.subs.push({id: uid(), t: el.value.trim(), d:false, xpClaimed:false, est:0, order:t.subs.length, logs:[], deletedAt: null}); touch(t); el.value = ''; save(); render(); if (focusTaskId) renderFocus();} ev.preventDefault();}
   else if (el.dataset.pgadd && el.value.trim()) {const p = S.projects.find(x => x.id === el.dataset.pgadd); if (p) {p.goals = p.goals || []; p.goals.push({id: uid(), t: el.value.trim(), d:false, order:p.goals.length}); touch(p); el.value = ''; save(); render();} ev.preventDefault();}
 });
 
 /* --- ATALHOS GLOBAIS DE TECLADO --- */
 document.addEventListener('keydown', ev => {
-  const tag = document.activeElement.tagName;
-  const isTyping = ['INPUT','TEXTAREA','SELECT'].includes(tag) || document.activeElement.isContentEditable;
+  const tgt = ev.target;
+  const isTyping = ev.isComposing || (tgt && tgt.isContentEditable) || (tgt && ['INPUT','TEXTAREA','SELECT'].includes(tgt.tagName));
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {ev.preventDefault(); openSearch(); return;}
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z' && !ev.shiftKey) {if (isTyping) return; ev.preventDefault(); undo(); return;}
   if (isTyping) return;
@@ -655,6 +656,37 @@ document.addEventListener('keydown', ev => {
     return;
   }
   if (ev.key === '?' || (ev.shiftKey && ev.key === '/')) {ev.preventDefault(); showShortcutsHelp(); return;}
+});
+
+/* --- ARRASTAR E SOLTAR DE SUBTAREFAS (reordenação persistente) --- */
+let draggingSub = null;
+document.addEventListener('dragstart', ev => {
+  const h = ev.target.closest && ev.target.closest('[data-dragsub]');
+  if (!h) return;
+  draggingSub = h.dataset.dragsub.split(':');
+  try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', h.dataset.dragsub); } catch (e) {}
+  const row = h.closest('.sub'); if (row) row.classList.add('dragging');
+});
+document.addEventListener('dragover', ev => {
+  const h = ev.target.closest && ev.target.closest('[data-dragsub]');
+  if (!h || !draggingSub) return;
+  ev.preventDefault();
+  try { ev.dataTransfer.dropEffect = 'move'; } catch (e) {}
+});
+document.addEventListener('drop', ev => {
+  const h = ev.target.closest && ev.target.closest('[data-dragsub]');
+  if (!h || !draggingSub) return;
+  ev.preventDefault();
+  const [tid, sid] = draggingSub;
+  const targetId = h.dataset.dragsub.split(':')[1];
+  const t = T(tid);
+  if (t && sid && sid !== targetId) { snapshot(); moveSubTo(t, sid, subIndex(t, targetId)); }
+  draggingSub = null;
+});
+document.addEventListener('dragend', ev => {
+  const h = ev.target.closest && ev.target.closest('[data-dragsub]');
+  if (h) { const row = h.closest('.sub'); if (row) row.classList.remove('dragging'); }
+  draggingSub = null;
 });
 
 /* --- CONTENTEDITABLE DE SUBTAREFAS E METAS (salvar ao perder foco) --- */
