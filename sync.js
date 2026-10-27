@@ -414,7 +414,11 @@
     var localTimer = (S && S.timer) || null;
     var localCu = localTimer ? numVal(localTimer.updatedAt, 0) : numVal((S && S.timerStoppedAt) || 0, 0);
     if (remoteCu <= localCu) return false; // local vence ou empate → mantém
+    var had = !!localTimer;
     S.timer = window.__merge.fromTimer(row); // null = sem sessão
+    if (had && !S.timer && typeof toast === 'function') {
+      toast('Sessão encerrada em outro dispositivo'); // aviso discreto, sem sair do modo foco
+    }
     return true;
   }
 

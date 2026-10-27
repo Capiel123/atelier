@@ -249,7 +249,7 @@
 .late{color:var(--er)}.soon{color:var(--wr)}
 
 /* --- TOAST (mensagem flutuante) --- */
-.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ac);color:#000;padding:8px 14px;border-radius:20px;font-weight:700;opacity:0;pointer-events:none;transition:.3s;z-index:99;max-width:90%;font-size:13px;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ac);color:#000;padding:8px 14px;border-radius:20px;font-weight:700;opacity:0;pointer-events:none;transition:.3s;z-index:120;max-width:90%;font-size:13px;text-align:center}
 .toast.on{opacity:1}.toast.err{background:var(--er);color:#fff}
 
 /* --- FILTROS --- */

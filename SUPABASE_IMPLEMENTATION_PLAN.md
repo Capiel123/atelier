@@ -2,7 +2,7 @@
 
 > **Contexto central:** [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) · índice: [`docs/README.md`](docs/README.md) · roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 >
-> **Status:** Fases 0–6 concluídas. A **Fase 6 (timer sincronizado)** está implementada e testada automaticamente (`_sync_timer_test.js`); **validação manual em PC + celular pendente**. Tema e accent são locais por dispositivo; ver `docs/TIMER.md` e `docs/TABS.md`.
+> **Status:** Fases 0–6 concluídas. A **Fase 6 (timer sincronizado)** está implementada, testada automaticamente (`_sync_timer_test.js`) e **validada manualmente em PC + celular** (cenários principais). Tema e accent são locais por dispositivo; ver `docs/TIMER.md` e `docs/TABS.md`.
 > **Arquitetura:** `SUPABASE_ARCHITECTURE.md` · **Dados:** `SUPABASE_DATA_MAPPING.md`
 > **Princípio:** cada fase entrega algo verificável sem quebrar o uso diário; o app permanece funcional offline e sem sync até a fase 7.
 
