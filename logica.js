@@ -95,6 +95,8 @@ function sectionProgress(tasks) {
 }
 // Conclusão "desta semana": evita herdar conclusões de semanas anteriores no planejamento.
 function isDoneThisWeek(t) { return !!(t && t.done && t.doneAt && t.doneAt >= weekStart().getTime()); }
+// Tarefa oculta da seção "Concluídas" por "Limpar concluídas" (sem tocar em done/doneAt).
+function isClearedFromDone(t) { return !!(t && S.clearedDone && S.clearedDone[t.id] && S.clearedDone[t.id] >= (t.doneAt || 0)); }
 // Minutos registrados nesta semana (logs com `end` dentro da semana atual).
 function taskMinutesThisWeek(t) { const ws = weekStart().getTime(); return ((t && t.logs) || []).filter(l => l.end != null && l.end >= ws).reduce((a,l) => a + (+l.minutes || 0), 0); }
 

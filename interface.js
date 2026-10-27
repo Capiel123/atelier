@@ -187,7 +187,7 @@ function viewWeek() {
   const workSpent = workTasks.reduce((a,t) => a + taskMinutes(t), 0);
   const cap = S.cfg.cap || 360;
   const full = workProg.totalWeight > cap;
-  const nextTask = S.tasks.find(t => t.next && !t.done);
+  const nextTask = S.tasks.find(t => t.next && !isDoneThisWeek(t));
   const slot = currentEnergySlot(); const currentE = getTodayEnergy()[slot];
   const slotLabel = {morning:'Manhã', afternoon:'Tarde', evening:'Noite'}[slot];
   const wIso = iso(weekStart());
@@ -312,7 +312,8 @@ function renderFilteredTasks() {
   if (!list.length) return list.length ? '<div class="msg">Nada com esses filtros.</div>' : '<div class="msg">Nada ainda.</div>';
 
   const pendingTasks = list.filter(t => !isDoneThisWeek(t));
-  const doneTasks = list.filter(t => isDoneThisWeek(t));
+  // "Limpar concluídas" só oculta; se a tarefa for re-concluída depois, reaparece (doneAt mais novo).
+  const doneTasks = list.filter(t => isDoneThisWeek(t) && !isClearedFromDone(t));
   const compact = getTaskCompactMode();
   const sectionsCollapsed = S.cfg.sectionsCollapsed || {};
 
@@ -368,6 +369,7 @@ function renderFilteredTasks() {
           <span class="section-header-meta">${doneTasks.length} ${doneTasks.length === 1 ? 'concluída' : 'concluídas'}</span>
         </div>
         <div class="section-header-right">
+          <button data-a="clrDone" title="Mover as tarefas concluídas para a Lixeira (tempo e histórico preservados)" style="padding:3px 9px;font-size:11px;background:transparent;border:1px solid var(--bd);border-radius:6px;color:var(--mu);cursor:pointer">Limpar concluídas</button>
           <span class="chev">${doneCollapsed ? '▸' : '▾'}</span>
         </div>
       </div>
@@ -1111,7 +1113,7 @@ function renderTimer() {
 }
 
 /* --- MODO FOCO (overlay fullscreen) --- */
-function openFocus(taskId) {const t = S.tasks.find(x => x.id === taskId); if (!t || t.done) return toast('Escolha uma tarefa pendente', true); focusTaskId = taskId; renderFocus();}
+function openFocus(taskId) {const t = S.tasks.find(x => x.id === taskId); if (!t || isDoneThisWeek(t)) return toast('Escolha uma tarefa pendente', true); focusTaskId = taskId; renderFocus();}
 function closeFocus() {
   if (S.timer && S.timer.taskId === focusTaskId) {
     // Se configurado "nunca parar", mantém o timer rodando e só fecha o overlay
@@ -1150,12 +1152,27 @@ function showCloseFocusModal() {
   </div>`;
   document.body.appendChild(modal);
 }
+function showFocusCompleteModal(t) {
+  document.getElementById('focusCompleteModal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'focusCompleteModal';
+  modal.className = 'shortcuts-modal';
+  modal.innerHTML = `<div class="shortcuts-content">
+    <h3 style="margin-top:0">Concluir tarefa?</h3>
+    <div style="font-size:13px;color:var(--mu);margin:8px 0 14px">Todas as subtarefas de "${esc(t.t)}" foram concluídas.</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button data-a="focusCompleteYes" data-id="${t.id}" style="background:var(--ac);color:#000;border-color:var(--ac);padding:10px">Concluir tarefa</button>
+      <button data-a="focusCompleteNo" style="padding:10px">Continuar sem concluir</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
 function updateFocusTimer() {if (!focusTaskId || !S.timer || S.timer.taskId !== focusTaskId) return; if (S.timer.paused) return; const elapsedSec = timerElapsedSec(); const targetMin = S.timer.targetMin || focusTargetMin; const remainingSec = Math.max(0, targetMin * 60 - elapsedSec); const te = document.getElementById('focusTime'); if (te) te.textContent = fmtClock(remainingSec); const prog = targetMin > 0 ? Math.min(1, (elapsedSec/60) / targetMin) : 0; const circ = 2 * Math.PI * 100; const c = document.querySelector('.focus-progress'); if (c) c.style.strokeDashoffset = circ * (1 - prog);}
 
 function renderFocus() {
   if (!focusTaskId) return;
   const t = S.tasks.find(x => x.id === focusTaskId);
-  if (!t || t.done) return closeFocus();
+  if (!t || isDoneThisWeek(t)) return closeFocus();
   let el = document.getElementById('focusOverlay');
   if (!el) {el = document.createElement('div'); el.id = 'focusOverlay'; el.className = 'focus-overlay'; document.body.appendChild(el);}
 

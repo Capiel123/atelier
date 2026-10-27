@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','toggleSection','resetXp']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','toggleSection','resetXp']);
 
 /* --- RASTREAR <details> ABERTOS (para persistir após render) --- */
 // 💡 Sem isso, cada re-render fecharia o painel "Editar" que o usuário abriu.
@@ -361,6 +361,16 @@ document.addEventListener('click', ev => {
     case 'focusResume': resumeTimer(); return;
     case 'focusSkip': advancePhase(); return;
     case 'focusStop': stopTimer(); return;
+    case 'focusCompleteYes': {
+      document.getElementById('focusCompleteModal')?.remove();
+      const ft = T(id);
+      if (ft) completeTaskInFocus(ft);
+      return;
+    }
+    case 'focusCompleteNo': {
+      document.getElementById('focusCompleteModal')?.remove();
+      return;
+    }
     case 'focusSetTarget': focusTargetMin = +btn.dataset.m; renderFocus(); return;
     case 'focusSelectSub': {
       const task = T(focusTaskId);
@@ -496,7 +506,7 @@ document.addEventListener('click', ev => {
       fallbackDownload();
       return;
     }
-    case 'clrDone': if (confirm('Limpar concluídas?')) {S.tasks.filter(t => t.done).forEach(t => {S.trash = S.trash || []; S.trash.unshift({id: uid(), task: JSON.parse(JSON.stringify(t)), deletedAt: Date.now()});}); S.tasks = S.tasks.filter(t => !t.done); if (S.trash.length > 200) S.trash = S.trash.slice(0, 200);} break;
+    case 'clrDone': if (confirm('Ocultar as tarefas concluídas deste dia da seção "Concluídas"? Elas continuam no Histórico.')) { S.clearedDone = S.clearedDone || {}; dayTasks(day).filter(t => isDoneThisWeek(t) && !S.clearedDone[t.id]).forEach(t => { S.clearedDone[t.id] = Date.now(); }); } break;
     case 'imp': doImport(V('imp')); return;
     default: return;
   }
@@ -557,12 +567,11 @@ document.addEventListener('change', ev => {
         }
         touch(t);
         save();
-        // conclui a tarefa no modo foco quando todas as subtarefas ativas forem feitas
-        if (sb.d && activeSubs(t).length && activeSubs(t).every(s => s.d)) {
-          completeTaskInFocus(t);
-          return;
-        }
         renderFocus();
+        // pergunta antes de concluir a tarefa principal (não conclui silenciosamente)
+        if (sb.d && activeSubs(t).length && activeSubs(t).every(s => s.d)) {
+          showFocusCompleteModal(t);
+        }
       }
     }
     return;
@@ -646,7 +655,7 @@ document.addEventListener('keydown', ev => {
     return;
   }
   if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const qa = document.getElementById('qa') || document.getElementById('qaJob'); if (qa) qa.focus(); return;}
-  if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const nt = S.tasks.find(t => t.next && !t.done) || S.tasks.find(t => !t.done && t.day === day); if (nt) openFocus(nt.id); else toast('Sem tarefa pendente'); return;}
+  if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const nt = S.tasks.find(t => t.next && !isDoneThisWeek(t)) || S.tasks.find(t => !isDoneThisWeek(t) && t.day === day); if (nt) openFocus(nt.id); else toast('Sem tarefa pendente'); return;}
   if (ev.key === 'Escape') {
     if (document.getElementById('searchModal')) {closeSearch(); return;}
     if (document.getElementById('closeFocusModal')) {document.getElementById('closeFocusModal').remove(); return;}
