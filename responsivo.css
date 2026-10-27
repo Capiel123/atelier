@@ -22,7 +22,11 @@
   .acts select{padding:6px 8px;min-height:40px;font-size:12.5px}
   .chk{width:28px;height:28px}
   .chk.s{width:22px;height:22px;font-size:11px}
-  .sub .btn-sm{padding:4px 8px;min-width:32px;min-height:32px}
+  .subs{margin-left:6px;padding-left:8px}
+  .sub{gap:5px;padding-left:4px;margin:4px 0}
+  .sub .sub-drag{display:none}
+  .sub .sub-time{font-size:10px}
+  .sub .btn-sm{padding:2px 4px;min-width:26px;min-height:28px}
   .quick-actions button{padding:8px 12px;min-height:40px;font-size:12.5px}
   .filter-bar input{min-width:100%}
   .filter-bar select{flex:1;min-width:0;max-width:none}

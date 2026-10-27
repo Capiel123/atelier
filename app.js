@@ -660,6 +660,10 @@ document.addEventListener('keydown', ev => {
 
 /* --- ARRASTAR E SOLTAR DE SUBTAREFAS (reordenação persistente) --- */
 let draggingSub = null;
+function clearSubDropMarks() {
+  document.querySelectorAll('.sub.drop-target').forEach(r => r.classList.remove('drop-target'));
+  document.querySelectorAll('.sub.dragging').forEach(r => r.classList.remove('dragging'));
+}
 document.addEventListener('dragstart', ev => {
   const h = ev.target.closest && ev.target.closest('[data-dragsub]');
   if (!h) return;
@@ -668,25 +672,33 @@ document.addEventListener('dragstart', ev => {
   const row = h.closest('.sub'); if (row) row.classList.add('dragging');
 });
 document.addEventListener('dragover', ev => {
-  const h = ev.target.closest && ev.target.closest('[data-dragsub]');
-  if (!h || !draggingSub) return;
+  const row = ev.target.closest && ev.target.closest('.sub');
+  if (!row || !row.dataset.subrow || !draggingSub) return;
   ev.preventDefault();
   try { ev.dataTransfer.dropEffect = 'move'; } catch (e) {}
+  if (!row.classList.contains('drop-target')) {
+    document.querySelectorAll('.sub.drop-target').forEach(r => r.classList.remove('drop-target'));
+    row.classList.add('drop-target');
+  }
+});
+document.addEventListener('dragleave', ev => {
+  const row = ev.target.closest && ev.target.closest('.sub');
+  if (row) row.classList.remove('drop-target');
 });
 document.addEventListener('drop', ev => {
-  const h = ev.target.closest && ev.target.closest('[data-dragsub]');
-  if (!h || !draggingSub) return;
+  const row = ev.target.closest && ev.target.closest('.sub');
+  if (!row || !row.dataset.subrow || !draggingSub) return;
   ev.preventDefault();
   const [tid, sid] = draggingSub;
-  const targetId = h.dataset.dragsub.split(':')[1];
+  const targetId = (row.dataset.subrow || '').split(':')[1];
   const t = T(tid);
-  if (t && sid && sid !== targetId) { snapshot(); moveSubTo(t, sid, subIndex(t, targetId)); }
+  if (t && sid && targetId && sid !== targetId) { snapshot(); moveSubTo(t, sid, subIndex(t, targetId)); }
   draggingSub = null;
+  clearSubDropMarks();
 });
 document.addEventListener('dragend', ev => {
-  const h = ev.target.closest && ev.target.closest('[data-dragsub]');
-  if (h) { const row = h.closest('.sub'); if (row) row.classList.remove('dragging'); }
   draggingSub = null;
+  clearSubDropMarks();
 });
 
 /* --- CONTENTEDITABLE DE SUBTAREFAS E METAS (salvar ao perder foco) --- */

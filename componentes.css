@@ -176,14 +176,16 @@
 .subs-badge:hover{color:var(--tx)}
 .sub{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0;padding:4px 0;border-left:3px solid transparent;padding-left:8px}
 .sub.run{border-left-color:var(--ac);background:color-mix(in srgb,var(--ac) 8%,transparent);border-radius:0 6px 6px 0}
-.sub .sub-txt{flex:1;min-width:0;word-break:break-word}
+.sub .sub-txt{flex:1;min-width:0;overflow-wrap:break-word;word-break:normal}
 .sub .x{text-decoration:line-through;opacity:.5}
 .sub .sub-time{color:var(--mu);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sub .btn-sm{padding:0 6px;font-size:11px;background:none;border:none;color:var(--mu);cursor:pointer}
 .sub .btn-sm:hover{color:var(--ac)}
 .sub .btn-sm.run{color:var(--bu)}
-.sub .sub-drag{cursor:grab;color:var(--mu);font-size:13px;padding:0 4px;user-select:none;flex:none;opacity:.7;touch-action:none}
-.sub .sub-drag:hover{color:var(--ac)}
+.sub .sub-drag{cursor:grab;color:var(--mu);font-size:14px;line-height:1;padding:4px 6px;margin:-2px 0;user-select:none;flex:none;opacity:.75;touch-action:none;border-radius:4px}
+.sub .sub-drag:hover{color:var(--ac);background:var(--s2)}
+.sub .sub-drag:active{cursor:grabbing}
+.sub.drop-target{background:color-mix(in srgb,var(--ac) 12%,transparent)}
 .sub.dragging{opacity:.45;background:var(--s2)}
 
 /* Cabeçalho de grupo de tarefas */
