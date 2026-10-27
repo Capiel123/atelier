@@ -282,7 +282,7 @@ document.addEventListener('click', ev => {
     case 'reportWeekToday': {reportWeekOffset = 0; render(); return;}
     case 'tog': {
       if (!t) break;
-      if (!t.done) {
+      if (!isDoneThisWeek(t)) {
         const card = btn.closest('.card');
         const isReduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const completeTask = () => {
@@ -352,7 +352,7 @@ document.addEventListener('click', ev => {
     case 'focusStart': {
       const task = T(focusTaskId);
       if (!task) break;
-      const firstPending = (task.subs||[]).filter(s => !s.d).sort((a,b) => (a.order||0)-(b.order||0))[0];
+      const firstPending = (task.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
       startTimer(task.id, firstPending ? firstPending.id : null, focusTargetMin);
       renderFocus();
       return;
@@ -368,9 +368,7 @@ document.addEventListener('click', ev => {
       const subId = btn.dataset.sub;
       if (!subId) break;
       if (S.timer && S.timer.taskId === task.id) {
-        S.timer.subId = subId;
-        save();
-        renderTimer();
+        switchTimerSub(subId);
         renderFocus();
         toast('Etapa alterada');
       } else {
@@ -549,12 +547,21 @@ document.addEventListener('change', ev => {
         sb.d = el.checked;
         if (sb.d) awardSubXp(t, sb);
         if (sb.d && S.timer && S.timer.taskId === t.id && S.timer.subId === sb.id) {
-          const nextPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b)=>(a.order||0)-(b.order||0))[0];
+          // registra o segmento na subtarefa atual antes de avançar
+          const elapsed = Math.round(timerElapsedSec() / 60);
+          if (elapsed > 0) recordTimerMinutes(t, elapsed, S.timer.subId, 'pomodoro', S.timer);
+          const nextPending = activeSubs(t).filter(s => !s.d)[0];
           S.timer.subId = nextPending ? nextPending.id : null;
+          S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.updatedAt = Date.now();
           renderTimer();
         }
         touch(t);
         save();
+        // conclui a tarefa no modo foco quando todas as subtarefas ativas forem feitas
+        if (sb.d && activeSubs(t).length && activeSubs(t).every(s => s.d)) {
+          completeTaskInFocus(t);
+          return;
+        }
         renderFocus();
       }
     }

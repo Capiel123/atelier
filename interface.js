@@ -177,7 +177,7 @@ function bar(p, label, msg) {return `<div class="bar"><div class="fill" style="w
 
 function viewWeek() {
   const ts = dayTasks(day); const today = iso(new Date());
-  const total = ts.length; const done = ts.filter(t => t.done).length;
+  const total = ts.length; const done = ts.filter(t => isDoneThisWeek(t)).length;
   const workTasks = ts.filter(t => taskSection(t) === 'work');
   const personalTasks = ts.filter(t => taskSection(t) === 'personal');
   const commitmentTasks = ts.filter(t => taskSection(t) === 'commitment');
@@ -203,8 +203,8 @@ function viewWeek() {
   // Card de resumo unificado: today-hero + stats pessoal/compromisso + barra de progresso
   const sectionStatsHtml = (commitmentTasks.length || personalTasks.length) ? `
     <div class="week-summary-sections">
-      ${commitmentTasks.length ? `<span>${SECTION_META.commitment.icon} Compromissos: <b>${commitmentProg.pct}%</b> <span class="wss-sub">(${commitmentTasks.filter(t=>t.done).length}/${commitmentTasks.length})</span></span>` : ''}
-      ${personalTasks.length ? `<span>${SECTION_META.personal.icon} Pessoal: <b>${personalProg.pct}%</b> <span class="wss-sub">(${personalTasks.filter(t=>t.done).length}/${personalTasks.length})</span></span>` : ''}
+      ${commitmentTasks.length ? `<span>${SECTION_META.commitment.icon} Compromissos: <b>${commitmentProg.pct}%</b> <span class="wss-sub">(${commitmentTasks.filter(t=>isDoneThisWeek(t)).length}/${commitmentTasks.length})</span></span>` : ''}
+      ${personalTasks.length ? `<span>${SECTION_META.personal.icon} Pessoal: <b>${personalProg.pct}%</b> <span class="wss-sub">(${personalTasks.filter(t=>isDoneThisWeek(t)).length}/${personalTasks.length})</span></span>` : ''}
     </div>` : '';
 
   const summaryCard = `<div class="week-summary-card">
@@ -216,7 +216,7 @@ function viewWeek() {
         <span>Gasto <b>${fmtMin(workSpent)}</b></span>
       </div>
     </div>
-    ${bar(workProg.pct, total ? `${workTasks.filter(t=>t.done).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', workProg.pct>=100 ? 'Trabalho fechado.' : workProg.pct>=50 ? 'Embalou.' : workProg.pct>0 ? 'Primeira vitória.' : 'Comece pequeno.')}
+    ${bar(workProg.pct, total ? `${workTasks.filter(t=>isDoneThisWeek(t)).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', workProg.pct>=100 ? 'Trabalho fechado.' : workProg.pct>=50 ? 'Embalou.' : workProg.pct>0 ? 'Primeira vitória.' : 'Comece pequeno.')}
     ${sectionStatsHtml}
   </div>`;
 
@@ -232,7 +232,7 @@ function viewWeek() {
 
   return `${summaryCard}
     ${showReviewHint ? `<div class="warn" style="border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 10%,var(--s1));padding:8px 10px;border-radius:8px;font-size:12px;margin-bottom:8px"><b style="color:var(--ac)">É dia de revisão semanal.</b> <a href="#" data-a="tab" data-t="review" style="color:var(--ac);font-weight:700">Abrir →</a></div>` : ''}
-    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>t.done).length}/${a.length}</small></button>`;}).join('')}</div>
+    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDoneThisWeek(t)).length}/${a.length}</small></button>`;}).join('')}</div>
     ${toggleBtn}
     <div class="week-collapsible${collapsed?' week-collapsible--hidden':''}" id="weekCollapsible">
       <div class="energy-row"><span class="energy-label">${slotLabel}:</span><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${e.icon} ${e.n}</button>`).join('')}</div></div>
@@ -306,20 +306,20 @@ function renderFilteredTasks() {
   // setTimeout(0) garante que a contagem (#taskCount) atualize após o HTML entrar no DOM
   setTimeout(() => {
     const el = document.getElementById('taskCount');
-    if (el) el.textContent = `(${list.filter(t=>!t.done).length} pend · ${list.filter(t=>t.done).length} feitas)`;
+    if (el) el.textContent = `(${list.filter(t=>!isDoneThisWeek(t)).length} pend · ${list.filter(t=>isDoneThisWeek(t)).length} feitas)`;
   }, 0);
 
   if (!list.length) return list.length ? '<div class="msg">Nada com esses filtros.</div>' : '<div class="msg">Nada ainda.</div>';
 
-  const pendingTasks = list.filter(t => !t.done);
-  const doneTasks = list.filter(t => t.done);
+  const pendingTasks = list.filter(t => !isDoneThisWeek(t));
+  const doneTasks = list.filter(t => isDoneThisWeek(t));
   const compact = getTaskCompactMode();
   const sectionsCollapsed = S.cfg.sectionsCollapsed || {};
 
   const sectionsHtml = SECTION_ORDER.map(section => {
     const allItems = list.filter(t => taskSection(t) === section);
     if (!allItems.length) return '';
-    const pendingItems = allItems.filter(t => !t.done);
+    const pendingItems = allItems.filter(t => !isDoneThisWeek(t));
     const meta = sectionMeta(section);
     const collapsed = !!sectionsCollapsed[section];
     const pend = pendingItems.length;
@@ -388,9 +388,10 @@ function cardTaskCompact(t, score) {
   const subsTotal = (t.subs||[]).length;
   const subsDone = (t.subs||[]).filter(s => s.d).length;
   const isSelected = selectedTaskId === t.id;
-  return `<div class="card compact ${t.done?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-a="expandTask" data-id="${t.id}">
+  const doneNow = isDoneThisWeek(t);
+  return `<div class="card compact ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-a="expandTask" data-id="${t.id}">
     <div class="row" style="align-items:center; width:100%;">
-      <button class="chk" data-a="tog" data-id="${t.id}">${t.done?'✓':''}</button>
+      <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti">
         <div class="compact-tt">${t.time?`<span style="color:var(--wr)">⏰ ${esc(t.time)} </span>`:''}${esc(t.t)}</div>
         <div class="compact-meta">
@@ -421,11 +422,12 @@ function cardTask(t, score) {
   const subsExpanded = subsCollapsed.has(t.id) ? false : (expandedSubs.has(t.id) ? true : !getTaskCompactMode());
   const k = f => `tasks:${t.id}:${f}`;
   const isSelected = selectedTaskId === t.id;
+  const doneNow = isDoneThisWeek(t);
   const scoreTip = score != null ? scoreBreakdown(t, buildCtx()) : '';
 
-  return `<div class="card ${t.done?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}">
+  return `<div class="card ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}">
     <div class="row" style="align-items:flex-start;">
-      <button class="chk" data-a="tog" data-id="${t.id}">${t.done?'✓':''}</button>
+      <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
         <div class="tt">${type ? `<span class="type-icon ${type.id}">${type.icon}</span>` : ''}<span>${esc(t.t)}</span>${isQuick ? '<span class="quick-ind">⚡</span>' : ''}${t.time ? `<span class="tag" style="color:var(--wr)">⏰ ${esc(t.time)}</span>` : ''}</div>
         ${t.desc ? `<div class="tdesc">${esc(t.desc)}</div>` : ''}
@@ -451,7 +453,7 @@ function cardTask(t, score) {
       <button data-a="moveDown" data-id="${t.id}" title="Descer">↓</button>
       <button data-a="focusMode" data-id="${t.id}">⛶</button>
       <select class="postpone-sel" data-a="postpone" data-id="${t.id}"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
-      ${t.done ? `<button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo do trabalho">✎ resumo</button>` : ''}
+      ${doneNow ? `<button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo do trabalho">✎ resumo</button>` : ''}
       <button data-a="del" data-id="${t.id}">✕</button>
     </div>
     

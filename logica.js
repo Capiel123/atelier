@@ -88,11 +88,15 @@ function taskWeight(t) {
 }
 function sectionProgress(tasks) {
   const totalWeight = tasks.reduce((a,t) => a + taskWeight(t), 0);
-  const doneWeight = tasks.filter(t => t.done).reduce((a,t) => a + taskWeight(t), 0);
-  const inProgressWeight = tasks.filter(t => !t.done).reduce((a,t) => { const w = taskWeight(t); const spent = taskMinutes(t); return a + Math.min(w, spent); }, 0);
+  const doneWeight = tasks.filter(t => isDoneThisWeek(t)).reduce((a,t) => a + taskWeight(t), 0);
+  const inProgressWeight = tasks.filter(t => !isDoneThisWeek(t)).reduce((a,t) => { const w = taskWeight(t); const spent = taskMinutesThisWeek(t); return a + Math.min(w, spent); }, 0);
   const pct = totalWeight > 0 ? Math.round(((doneWeight + inProgressWeight) / totalWeight) * 100) : 0;
   return {pct, totalWeight, doneWeight, inProgressWeight};
 }
+// Conclusão "desta semana": evita herdar conclusões de semanas anteriores no planejamento.
+function isDoneThisWeek(t) { return !!(t && t.done && t.doneAt && t.doneAt >= weekStart().getTime()); }
+// Minutos registrados nesta semana (logs com `end` dentro da semana atual).
+function taskMinutesThisWeek(t) { const ws = weekStart().getTime(); return ((t && t.logs) || []).filter(l => l.end != null && l.end >= ws).reduce((a,l) => a + (+l.minutes || 0), 0); }
 
 /* --- PROJETOS E CLIENTES --- */
 function projectEarnings(p) {
@@ -287,6 +291,26 @@ function moveSubTo(t, subId, toIndex) {
   deleted.forEach((s, ix) => s.order = active.length + ix);
   t.subs = active.concat(deleted);
   touch(t); save(); render();
+}
+// Troca a subtarefa em foco, registrando o segmento atual na subtarefa anterior (atribuição por sub).
+function switchTimerSub(newSubId) {
+  if (!S.timer) return;
+  const t = S.tasks.find(x => x.id === S.timer.taskId);
+  const elapsed = Math.round(timerElapsedSec() / 60);
+  if (t && elapsed > 0) recordTimerMinutes(t, elapsed, S.timer.subId, 'pomodoro', S.timer);
+  S.timer.subId = newSubId;
+  S.timer.accumulated = 0;
+  S.timer.startedAt = Date.now();
+  S.timer.updatedAt = Date.now();
+  save(); renderTimer();
+}
+// Conclui a tarefa a partir do modo foco (todas as subtarefas feitas): registra a sessão, marca done e fecha.
+function completeTaskInFocus(t) {
+  if (!t) return;
+  if (S.timer && S.timer.taskId === t.id) stopTimer();
+  t.done = true; t.doneAt = Date.now(); touch(t); awardTaskXp(t);
+  closeFocus();
+  save(); render();
 }
 function beep() {try {const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 720; g.gain.setValueAtTime(0.15, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.5); o.start(); o.stop(a.currentTime + 0.5);} catch(e) {}}
 
