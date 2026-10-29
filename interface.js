@@ -375,7 +375,7 @@ function renderFilteredTasks() {
           <span class="section-header-meta">${doneTasks.length} ${doneTasks.length === 1 ? 'concluída' : 'concluídas'}</span>
         </div>
         <div class="section-header-right">
-          <button data-a="clrDone" title="Mover as tarefas concluídas para a Lixeira (tempo e histórico preservados)" style="padding:3px 9px;font-size:11px;background:transparent;border:1px solid var(--bd);border-radius:6px;color:var(--mu);cursor:pointer">Limpar concluídas</button>
+          <button data-a="clrDone" title="Ocultar concluídas da lista" style="padding:3px 9px;font-size:11px;background:transparent;border:1px solid var(--bd);border-radius:6px;color:var(--mu);cursor:pointer">Limpar concluídas</button>
           <span class="chev">${doneCollapsed ? '▸' : '▾'}</span>
         </div>
       </div>

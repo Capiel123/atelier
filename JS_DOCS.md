@@ -1,10 +1,10 @@
 # Guia de JavaScript — Ateliê (estrutura atual)
 
-O JavaScript foi dividido em quatro arquivos. O conteúdo abaixo substitui o antigo `JS_DOCS.md.md`, cujo mapa não refletia corretamente a fragmentação atual e mantinha referências a uma sincronização remota como se fosse parte central do fluxo.
+O JavaScript tem quatro arquivos centrais (`estado.js`, `logica.js`, `interface.js`, `app.js`) e seis módulos de integração carregados depois deles. O conteúdo abaixo substitui o antigo `JS_DOCS.md.md`, cujo mapa não refletia corretamente a fragmentação atual.
 
 ## 1. Ordem de carregamento
 
-`index.html` carrega com `defer` e nesta ordem: `estado.js` → `logica.js` → `interface.js` → `app.js`. Como todos compartilham o escopo global, respeitar essa ordem e os nomes globais é essencial.
+`index.html` carrega com `defer` e nesta ordem: `estado.js` → `logica.js` → `interface.js` → `app.js` → `supabase-config.js` → `auth.js` → `onboarding.js` → `import-data.js` → `merge.js` → `sync.js`. Como todos compartilham o escopo global, respeitar essa ordem e os nomes globais é essencial.
 
 ## 2. Arquivos e responsabilidades
 
@@ -56,6 +56,15 @@ O JavaScript foi dividido em quatro arquivos. O conteúdo abaixo substitui o ant
 - IIFE do FAB; IIFE `initPWA()` registra service worker, versão/updates e texto de status.
 - `setInterval` atualiza timer, modo foco e reordenação por energia.
 
+### Módulos de integração (após `app.js`)
+
+- `supabase-config.js` — URL, chave publishable e redirect do projeto.
+- `auth.js` — Magic Link e sessão (`window.__auth`).
+- `onboarding.js` — apresentação de primeira utilização (`window.__onboarding`).
+- `import-data.js` — mapeamento S→linhas e importação inicial (`window.__importer`).
+- `merge.js` — mapeamento remoto→local e merge LWW/união (`window.__merge`).
+- `sync.js` — outbox, push, pull, cursor e recuperação (`window.__sync`).
+
 ## 3. Estado global e persistência
 
 - `S` é o objeto-raiz persistido com tarefas, projetos, contatos, configurações e demais coleções; veja `DATA-MODEL.md`.
@@ -99,5 +108,5 @@ O JSON é parseado → são exigidos `tasks` e `projects` → o estado anterior 
 - Evitar mover código entre arquivos sem compreender os globais compartilhados.
 - Não criar uma segunda fonte para tempo (`spent` versus `logs`) sem uma regra definida.
 - Não confiar em nomes de ações ou campos documentados sem pesquisar a versão atual.
-- Não declarar que o projeto tem testes automáticos: o ZIP analisado não inclui configuração de teste.
+- Os harnesses Node ficam fora do app, em `default-workspace/`; o app em si não inclui `package.json`, build ou suíte de testes.
 - Depois de alterar arquivo JS, revisar cache da PWA e atualizar `CACHE_VERSION` conforme a convenção existente.

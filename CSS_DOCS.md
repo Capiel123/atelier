@@ -12,6 +12,8 @@ Este arquivo substitui o mapa antigo que tratava os estilos como um conjunto men
 
 A ordem define parte da cascata. `responsivo.css` contém refinamentos posteriores que sobrescrevem regras anteriores conforme a viewport.
 
+> **Planejado (não implementado):** a reforma mobile da aba Semana prevê um bloco novo no fim de `responsivo.css`, sem consolidar os blocos existentes. Ver [`docs/PLANO-UI-SEMANA.md`](docs/PLANO-UI-SEMANA.md).
+
 ## Mapa por arquivo
 
 ### `base.css` — fundação global
