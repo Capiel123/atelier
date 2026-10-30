@@ -15,7 +15,7 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .logo{font-weight:700;font-size:20px;letter-spacing:.04em;color:var(--ac);display:flex;align-items:center;gap:8px;cursor:pointer}
 .logo img{max-height:32px;max-width:100px;object-fit:contain;flex:none}
-.logo-text{font-family:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;font-size:24px;letter-spacing:.06em;color:var(--ac);font-weight:700;line-height:1;white-space:nowrap}
+.logo-text{font-family:var(--font-display);font-size:24px;letter-spacing:.06em;color:var(--ac);font-weight:700;line-height:1;white-space:nowrap}
 
 /* Botão de busca do topo.
    A lupa é desenhada em CSS (círculo + haste) para não depender do
@@ -36,6 +36,8 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .timer.run{border-color:var(--bu);box-shadow:0 0 12px color-mix(in srgb,var(--bu) 40%,transparent)}
 .timer b{font-size:14px;font-variant-numeric:tabular-nums;min-width:48px;text-align:center;color:var(--tx)}
 .timer #tlabel{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mu); font-size: 11px;}
+.timer b,
+.timer #tlabel{font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--mu)}
 .timer button{padding:2px 6px; font-size: 11px;}
 
 /* --- NAVEGAÇÃO PRINCIPAL (desktop) --- */
@@ -56,6 +58,9 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .week-summary-card{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:10px 12px 8px;margin-bottom:12px}
 .week-summary-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .week-summary-day .th-day{font-size:17px;font-weight:700;color:var(--ac);text-transform:capitalize}
+
+/* Sem data-theme no DOM: o Cromo é o único tema com bg #050506 no meta theme-color. */
+:root:has(meta[name="theme-color"][content="#050506"]) .th-day{font-family:var(--font-display)}
 .week-summary-day .th-date{color:var(--mu);font-size:11px;margin-left:6px}
 .week-summary-card .th-stats{display:flex;gap:6px;font-size:11px;color:var(--mu);flex-wrap:wrap;justify-content:flex-end}
 .week-summary-card .th-stats b{color:var(--tx);font-variant-numeric:tabular-nums}
@@ -81,14 +86,16 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 /* Indicadores compactos de prioridade (alta/média/baixa) */
 .pr-group{display:inline-flex;gap:5px;align-items:center}
 .pr-ind{display:inline-flex;align-items:center;gap:3px;font-variant-numeric:tabular-nums}
-.pr-ind .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.pr-ind .dot{width:7px;height:7px;border-radius:var(--dot-radius,50%);flex:none}
 .week-summary-sections .lvl-ind{opacity:.85}
 
 /* --- SELETOR DE DIAS DA SEMANA --- */
 .days{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
 .days button{flex:1;min-width:60px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;position:relative;background:var(--s1); border-radius:var(--radius-sm,8px);}
 .days button.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 15%,var(--s1))}
-.days small{color:var(--mu);font-size:10px;margin-top:2px}
+/* No brutal claro, 15% derruba o texto --mu do dia selecionado para 4,1:1. */
+[data-look="brutal"][data-mode="light"] .days button.on{background:color-mix(in srgb,var(--ac) 8%,var(--s1))}
+.days small{color:var(--mu);font-size:10px;margin-top:2px;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .days i{position:absolute;top:4px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
 
 /* --- BARRA DE TÍTULO DE TAREFAS (sticky) ---

@@ -6,7 +6,7 @@ Ateliê é uma aplicação pessoal de produtividade, hoje implementada com HTML,
 A prioridade é evoluir a aplicação real em passos pequenos, preservando dados, comportamento, visual e funcionamento offline. Não reconstruir o projeto do zero nem converter a arquitetura inteira por preferência técnica.
 
 ## Antes de alterar
-1. Leia `docs/README.md`, `docs/PROJECT_CONTEXT.md` e a documentação relevante; consulte também as 3 últimas entradas de `docs/HANDOFF.md`.
+1. Leia `docs/README.md`, `docs/PROJECT_CONTEXT.md` e a documentação relevante; consulte o painel de `docs/HANDOFF.md` e as 3 entradas mais recentes de `docs/archive/HANDOFF-HISTORICO.md`.
 2. Inspecione o código real antes de confiar em nomes, localização de funções ou documentação antiga.
 3. Identifique o fluxo de dados e as dependências da funcionalidade afetada. Consulte `docs/DEPENDENCIES.md` e `docs/BUSINESS-RULES.md`.
 4. Antes de uma mudança com impacto em dados, persistência, CSS global, arquivos de inicialização ou PWA, explique plano, arquivos afetados, riscos e como validar.
@@ -39,7 +39,7 @@ A prioridade é evoluir a aplicação real em passos pequenos, preservando dados
 
 ### Temas e tokens
 - Os 11 temas legados são preservados. `bone` (Osso) é **tema escuro**, com fundo bege muito escuro `#0E0D0B`; não existe tema claro legado.
-- Novas paletas planejadas: Osso Profundo (`deepbone`), Cromo (`chrome`) e Osso Profundo Claro (`deepbone-light`). O plano fica em `docs/PLANO-TEMAS-ESTETICA.md`.
+- Novas paletas: Osso Profundo (`deepbone`), Cromo (`chrome`) e Osso Profundo Claro (`deepbone-light`). O plano e o status ficam em `docs/PLANO-TEMAS-ESTETICA.md`.
 - Eixos estruturais: `mode` (`dark` | `light`) e `look` (`brutal`). O estilo Metal é `look=brutal` + `mode=dark`.
 - Tema sem `data-look` não muda de aparência, exceto no FAB, no ruído de fundo e nos tokens de prioridade/pílulas (decisão 20).
 - Texto e estados usam tokens com fallback; `--on-ac` substitui `#000` sobre o accent.
@@ -47,7 +47,7 @@ A prioridade é evoluir a aplicação real em passos pequenos, preservando dados
 - Validação obrigatória nos 6 temas: Obsidiana, Vampiro, Osso, Osso Profundo, Cromo e Osso Profundo Claro.
 - O plano só deve ser implementado após aprovação da tabela de parâmetros e dos contrastes.
 
-### Aba Semana — reforma em andamento (Etapas 1–6 aplicadas; ver `docs/HANDOFF.md`)
+### Aba Semana — reforma aplicada (Etapas 1–6; ver `docs/PLANO-UI-SEMANA.md`)
 - Alvos, medidas e decisões em `docs/PLANO-UI-SEMANA.md`. Não aplicar esses números a outras abas.
 
 ### Desktop
@@ -61,8 +61,8 @@ A prioridade é evoluir a aplicação real em passos pequenos, preservando dados
 - A integração legada `window.claude` não é o Supabase. Para usuário autenticado há sincronização remota ativa (push/pull/merge); sem login o app segue local. Consulte `docs/ARCHITECTURE.md`.
 
 ## Passagem de trabalho entre agentes
-- Ao começar: ler as 3 últimas entradas de `docs/HANDOFF.md`.
-- Ao terminar: escrever uma entrada no topo com data, agente, arquivos alterados, o que não foi testado e pendências.
+- Ao começar: ler o painel de `docs/HANDOFF.md` e as 3 entradas mais recentes de `docs/archive/HANDOFF-HISTORICO.md`.
+- Ao terminar: atualizar o painel e registrar a entrada detalhada no topo de `docs/archive/HANDOFF-HISTORICO.md` com data, agente, arquivos alterados, o que não foi testado e pendências.
 
 ## Depois de alterar
 1. Explique o que mudou e por quê, arquivo por arquivo (sem `git`).

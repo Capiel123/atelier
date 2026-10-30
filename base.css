@@ -5,6 +5,34 @@
    Mexer aqui afeta o site inteiro.
    ========================================================= */
 
+/* --- FONTES LOCAIS (OFL 1.1) ---
+   Subconjunto latino; os arquivos e as licenças ficam em ./fonts/.
+   DM Sans não é hospedada: o corpo cai para system-ui fora do wordmark. */
+@font-face{
+  font-family:'Grenze Gotisch';
+  src:url('./fonts/grenze-gotisch-bold-latin.woff2') format('woff2');
+  font-weight:700;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF,U+0100-017F,U+2000-206F,U+20AC,U+2122;
+}
+@font-face{
+  font-family:'IBM Plex Mono';
+  src:url('./fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
+  font-weight:400;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF,U+0100-017F,U+2000-206F,U+20AC,U+2122;
+}
+@font-face{
+  font-family:'IBM Plex Mono';
+  src:url('./fonts/ibm-plex-mono-500-latin.woff2') format('woff2');
+  font-weight:500;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF,U+0100-017F,U+2000-206F,U+20AC,U+2122;
+}
+
 /* --- PALETA E TOKENS DE DESIGN ---
    💡 Para trocar a cor de destaque de todo o app, altere --ac aqui. */
 :root{
@@ -15,6 +43,10 @@
   --cm:#e0a33b;--pe:#a08fc0; /* ⚠ --cm e --pe não são usados no código */
   --radius:12px;--radius-sm:8px;--radius-pill:16px;--dot-radius:50%;
   --noise-opacity:0;
+  --fab-bg:color-mix(in srgb,var(--bg) 86%,var(--s2));
+  --fab-border:var(--ac);
+  --font-display:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px)
@@ -72,6 +104,10 @@ h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
   --dot-radius:0;
   --bevel:6px;
   --bevel-sm:clamp(3px,calc(var(--bevel,6px) - 2px),4px);
+}
+
+[data-look="brutal"][data-mode="dark"]{
+  --fab-border:color-mix(in srgb,var(--ac) 65%,var(--bg));
 }
 
 [data-look="brutal"] .card,

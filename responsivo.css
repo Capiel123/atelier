@@ -89,7 +89,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 
 /* FAB (botão flutuante de adicionar) — padrão oculto, mobile ativa */
 .fab{display:none;position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:var(--ac);color:var(--on-ac,#000);border:none;font-size:30px;font-weight:700;line-height:1;padding:0;box-shadow:var(--sh);z-index:45;align-items:center;justify-content:center}
-.fab:hover{border:none;filter:brightness(1.08)}.fab[hidden]{display:none!important}
+.fab:hover{filter:brightness(1.08)}.fab[hidden]{display:none!important}
 
 /* --- DESKTOP (≥ 1024px) --- */
 @media(min-width:1024px){
@@ -294,8 +294,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     background: var(--bg) !important;
   }
   .days small {
-    color: var(--tx) !important;
-    opacity: 0.6;
+    color: var(--mu) !important;
   }
   /* Bloco de reordenamento #app:has(.today-hero) removido em V17:
      a view semana usa .week-summary-card e .week-collapsible agora.
@@ -522,16 +521,28 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
    FAB quadrado e opacidades das concluídas. Só mobile (≤640px).
    ========================================================= */
 @media(max-width:640px){
-  /* FAB: quadrado, fundo escuro do tema, borda e "+" no accent.
+  /* FAB: fundo/borda por token e "+" desenhado por pseudo-elementos.
      Tamanho, posição e z-index continuam os mesmos. */
   .fab{
-    border-radius:5px;
-    background:color-mix(in srgb,var(--bg) 86%,var(--s2));
-    border:1.5px solid var(--ac);
+    border-radius:var(--radius-sm);
+    background:var(--fab-bg);
+    border:1.5px solid var(--fab-border);
     color:var(--ac);
+    font-size:0;
   }
+  .fab::before,
+  .fab::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:50%;
+    background:var(--ac);
+    transform:translate(-50%,-50%);
+  }
+  .fab::before{width:18px;height:1.5px}
+  .fab::after{width:1.5px;height:18px}
   .fab:hover{
-    border:1.5px solid var(--ac);
+    border:1.5px solid var(--fab-border);
     filter:brightness(1.08);
   }
 
@@ -565,5 +576,19 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     content:"";
     position:absolute;
     inset:-12px -4px -11px;
+  }
+}
+
+/* =========================================================
+   ETAPA 11 — BRILHO FINO DA BARRA DO RESUMO (3px)
+   Só no brutal escuro e só mobile; no desktop a barra de 20px
+   continua com a textura metal.
+   ========================================================= */
+@media(max-width:640px){
+  [data-look="brutal"][data-mode="dark"] .week-summary-card .bar .fill{
+    background:linear-gradient(180deg,
+      color-mix(in srgb,var(--ac) 45%,var(--bu)) 0%,
+      color-mix(in srgb,var(--ac) 88%,var(--tx)) 50%,
+      color-mix(in srgb,var(--ac) 45%,var(--bu)) 100%);
   }
 }

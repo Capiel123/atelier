@@ -12,7 +12,7 @@ Este arquivo substitui o mapa antigo que tratava os estilos como um conjunto men
 
 A ordem define parte da cascata. `responsivo.css` contém refinamentos posteriores que sobrescrevem regras anteriores conforme a viewport.
 
-> **Planejado (não implementado):** a reforma mobile da aba Semana prevê um bloco novo no fim de `responsivo.css`, sem consolidar os blocos existentes. Ver [`docs/PLANO-UI-SEMANA.md`](docs/PLANO-UI-SEMANA.md).
+> **Aplicado:** a reforma mobile da aba Semana está nos blocos V18–V23 no fim de `responsivo.css`, sem consolidar os blocos existentes. Ver [`docs/PLANO-UI-SEMANA.md`](docs/PLANO-UI-SEMANA.md).
 
 ## Mapa por arquivo
 
@@ -66,6 +66,8 @@ Os tokens padrão aparecem em `base.css`, mas `estado.js`/`applyTheme()` substit
 - `--bevel`: tamanho do chanfro do look brutal (cards); `--bevel-sm` é derivado para controles (4px; 3px no Cromo).
 - `--surface-card`, `--surface-panel`: fundos de cards de conteúdo e de painéis (menus, modais, folhas e navegação). Fallback `var(--s1)` nos temas legados. No tema claro, `--surface-card` é mais claro que `--bg` e `--surface-panel` é mais escuro.
 - `--noise-opacity`: opacidade do grão de fundo. `0` nos temas legados; `0.035`–`0.05` nos temas brutal.
+- `--fab-bg`: fundo do FAB; padrão `color-mix(in srgb,var(--bg) 86%,var(--s2))`.
+- `--fab-border`: borda de 1.5px do FAB; padrão `var(--ac)`. Nos temas brutal escuros: `color-mix(in srgb,var(--ac) 65%,var(--bg))`.
 
 `THEMES` define **14 temas**: os 11 legados — Obsidiana (`obsidian`), Vampiro (`vampire`), Oculto (`occult`), Noir (`noir`), Cianótico (`cyanotic`), Tóxico (`toxic`), Brasa (`ember`), Luar (`moonlight`), Rosa Morta (`rose`), Abismo (`abyss`) e Osso (`bone`) — e os três novos: Osso Profundo (`deepbone`), Cromo (`chrome`) e Osso Profundo Claro (`deepbone-light`). A logo é configurável à parte.
 

@@ -540,10 +540,12 @@
   border:1px solid var(--bd) !important;
 }
 
-/* Pílulas de status: vazadas. Cor/tracejado semântico do estado é preservado. */
+/* Pílulas de status: vazadas. Cor/tracejado semântico dos estados de problema é preservado. */
 [data-look="brutal"] .sync-pill{
   background:transparent;
   border-width:1px;
+}
+[data-look="brutal"] .sync-pill:not([data-state="error"]):not([data-state="blocked"]):not([data-state="offline"]):not([data-state="pending"]):not([data-state="paused"]){
   border-color:var(--bd);
 }
 
@@ -557,4 +559,57 @@
   background:var(--surface-card,var(--s1));
   border-color:color-mix(in srgb,var(--tx) 40%,transparent);
   box-shadow:0 0 10px color-mix(in srgb,var(--tx) 10%,transparent);
+}
+
+/* =========================================================
+   ETAPA 9 — TIPOGRAFIA
+   Cabeçalhos de seção em mono/caixa-alta no look brutal;
+   números de tempo e contagem em mono, tabulares e --mu.
+   ========================================================= */
+[data-look="brutal"] .section-header{
+  font-family:var(--font-mono);
+  text-transform:uppercase;
+  letter-spacing:.18em;
+  color:var(--mu);
+}
+[data-look="brutal"] .section-header-title b{
+  font-size:10.5px;
+}
+/* O botão "Limpar concluídas" e o % não devem herdar o espaçamento do título. */
+[data-look="brutal"] .section-header-right{
+  text-transform:none;
+  letter-spacing:normal;
+}
+[data-look="brutal"] .section-header-title b,
+[data-look="brutal"] .section-header-title > span:first-child{
+  color:var(--mu) !important;
+}
+.tm,
+.compact-meta,
+.sub .sub-time{
+  font-family:var(--font-mono);
+  font-variant-numeric:tabular-nums;
+  color:var(--mu);
+}
+.tm b{color:var(--mu)}
+
+/* =========================================================
+   ETAPA 11 — TEXTURA METAL NAS BARRAS (BRUTAL ESCURO)
+   Gradiente vertical --ac/--bu com linhas de 1px a 6%.
+   A barra fina do resumo (3px) recebe só um brilho central.
+   ========================================================= */
+[data-look="brutal"][data-mode="dark"]{
+  --bar-metal:
+    repeating-linear-gradient(0deg,color-mix(in srgb,var(--tx) 6%,transparent) 0 1px,transparent 1px 4px),
+    linear-gradient(180deg,
+      color-mix(in srgb,var(--ac) 82%,var(--bu)) 0%,
+      color-mix(in srgb,var(--ac) 35%,var(--bu)) 50%,
+      color-mix(in srgb,var(--ac) 82%,var(--bu)) 100%);
+}
+[data-look="brutal"][data-mode="dark"] .bar .fill{
+  background:var(--bar-metal);
+}
+[data-look="brutal"][data-mode="dark"] .section-progress > div,
+[data-look="brutal"][data-mode="dark"] .section-progress .fill{
+  background:var(--bar-metal) !important;
 }
