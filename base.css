@@ -45,7 +45,7 @@
   --noise-opacity:0;
   --fab-bg:color-mix(in srgb,var(--bg) 86%,var(--s2));
   --fab-border:var(--ac);
-  --font-display:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;
+  --font-display:'DM Sans',system-ui,sans-serif;
   --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -104,6 +104,7 @@ h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
   --dot-radius:0;
   --bevel:6px;
   --bevel-sm:clamp(3px,calc(var(--bevel,6px) - 2px),4px);
+  --font-display:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;
 }
 
 [data-look="brutal"][data-mode="dark"]{

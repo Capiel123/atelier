@@ -524,8 +524,11 @@
    O tema claro brutal e os temas legados mantêm a seleção atual.
    ========================================================= */
 
-/* Cards: some a borda esquerda de 3px; fica só a moldura de 1px. */
-[data-look="brutal"] .card{border:1px solid var(--bd)}
+/* Cards: moldura de 1px + faixa sutil de 2px na cor da tarefa. */
+[data-look="brutal"] .card{
+  border:1px solid var(--bd);
+  border-left:2px solid color-mix(in srgb,var(--c,var(--bd)) 65%,var(--bd));
+}
 
 /* Dia não selecionado: vazado. O .on continua como hoje no claro. */
 [data-look="brutal"] .days button:not(.on){background:transparent;border:1px solid var(--bd)}
@@ -558,6 +561,7 @@
 [data-look="brutal"][data-mode="dark"] .card.selected{
   background:var(--surface-card,var(--s1));
   border-color:color-mix(in srgb,var(--tx) 40%,transparent);
+  border-left-color:color-mix(in srgb,var(--c,var(--bd)) 65%,var(--bd));
   box-shadow:0 0 10px color-mix(in srgb,var(--tx) 10%,transparent);
 }
 

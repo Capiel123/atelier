@@ -592,3 +592,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
       color-mix(in srgb,var(--ac) 45%,var(--bu)) 100%);
   }
 }
+
+/* A faixa lateral dos cards no brutal é sutil; vence o 4px mobile. */
+@media(max-width:640px){
+  [data-look="brutal"] .card{border-left-width:2px !important}
+}

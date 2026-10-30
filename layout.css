@@ -15,7 +15,8 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .logo{font-weight:700;font-size:20px;letter-spacing:.04em;color:var(--ac);display:flex;align-items:center;gap:8px;cursor:pointer}
 .logo img{max-height:32px;max-width:100px;object-fit:contain;flex:none}
-.logo-text{font-family:var(--font-display);font-size:24px;letter-spacing:.06em;color:var(--ac);font-weight:700;line-height:1;white-space:nowrap}
+.logo-text{font-family:'DM Sans',system-ui,sans-serif;font-family:var(--font-display);font-size:24px;letter-spacing:.06em;color:var(--ac);font-weight:700;line-height:1;white-space:nowrap}
+[data-look="brutal"] .logo-text{font-family:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;font-family:var(--font-display)}
 
 /* Botão de busca do topo.
    A lupa é desenhada em CSS (círculo + haste) para não depender do
