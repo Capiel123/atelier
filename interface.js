@@ -1223,7 +1223,7 @@ function renderFocus() {
 
   let primaryBtn;
   if (!running) {
-    const label = firstPending ? `▶ Iniciar ${targetMin}min · ${firstPending.t.slice(0,20)}` : `▶ Iniciar ${targetMin}min`;
+    const label = `▶ Iniciar ${targetMin}min`;
     primaryBtn = `<button data-a="focusStart" class="focus-btn start">${label}</button>`;
   }
   else if (isPaused) primaryBtn = `<button data-a="focusResume" class="focus-btn start">▶ Retomar</button>`;
@@ -1282,7 +1282,7 @@ function renderFocus() {
         ${primaryBtn}
         ${skipBtn}
         <button data-a="log" data-id="${t.id}" data-m="5" class="focus-btn ghost">+5m</button>
-        <button data-a="log" data-id="${t.id}" data-m="-10" class="focus-btn ghost">-10m</button>
+        <button data-a="log" data-id="${t.id}" data-m="-5" class="focus-btn ghost">-5m</button>
         <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
       </div>`;
 

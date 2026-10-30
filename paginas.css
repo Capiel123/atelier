@@ -52,7 +52,7 @@
 .focus-durations button.on{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac)}
 .focus-actions{display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap}
 .focus-btn{padding:12px 24px;font-size:15px;font-weight:600;border-radius:10px}
-.focus-btn.start{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac)}
+.focus-btn.start{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac);white-space:nowrap}
 .focus-btn.pause{background:var(--bu);color:#fff;border-color:var(--bu)}
 .focus-btn.ghost{background:transparent;color:var(--mu)}
 .focus-subs{margin-top:24px;text-align:left;background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:10px;padding:12px}
