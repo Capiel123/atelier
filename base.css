@@ -6,7 +6,8 @@
    ========================================================= */
 
 /* --- FONTES LOCAIS (OFL 1.1) ---
-   Subconjunto latino; os arquivos e as licenças ficam em ./fonts/.
+   Subconjunto latino; o wordmark tem um subset mínimo embutido.
+   Os arquivos completos e as licenças ficam em ./fonts/.
    DM Sans não é hospedada: o corpo cai para system-ui fora do wordmark. */
 @font-face{
   font-family:'Grenze Gotisch';
@@ -15,6 +16,14 @@
   font-style:normal;
   font-display:swap;
   unicode-range:U+0000-00FF,U+0100-017F,U+2000-206F,U+20AC,U+2122;
+}
+
+@font-face{
+  font-family:'Grenze Gotisch Wordmark';
+  src:url('data:font/woff2;base64,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') format('woff2');
+  font-weight:700;
+  font-style:normal;
+  font-display:swap;
 }
 @font-face{
   font-family:'IBM Plex Mono';
@@ -104,7 +113,7 @@ h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
   --dot-radius:0;
   --bevel:6px;
   --bevel-sm:clamp(3px,calc(var(--bevel,6px) - 2px),4px);
-  --font-display:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;
+  --font-display:'Grenze Gotisch Wordmark','Grenze Gotisch','UnifrakturCook','DM Sans',serif;
 }
 
 [data-look="brutal"][data-mode="dark"]{
