@@ -6,27 +6,62 @@
    ========================================================= */
 
 /* --- SYNC PILL (indicador de sincronização) ---
-   💡 Estados: saved / saving / error / blocked / offline. */
-.sync-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:var(--s1);border:1px solid var(--bd);border-radius:16px;font-size:10.5px;color:var(--mu);height: 34px; transition:opacity .3s,background .2s,border-color .2s,color .2s; cursor: pointer;}
-.sync-pill .sp-dot{width:6px;height:6px;border-radius:50%;background:var(--mu);flex:none;transition:background .2s;}
-.sync-pill[data-state="saved"] .sp-dot{background:var(--ok)}
-.sync-pill[data-state="saving"] .sp-dot{background:var(--wr);animation:pwaPulse 1s infinite}
-.sync-pill[data-state="error"] .sp-dot{background:var(--er)}
-.sync-pill[data-state="blocked"] .sp-dot{background:var(--wr)}
-.sync-pill[data-state="offline"] .sp-dot{background:var(--mu)}
-.sync-pill[data-state="saved"]{opacity:.65}
-.sync-pill[data-state="saving"],.sync-pill[data-state="error"],.sync-pill[data-state="offline"],.sync-pill[data-state="blocked"]{opacity:1}
-.sync-pill[data-state="error"]{color:var(--er);border-color:var(--er);}
-.sync-pill[data-state="blocked"]{color:var(--wr);border-color:var(--wr);}
+   syncPill: saved / saving / error / blocked / offline.
+   cloudPill: synced / sending / pending / paused / error / offline.
+   Formas (distinguíveis em escala de cinza):
+   - cheio ............. saved / synced
+   - meio preenchido ... saving / sending (+ pulso)
+   - vazado ............ pending (borda cheia) / paused (borda tracejada)
+   - losango ........... error (cheio) / blocked (vazado), com pílula tracejada
+   - vazado + tracejado  offline
+   O texto nunca é ocultado aqui; o colapso mobile só atinge saved/synced/saving/sending. */
+.sync-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--radius-pill,16px);font-size:10.5px;color:var(--mu);height: 34px; transition:opacity .3s,background .2s,border-color .2s,color .2s; cursor: pointer;}
+.sync-pill .sp-dot{width:8px;height:8px;box-sizing:border-box;border-radius:var(--dot-radius,50%);background:var(--mu);border:1px solid transparent;flex:none;transition:background .2s,border-color .2s,border-radius .2s,transform .2s;}
+
+/* Cheio: gravado / sincronizado */
+.sync-pill[data-state="saved"] .sp-dot,
+.sync-pill[data-state="synced"] .sp-dot{background:var(--ok);border-color:var(--ok)}
+
+/* Meio preenchido (estático) + pulso: gravando / enviando */
+.sync-pill[data-state="saving"] .sp-dot,
+.sync-pill[data-state="sending"] .sp-dot{
+  background:linear-gradient(90deg,var(--wr) 50%,transparent 50%);
+  border-color:var(--wr);
+  animation:pwaPulse 1s infinite;
+}
+
+/* Vazado: pendente (borda cheia) e pausada (borda tracejada) */
+.sync-pill[data-state="pending"] .sp-dot{background:transparent;border:1.5px solid var(--wr)}
+.sync-pill[data-state="paused"] .sp-dot{background:transparent;border:1.5px dashed var(--mu)}
+
+/* Losango: erro (cheio) e bloqueado (vazado) */
+.sync-pill[data-state="error"] .sp-dot,
+.sync-pill[data-state="blocked"] .sp-dot{
+  border-radius:0;
+  transform:rotate(45deg);
+}
+.sync-pill[data-state="error"] .sp-dot{background:var(--er);border-color:var(--er)}
+.sync-pill[data-state="blocked"] .sp-dot{background:transparent;border:1.5px solid var(--wr)}
+
+/* Offline: vazado + pílula tracejada */
+.sync-pill[data-state="offline"] .sp-dot{background:transparent;border:1.5px solid var(--mu)}
+
+/* Pílula: estados de problema mantêm texto e ganham borda tracejada */
+.sync-pill[data-state="saved"],
+.sync-pill[data-state="synced"]{opacity:.65}
+.sync-pill[data-state="saving"],.sync-pill[data-state="error"],.sync-pill[data-state="offline"],.sync-pill[data-state="blocked"],.sync-pill[data-state="pending"],.sync-pill[data-state="paused"]{opacity:1}
+.sync-pill[data-state="error"]{color:var(--er);border-color:var(--er);border-style:dashed}
+.sync-pill[data-state="blocked"]{color:var(--wr);border-color:var(--wr);border-style:dashed}
+.sync-pill[data-state="offline"]{color:var(--mu);border-color:var(--mu);border-style:dashed}
+.sync-pill[data-state="pending"]{color:var(--mu);border-color:var(--wr)}
+.sync-pill[data-state="paused"]{color:var(--mu);border-color:var(--mu)}
 
 /* --- CLOUD PILL (sync local → Supabase, Fase 4) --- */
 .sync-pill[hidden]{display:none}
 .cloud-pill{opacity:1;margin-left:6px}
-.cloud-pill[data-state="sending"] .sp-dot{background:var(--wr);animation:pwaPulse 1s infinite}
-.cloud-pill[data-state="pending"] .sp-dot{background:var(--wr)}
-.cloud-pill[data-state="synced"] .sp-dot{background:var(--ok)}
-.cloud-pill[data-state="paused"] .sp-dot{background:var(--mu)}
-.cloud-pill[data-state="synced"]{opacity:.65}
+/* O cloudPill também é .sync-pill; estas regras explícitas garantem cor nos problemas. */
+.cloud-pill[data-state="error"]{color:var(--er);border-color:var(--er);border-style:dashed}
+.cloud-pill[data-state="offline"]{color:var(--mu);border-color:var(--mu);border-style:dashed}
 @keyframes pwaPulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* --- BANNERS DE AVISO (backup e atualização) --- */
@@ -44,7 +79,7 @@
 }
 .update-banner .ub-msg{flex:1;color:var(--tx);font-weight:500}
 .update-banner button[data-pwa="update"]{
-  background:var(--ac);color:#000;border-color:var(--ac);
+  background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac);
   font-weight:700;padding:5px 12px;
 }
 .update-banner button[data-pwa="dismiss"]{
@@ -64,12 +99,12 @@
 .energy-pills button[data-e="high"].active{color:var(--bu);border-color:var(--bu)}
 
 /* --- CARD "PRÓXIMO COMPROMISSO" --- */
-.next-card{background:linear-gradient(135deg,var(--s1),var(--s2));border:1px solid var(--ac);border-left:4px solid var(--ac);border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.next-card{background:linear-gradient(135deg,var(--surface-card,var(--s1)),var(--s2));border:1px solid var(--ac);border-left:4px solid var(--ac);border-radius:var(--radius,12px);padding:10px 12px;margin-bottom:10px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .next-card .nc-label{font-size:10px;color:var(--ac);letter-spacing:.1em;font-weight:700;text-transform:uppercase}
 .next-card .nc-title{font-size:15px;font-weight:600;margin-top:2px}
 .next-card .nc-meta{font-size:11px;color:var(--mu);margin-top:2px}
 .next-card .nc-actions{display:flex;gap:6px}
-.next-card .nc-actions .go{background:var(--ac);color:#000;border-color:var(--ac);font-weight:600;padding:6px 12px}
+.next-card .nc-actions .go{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac);font-weight:600;padding:6px 12px}
 
 /* --- BARRA DE PROGRESSO ---
    💡 Para trocar o gradiente da barra, altere --bu e --ac. */
@@ -94,13 +129,13 @@
    💡 Para mudar o padding dos cards, altere .card aqui.
    A cor da borda esquerda vem de --c (definida por JS).
    ========================================================= */
-.card{background:var(--s1);border:1px solid var(--bd);border-left:3px solid var(--c,var(--bd));border-radius:12px;padding:14px;margin-bottom:10px;transition:.2s}
-.card.done{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--s1))}
+.card{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-left:3px solid var(--c,var(--bd));border-radius:var(--radius,12px);padding:14px;margin-bottom:10px;transition:.2s}
+.card.done{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface-card,var(--s1)))}
 .card.done .tt, .card.done .compact-tt{text-decoration:line-through;opacity:.55}
 
 /* Feedback visual imediato ao concluir tarefa */
 .card.task-completing{
-  background:color-mix(in srgb,var(--ok) 12%,var(--s1)) !important;
+  background:color-mix(in srgb,var(--ok) 12%,var(--surface-card,var(--s1))) !important;
   border-color:color-mix(in srgb,var(--ok) 40%,var(--bd)) !important;
   opacity:0.78;
   transform:scale(0.99);
@@ -142,8 +177,8 @@
 .card.next-card-in{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac) inset}
 .card.highlight{box-shadow:0 0 0 2px var(--ac);transition:box-shadow 2s}
 .card.selected{box-shadow:0 0 0 2px var(--ac);background:color-mix(in srgb,var(--ac) 8%,var(--s1))}
-.card.compact{padding:12px 14px;cursor:pointer; background: var(--s1); display: flex; align-items: center; justify-content: space-between;}
-.card.compact:hover{background:color-mix(in srgb,var(--c) 8%,var(--s1))}
+.card.compact{padding:12px 14px;cursor:pointer; background: var(--surface-card,var(--s1)); display: flex; align-items: center; justify-content: space-between;}
+.card.compact:hover{background:color-mix(in srgb,var(--c) 8%,var(--surface-card,var(--s1)))}
 .compact-tt{font-size:15px;line-height:1.3;margin-bottom:2px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; font-weight: 500;}
 .compact-meta{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mu);margin-top:2px}
 .chev{color:var(--mu);font-size:14px;flex:none;padding:0 6px}
@@ -159,7 +194,20 @@
 
 .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--mu);font-size:12px;margin-top:6px}
 .tag{background:var(--s2);border-radius:6px;padding:2px 6px;font-size:11px}
-.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.dot{width:8px;height:8px;border-radius:var(--dot-radius,50%);display:inline-block;flex:none}
+
+/* Prioridade no look brutal: alta cheia, média metade, baixa vazada. */
+[data-look="brutal"] .dot[data-pr="0"]{border-radius:0}
+[data-look="brutal"] .dot[data-pr="1"]{
+  border-radius:0;
+  border:1px solid var(--pr-med,#e0a33b);
+  background:linear-gradient(90deg,var(--pr-med,#e0a33b) 50%,transparent 50%) !important;
+}
+[data-look="brutal"] .dot[data-pr="2"]{
+  border-radius:0;
+  border:1.5px solid var(--pr-low,#6f8de0);
+  background:transparent !important;
+}
 .tm{text-align:right;font-size:12px;color:var(--mu);min-width:80px}
 .tm b{color:var(--tx);font-variant-numeric:tabular-nums; font-size: 14px;}
 .mini{height:4px;background:var(--s2);border-radius:2px;margin-top:6px;overflow:hidden}
@@ -189,7 +237,7 @@
 .sub.dragging{opacity:.45;background:var(--s2)}
 
 /* Cabeçalho de grupo de tarefas */
-.section-header{display:flex;justify-content:space-between;align-items:center;padding:10px 6px;margin-top:16px;border-bottom:1px solid var(--bd);cursor:pointer;user-select:none;transition:background .15s;border-radius:8px 8px 0 0}
+.section-header{display:flex;justify-content:space-between;align-items:center;padding:10px 6px;margin-top:16px;border-bottom:1px solid var(--bd);cursor:pointer;user-select:none;transition:background .15s;border-radius:min(var(--radius,12px),8px) min(var(--radius,12px),8px) 0 0}
 .section-header:hover{background:var(--s1)}
 .section-header:first-child{margin-top:8px}
 .section-header-title{display:flex;align-items:center;gap:8px}
@@ -205,11 +253,11 @@
   border-top:1px dashed var(--bd);
   border-bottom:1px solid var(--bd);
   padding:10px 8px;
-  background:color-mix(in srgb,var(--s1) 60%,transparent);
-  border-radius:8px;
+  background:color-mix(in srgb,var(--surface-card,var(--s1)) 60%,transparent);
+  border-radius:min(var(--radius,12px),8px);
 }
 .done-section-header:hover{
-  background:var(--s1);
+  background:var(--surface-card,var(--s1));
 }
 .done-count{
   font-size:11.5px;
@@ -254,7 +302,7 @@
 .late{color:var(--er)}.soon{color:var(--wr)}
 
 /* --- TOAST (mensagem flutuante) --- */
-.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ac);color:#000;padding:8px 14px;border-radius:20px;font-weight:700;opacity:0;pointer-events:none;transition:.3s;z-index:120;max-width:90%;font-size:13px;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ac);color:var(--on-ac,#000);padding:8px 14px;border-radius:20px;font-weight:700;opacity:0;pointer-events:none;transition:.3s;z-index:120;max-width:90%;font-size:13px;text-align:center}
 .toast.on{opacity:1}.toast.err{background:var(--er);color:#fff}
 
 /* --- FILTROS --- */
@@ -262,17 +310,17 @@
 .filter-bar input{flex:1;min-width:120px;font-size:12.5px;padding:5px 8px}
 .filter-bar select{flex:none;width:auto;font-size:12px;padding:5px 6px;max-width:140px}
 .filter-bar button{padding:5px 10px;font-size:12px;background:var(--s2);border:1px solid var(--bd)}
-.filter-bar button.on{background:var(--ac);color:#000;border-color:var(--ac)}
+.filter-bar button.on{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac)}
 
 .labels-filter{display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;margin-bottom:8px}
-.label-pill{font-size:10.5px;padding:1px 7px;border-radius:8px;background:color-mix(in srgb,var(--lc) 15%,var(--s2));color:var(--lc);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent);cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:3px;transition:.15s}
+.label-pill{font-size:10.5px;padding:1px 7px;border-radius:var(--radius-sm,8px);background:color-mix(in srgb,var(--lc) 15%,var(--s2));color:var(--lc);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent);cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:3px;transition:.15s}
 .labels-filter .label-pill{font-size:12px;padding:3px 9px}
 .labels-filter .label-pill.on{background:color-mix(in srgb,var(--lc) 35%,var(--s2));color:var(--tx)}
 
 .tag-filter{display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;margin-bottom:8px}
 .tag-pill{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--bd);color:var(--mu);cursor:pointer;user-select:none;transition:.15s}
 .tag-pill:hover{color:var(--tx);border-color:var(--ac)}
-.tag-pill.on{background:var(--ac);color:#000;border-color:var(--ac);font-weight:600}
+.tag-pill.on{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac);font-weight:600}
 
 /* Ícones de tipo de tarefa (cores fixas por categoria) */
 .type-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;font-size:12px;background:var(--s2);flex:none}
@@ -307,7 +355,7 @@
 
 /* --- KPIs --- */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px}
-.kpi{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:10px}
+.kpi{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:10px;padding:10px}
 .kpi .kpi-label{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
 .kpi .kpi-value{font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;color:var(--tx)}
 .kpi .kpi-sub{font-size:11px;color:var(--mu);margin-top:2px}
@@ -404,4 +452,109 @@
     border-color: var(--pc); 
     color: var(--pc);
     box-shadow: 0 0 10px color-mix(in srgb, var(--pc) 20%, transparent);
+}
+/* =========================================================
+   ETAPA 4 — ÍCONES GEOMÉTRICOS NO LOOK BRUTAL
+   Só botões inequivocamente icon-only (um glifo, sem texto).
+   O glifo é ocultado com font-size:0 e redesenhado em
+   currentColor com traço de 1,5px.
+   Ficam de fora os botões que compartilham a ação com texto
+   (del, toggleQuickAdd, closeReport), os que trocam de glifo
+   por estado (setnext, reviewToggle, chk) e os que já usam
+   ::before como hitbox (btn-sm / ações compactas).
+   ========================================================= */
+
+/* Fechar (✕): duas diagonais, cada uma num tile de 8×8px. */
+[data-look="brutal"] .ob-close,
+[data-look="brutal"] [data-a="dismissRecovery"],
+[data-look="brutal"] [data-a="dismissBackup"],
+[data-look="brutal"] [data-a="closeMore"],
+[data-look="brutal"] .focus-close,
+[data-look="brutal"] [data-a="trashDelete"],
+[data-look="brutal"] [data-a="pgdel"],
+[data-look="brutal"] [data-a="pdel"],
+[data-look="brutal"] [data-a="clientDel"],
+[data-look="brutal"] [data-a="histDel"],
+[data-look="brutal"] [data-a="cmdDel"],
+[data-look="brutal"] [data-a="sdel"],
+[data-look="brutal"] [data-a="gdel"],
+[data-look="brutal"] [data-a="focusDurRem"],
+[data-look="brutal"] [data-a="reviewArchive"]{
+  font-size:0;
+  line-height:0;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:8px 8px,8px 8px;
+  background-image:
+    linear-gradient(45deg,transparent calc(50% - .75px),currentColor calc(50% - .75px),currentColor calc(50% + .75px),transparent calc(50% + .75px)),
+    linear-gradient(-45deg,transparent calc(50% - .75px),currentColor calc(50% - .75px),currentColor calc(50% + .75px),transparent calc(50% + .75px));
+}
+
+/* Adicionar (+): barra horizontal de 10px e vertical de 10px. */
+[data-look="brutal"] [data-a="qa"],
+[data-look="brutal"] [data-a="qaJob"],
+[data-look="brutal"] [data-a="pgadd"],
+[data-look="brutal"] [data-a="clientAdd"],
+[data-look="brutal"] [data-a="gadd"],
+[data-look="brutal"] [data-a="cmdAdd"],
+[data-look="brutal"] [data-a="skillAdd"],
+[data-look="brutal"] [data-a="areaAdd"],
+[data-look="brutal"] [data-a="focusDurAdd"]{
+  font-size:0;
+  line-height:0;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:10px 1.5px,1.5px 10px;
+  background-image:
+    linear-gradient(currentColor,currentColor),
+    linear-gradient(currentColor,currentColor);
+}
+
+/* A lupa do brutal usa haste mais curta e reta (sem ponta arredondada). */
+[data-look="brutal"] .search-btn::after{
+  background-size:5px 5px;
+  background-position:16px 25px;
+}
+
+/* =========================================================
+   ETAPA 8 — CROMO BRUTAL E SELEÇÃO METAL
+   Sob [data-look="brutal"], cards e controles ficam vazados:
+   1px var(--bd), sem preenchimento. A seleção metal (brutal +
+   dark) usa apenas borda/brilho em --tx, sem tinta de fundo.
+   O tema claro brutal e os temas legados mantêm a seleção atual.
+   ========================================================= */
+
+/* Cards: some a borda esquerda de 3px; fica só a moldura de 1px. */
+[data-look="brutal"] .card{border:1px solid var(--bd)}
+
+/* Dia não selecionado: vazado. O .on continua como hoje no claro. */
+[data-look="brutal"] .days button:not(.on){background:transparent;border:1px solid var(--bd)}
+
+/* Controles (Filtros/Auto): vazados. O estado .on usa o accent só no texto. */
+[data-look="brutal"] .week-ctrl-btn{background:transparent;border:1px solid var(--bd)}
+[data-look="brutal"] .week-ctrl-btn.on{background:transparent;color:var(--ac);border-color:var(--bd)}
+
+/* Expandir/Recolher têm background/border inline: precisa de !important. */
+[data-look="brutal"] .tasks-header-actions button{
+  background:transparent !important;
+  border:1px solid var(--bd) !important;
+}
+
+/* Pílulas de status: vazadas. Cor/tracejado semântico do estado é preservado. */
+[data-look="brutal"] .sync-pill{
+  background:transparent;
+  border-width:1px;
+  border-color:var(--bd);
+}
+
+/* Seleção metal: sem preenchimento tingido, só contorno e brilho neutros. */
+[data-look="brutal"][data-mode="dark"] .days button.on{
+  background:transparent;
+  border-color:color-mix(in srgb,var(--tx) 40%,transparent);
+  box-shadow:0 0 10px color-mix(in srgb,var(--tx) 10%,transparent);
+}
+[data-look="brutal"][data-mode="dark"] .card.selected{
+  background:var(--surface-card,var(--s1));
+  border-color:color-mix(in srgb,var(--tx) 40%,transparent);
+  box-shadow:0 0 10px color-mix(in srgb,var(--tx) 10%,transparent);
 }

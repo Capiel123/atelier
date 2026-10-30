@@ -4,8 +4,8 @@ PWA pessoal de produtividade — tarefas, projetos, tempo/Pomodoro, carreira/con
 
 ## Status
 
-- Fases 0–5 concluídas: schema/RLS, auth Magic Link, onboarding, importação inicial, push (outbox) e pull/merge.
-- **Próxima:** Fase 6 — Timer sincronizado (planejada, não iniciada).
+- Fases 0–6 concluídas: schema/RLS, auth Magic Link, onboarding, importação inicial, push (outbox), pull/merge e timer sincronizado (automatizado + validado manualmente em PC e celular).
+- **Próximas:** lembretes; Realtime; Storage para logo; ledger de XP. Ver [docs/ROADMAP.md](docs/ROADMAP.md).
 - App funciona offline e sem login. Tema e accent são **locais por dispositivo**.
 
 ## Início rápido
@@ -35,7 +35,8 @@ Ordem de carga dos scripts e do CSS é **contrato** — ver `docs/ARCHITECTURE.m
 |---|---|
 | [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) | **Comece aqui.** Resumo central, decisões, estado e regras. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitetura atual e responsabilidades dos módulos. |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Fases, estado atual e Fase 6 (timer). |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Fases, estado atual e próximos itens. |
+| [docs/AUDITORIA-UX-UI.md](docs/AUDITORIA-UX-UI.md) | Auditoria de UX/UI: fricções priorizadas, propostas, lacunas e roadmap. |
 | [docs/TEST-CHECKLIST.md](docs/TEST-CHECKLIST.md) | Testes automatizados e validação manual. |
 | [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · [docs/BUSINESS-RULES.md](docs/BUSINESS-RULES.md) · [docs/FUNCTIONAL-MAP.md](docs/FUNCTIONAL-MAP.md) · [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) | Dados, regras, mapas e riscos. |
 | [docs/GUIA-PESSOAL.md](docs/GUIA-PESSOAL.md) · [docs/GUIA-FILA.md](docs/GUIA-FILA.md) · [docs/GUIA-REDE.md](docs/GUIA-REDE.md) · [docs/GUIA-AMIZADES.md](docs/GUIA-AMIZADES.md) | Guias explicativos. |

@@ -13,6 +13,8 @@
   --ac:#d4a84b;--bu:#9c3355;
   --ok:#4fb3a2;--wr:#e0a33b;--er:#e0626a;
   --cm:#e0a33b;--pe:#a08fc0; /* ⚠ --cm e --pe não são usados no código */
+  --radius:12px;--radius-sm:8px;--radius-pill:16px;--dot-radius:50%;
+  --noise-opacity:0;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px)
@@ -23,10 +25,25 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 
 /* --- ESTILO GLOBAL DO CORPO --- */
-body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 'DM Sans',system-ui,sans-serif;transition:background .3s ease}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 'DM Sans',system-ui,sans-serif;transition:background .3s ease;isolation:isolate}
+
+/* Ruído de fundo (Etapa 6).
+   Fica numa camada fixa atrás do conteúdo: z-index:-1 dentro do stacking
+   context isolado do body. Sem mix-blend-mode e sem interceptar toque.
+   Temas sem --noise-opacity ficam com opacidade 0 (nenhuma mudança). */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:var(--noise-opacity,0);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:160px 160px;
+}
 
 /* --- CONTROLES GENÉRICOS (botão, input, select, textarea) --- */
-button,input,select,textarea{font:inherit;color:inherit;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:6px 9px}
+button,input,select,textarea{font:inherit;color:inherit;background:var(--s2);border:1px solid var(--bd);border-radius:var(--radius-sm,8px);padding:6px 9px}
 button{cursor:pointer}button:hover{border-color:var(--ac)}
 button:disabled{opacity:.4;cursor:not-allowed}
 input,textarea,select{width:100%}
@@ -40,3 +57,86 @@ textarea{margin:6px 0;font-family:inherit;resize:vertical}
 h3{margin:16px 0 8px;color:var(--ac);font-size:14px;letter-spacing:.03em}
 h3 .count{color:var(--mu);font-weight:400;font-size:12px}
 h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
+
+/* =========================================================
+   LOOK BRUTAL — RAIOS E CHANFRO
+   Sem [data-look="brutal"], nada aqui se aplica.
+   Fallback fora de @supports: 2px (cards) / 1px (controles).
+   Com corner-shape: bevel, o raio vira chanfro de --bevel
+   (6px cards / 4px controles; Cromo 4px / 3px via --bevel-sm).
+   ========================================================= */
+[data-look="brutal"]{
+  --radius:2px;
+  --radius-sm:1px;
+  --radius-pill:2px;
+  --dot-radius:0;
+  --bevel:6px;
+  --bevel-sm:clamp(3px,calc(var(--bevel,6px) - 2px),4px);
+}
+
+[data-look="brutal"] .card,
+[data-look="brutal"] .next-card,
+[data-look="brutal"] .week-summary-card,
+[data-look="brutal"] .today-hero,
+[data-look="brutal"] .job-card,
+[data-look="brutal"] .contact-card,
+[data-look="brutal"] .network-card,
+[data-look="brutal"] .orbit-wrap,
+[data-look="brutal"] .xp-hero,
+[data-look="brutal"] .section-group,
+[data-look="brutal"] .history-report-bar,
+[data-look="brutal"] .done-section-header{border-radius:var(--radius,2px)}
+
+[data-look="brutal"] .section-header{border-radius:var(--radius,2px) var(--radius,2px) 0 0}
+[data-look="brutal"] .sync-pill{border-radius:var(--radius-pill,2px)}
+
+[data-look="brutal"] button:not(.fab),
+[data-look="brutal"] input,
+[data-look="brutal"] select,
+[data-look="brutal"] textarea,
+[data-look="brutal"] .search-btn,
+[data-look="brutal"] .timer,
+[data-look="brutal"] .week-ctrl-btn,
+[data-look="brutal"] .week-add-btn,
+[data-look="brutal"] .label-pill{border-radius:var(--radius-sm,1px)}
+
+/* O mobile já força 6px !important em .days button; o look brutal precisa vencer. */
+[data-look="brutal"] .days button{border-radius:var(--radius-sm,1px) !important}
+
+@supports (corner-shape: bevel){
+  [data-look="brutal"] .card,
+  [data-look="brutal"] .next-card,
+  [data-look="brutal"] .week-summary-card,
+  [data-look="brutal"] .today-hero,
+  [data-look="brutal"] .job-card,
+  [data-look="brutal"] .contact-card,
+  [data-look="brutal"] .network-card,
+  [data-look="brutal"] .orbit-wrap,
+  [data-look="brutal"] .xp-hero,
+  [data-look="brutal"] .section-group,
+  [data-look="brutal"] .history-report-bar,
+  [data-look="brutal"] .done-section-header,
+  [data-look="brutal"] .section-header{
+    border-radius:var(--bevel,6px);
+    corner-shape:bevel;
+  }
+  [data-look="brutal"] .section-header{border-radius:var(--bevel,6px) var(--bevel,6px) 0 0}
+
+  [data-look="brutal"] button:not(.fab),
+  [data-look="brutal"] input,
+  [data-look="brutal"] select,
+  [data-look="brutal"] textarea,
+  [data-look="brutal"] .search-btn,
+  [data-look="brutal"] .timer,
+  [data-look="brutal"] .week-ctrl-btn,
+  [data-look="brutal"] .week-add-btn,
+  [data-look="brutal"] .label-pill,
+  [data-look="brutal"] .sync-pill{
+    border-radius:var(--bevel-sm,4px);
+    corner-shape:bevel;
+  }
+  [data-look="brutal"] .days button{
+    border-radius:var(--bevel-sm,4px) !important;
+    corner-shape:bevel;
+  }
+}

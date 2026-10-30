@@ -30,12 +30,22 @@ A prioridade é evoluir a aplicação real em passos pequenos, preservando dados
 - Não alterar desktop nem a faixa 641–1023px sem pedido explícito (essa faixa não tem regra própria: usa o layout base).
 - Preferir CSS. Se exigir mudar template em `interface.js`, parar e pedir confirmação. Não alterar `app.js`/`sync.js` por efeito visual.
 - Não renomear nem remover `#qa`, `#qaJob`, `#fab`, `#syncPill`, `#cloudPill`, ações `data-a` nem ids/classes usados pelo JS (o FAB usa MutationObserver).
-- Cores por tokens do tema (`--bg`, `--s1..3`, `--bd`, `--tx`, `--mu`, `--ac`, `--bu`, `--ok`, `--wr`, `--er`); evitar hex fixo. Validar em ≥3 temas, incluindo o claro (Osso).
+- Cores por tokens do tema (`--bg`, `--s1..3`, `--bd`, `--tx`, `--mu`, `--ac`, `--bu`, `--ok`, `--wr`, `--er`); evitar hex fixo. Validar em ≥3 temas (Obsidiana, Vampiro e Osso (bege escuro) e, quando existir, Osso Profundo Claro).
 - Evitar caixas dentro de caixas; só o card de tarefa tem elevação/borda forte.
 - Alvos de toque ≥44px de altura. Exceção consciente: "Ver resumo e filtros" (≤32px).
 - Rolagem é da página: sem `overflow-y` interno na lista. Elementos fixos usam `position: sticky` com `top` por variáveis CSS.
 - O espaço inferior da lista deve deixar o último card acima do FAB (topo do FAB + 16px + `env(safe-area-inset-bottom)`).
 - Pílulas de status: mudança só visual; erro, pausa, offline e pendente nunca podem ficar ocultos.
+
+### Temas e tokens
+- Os 11 temas legados são preservados. `bone` (Osso) é **tema escuro**, com fundo bege muito escuro `#0E0D0B`; não existe tema claro legado.
+- Novas paletas planejadas: Osso Profundo (`deepbone`), Cromo (`chrome`) e Osso Profundo Claro (`deepbone-light`). O plano fica em `docs/PLANO-TEMAS-ESTETICA.md`.
+- Eixos estruturais: `mode` (`dark` | `light`) e `look` (`brutal`). O estilo Metal é `look=brutal` + `mode=dark`.
+- Tema sem `data-look` não muda de aparência, exceto no FAB, no ruído de fundo e nos tokens de prioridade/pílulas (decisão 20).
+- Texto e estados usam tokens com fallback; `--on-ac` substitui `#000` sobre o accent.
+- `THEMES` aceita chaves opcionais (`tx`, `mu`, `ok`, `wr`, `er`, `onAc`, `mode`, `look`, `radius`, `radiusSm`, `radiusPill`, `bevel`, `noise`, `prHigh`, `prMed`, `prLow`, `surfaceCard`, `surfacePanel`, `fontDisplay`, `fontMono`, `titleTrack`); na ausência delas valem `base.css`/fallback.
+- Validação obrigatória nos 6 temas: Obsidiana, Vampiro, Osso, Osso Profundo, Cromo e Osso Profundo Claro.
+- O plano só deve ser implementado após aprovação da tabela de parâmetros e dos contrastes.
 
 ### Aba Semana — reforma em andamento (Etapas 1–6 aplicadas; ver `docs/HANDOFF.md`)
 - Alvos, medidas e decisões em `docs/PLANO-UI-SEMANA.md`. Não aplicar esses números a outras abas.

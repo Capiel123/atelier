@@ -61,10 +61,28 @@ Os tokens padrão aparecem em `base.css`, mas `estado.js`/`applyTheme()` substit
 - `--bu`: cor secundária/brand.
 - `--ok`, `--wr`, `--er`: estados semânticos (sucesso, alerta, erro).
 - `--chk-bg`, `--chk-bd`, `--chk-done`, `--chk-mark`: checkbox temático.
+- `--radius`, `--radius-sm`, `--radius-pill`: raios de cards, controles/chips e pílulas. Fallbacks atuais: `12px`, `8px`, `16px`.
+- `--dot-radius`: raio dos pontos de prioridade e das pílulas. `50%` nos temas legados; `0` no look brutal.
+- `--bevel`: tamanho do chanfro do look brutal (cards); `--bevel-sm` é derivado para controles (4px; 3px no Cromo).
+- `--surface-card`, `--surface-panel`: fundos de cards de conteúdo e de painéis (menus, modais, folhas e navegação). Fallback `var(--s1)` nos temas legados. No tema claro, `--surface-card` é mais claro que `--bg` e `--surface-panel` é mais escuro.
+- `--noise-opacity`: opacidade do grão de fundo. `0` nos temas legados; `0.035`–`0.05` nos temas brutal.
 
-No código recebido, `THEMES` define **11 temas**: Obsidiana (`obsidian`), Vampiro (`vampire`), Oculto (`occult`), Noir (`noir`), Cianótico (`cyanotic`), Tóxico (`toxic`), Brasa (`ember`), Luar (`moonlight`), Rosa Morta (`rose`), Abismo (`abyss`) e Osso (`bone`). A logo é configurável à parte.
+`THEMES` define **14 temas**: os 11 legados — Obsidiana (`obsidian`), Vampiro (`vampire`), Oculto (`occult`), Noir (`noir`), Cianótico (`cyanotic`), Tóxico (`toxic`), Brasa (`ember`), Luar (`moonlight`), Rosa Morta (`rose`), Abismo (`abyss`) e Osso (`bone`) — e os três novos: Osso Profundo (`deepbone`), Cromo (`chrome`) e Osso Profundo Claro (`deepbone-light`). A logo é configurável à parte.
 
 Ao criar seletor visual ou componente, usar os tokens quando a cor deve acompanhar o tema. Evitar cores hardcoded em elementos gerais; cores hardcoded podem continuar apropriadas para semântica específica (por exemplo, categorias codificadas por cor), desde que isso seja intencional.
+
+### Superfícies e ruído
+
+- Cards de conteúdo usam `var(--surface-card,var(--s1))`; painéis usam `var(--surface-panel,var(--s1))`. Nos temas legados, ambos resolvem para `--s1` e nada muda.
+- No tema claro (`deepbone-light`), o card é mais claro que o fundo e o painel é mais escuro. Os valores são tokens explícitos do tema, não `color-mix` com preto/branco.
+- O grão fica em `body::before` (`position:fixed`, `z-index:-1`, `pointer-events:none`) dentro do stacking context criado por `isolation:isolate` no `body`. Ele é apenas fundo: não intercepta toque/rolagem e não é pintado por cima de texto ou cards.
+- `--noise-opacity` ausente ou `0` mantém a camada invisível. Não usar `mix-blend-mode` nessa camada.
+
+### Ícones desenhados em CSS
+
+- A lupa de `.search-btn` é universal (não depende de `data-look`): círculo em `::before` e haste em `::after`, ambos em `currentColor`, com traço de 1.5px. O `::after` também fornece o alvo de toque de 44px de altura.
+- No look brutal, `componentes.css` redesenha `✕` e `+` com `background-image` em gradiente e `font-size:0`. A regra vale apenas para botões inequivocamente icon-only, listados por `data-a`; não usar em ações que também aparecem com texto.
+- Ao desenhar um ícone novo por CSS: usar `currentColor`, manter traço de 1.5px, não ocupar o `::before` de botões que já o usam como hitbox e confirmar que o glifo não muda por estado/template. Caso mude, apenas reportar — a correção exige template ou JavaScript.
 
 ## Como decidir onde colocar uma regra
 

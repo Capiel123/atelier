@@ -24,20 +24,23 @@ const AREAS_DEFAULT = [
 ];
 const CURRENCIES = {BRL:{sym:'R$',n:'Real'}, USD:{sym:'$',n:'Dólar'}, EUR:{sym:'€',n:'Euro'}};
 const THEMES = {
-  obsidian:  {n:'Obsidiana',  desc:'Dourado frio · clássico', ac:'#d4a84b', bu:'#9c3355', bg:'#0e0d11', s1:'#17151c', s2:'#1f1c26', s3:'#26222f', bd:'#2c2835', chkBg:'#17151c', chkBd:'#2c2835', chkDone:'#d4a84b', chkMark:'#000'},
-  vampire:   {n:'Vampiro',    desc:'Sangue',                 ac:'#b8324a', bu:'#5c1228', bg:'#100609', s1:'#1a0d11', s2:'#221216', s3:'#2a181c', bd:'#33191f', chkBg:'#1a0d11', chkBd:'#33191f', chkDone:'#b8324a', chkMark:'#fff'},
-  occult:    {n:'Oculto',     desc:'Violeta profundo',       ac:'#a374d4', bu:'#5a2a8a', bg:'#0c0912', s1:'#15111e', s2:'#1d1828', s3:'#252032', bd:'#2e283d', chkBg:'#15111e', chkBd:'#2e283d', chkDone:'#a374d4', chkMark:'#000'},
-  noir:      {n:'Noir',       desc:'Prata fria',             ac:'#c5c5c9', bu:'#7a7580', bg:'#0c0c0e', s1:'#151517', s2:'#1d1d20', s3:'#26262a', bd:'#303035', chkBg:'#151517', chkBd:'#303035', chkDone:'#c5c5c9', chkMark:'#000'},
-  cyanotic:  {n:'Cianótico',  desc:'Ciano gelado',           ac:'#4fb3d4', bu:'#2a5a7a', bg:'#080d12', s1:'#101820', s2:'#182530', s3:'#1f303d', bd:'#263a4a', chkBg:'#101820', chkBd:'#263a4a', chkDone:'#4fb3d4', chkMark:'#000'},
-  toxic:     {n:'Tóxico',     desc:'Verde ácido',            ac:'#7ab876', bu:'#3a6b3a', bg:'#080f0a', s1:'#101a12', s2:'#17261a', s3:'#1e3023', bd:'#253a2b', chkBg:'#101a12', chkBd:'#253a2b', chkDone:'#7ab876', chkMark:'#000'},
-  ember:     {n:'Brasa',      desc:'Laranja queimado',       ac:'#e08a4f', bu:'#8b2942', bg:'#110c09', s1:'#1a1410', s2:'#231c16', s3:'#2b241d', bd:'#362d24', chkBg:'#1a1410', chkBd:'#362d24', chkDone:'#e08a4f', chkMark:'#000'},
-  moonlight: {n:'Luar',       desc:'Azul pálido',            ac:'#a8bedb', bu:'#5a6b8a', bg:'#0a0d12', s1:'#121820', s2:'#1a222c', s3:'#222c38', bd:'#2c3642', chkBg:'#121820', chkBd:'#2c3642', chkDone:'#a8bedb', chkMark:'#000'},
-  rose:      {n:'Rosa Morta', desc:'Rosa pálido',            ac:'#d4a0b8', bu:'#7a4a5e', bg:'#100c0e', s1:'#191317', s2:'#221a1e', s3:'#2a2226', bd:'#342b30', chkBg:'#191317', chkBd:'#342b30', chkDone:'#d4a0b8', chkMark:'#000'},
-  abyss:     {n:'Abismo',     desc:'Azul-marinho',           ac:'#7a9fd4', bu:'#4a5e8a', bg:'#080a12', s1:'#10141e', s2:'#181e2c', s3:'#1f2638', bd:'#272e42', chkBg:'#10141e', chkBd:'#272e42', chkDone:'#7a9fd4', chkMark:'#000'},
-  bone:      {n:'Osso',       desc:'Bege frio',              ac:'#c9b394', bu:'#7a6a55', bg:'#0e0d0b', s1:'#171613', s2:'#1f1e1a', s3:'#27261f', bd:'#31302a', chkBg:'#171613', chkBd:'#31302a', chkDone:'#c9b394', chkMark:'#000'}
+  obsidian:  {n:'Obsidiana',  desc:'Dourado frio · clássico', mode:'dark', ac:'#d4a84b', bu:'#9c3355', bg:'#0e0d11', s1:'#17151c', s2:'#1f1c26', s3:'#26222f', bd:'#2c2835', chkBg:'#17151c', chkBd:'#2c2835', chkDone:'#d4a84b', chkMark:'#000'},
+  vampire:   {n:'Vampiro',    desc:'Sangue',                 mode:'dark', ac:'#b8324a', bu:'#5c1228', bg:'#100609', s1:'#1a0d11', s2:'#221216', s3:'#2a181c', bd:'#33191f', chkBg:'#1a0d11', chkBd:'#33191f', chkDone:'#b8324a', chkMark:'#fff'},
+  occult:    {n:'Oculto',     desc:'Violeta profundo',       mode:'dark', ac:'#a374d4', bu:'#5a2a8a', bg:'#0c0912', s1:'#15111e', s2:'#1d1828', s3:'#252032', bd:'#2e283d', chkBg:'#15111e', chkBd:'#2e283d', chkDone:'#a374d4', chkMark:'#000'},
+  noir:      {n:'Noir',       desc:'Prata fria',             mode:'dark', ac:'#c5c5c9', bu:'#7a7580', bg:'#0c0c0e', s1:'#151517', s2:'#1d1d20', s3:'#26262a', bd:'#303035', chkBg:'#151517', chkBd:'#303035', chkDone:'#c5c5c9', chkMark:'#000'},
+  cyanotic:  {n:'Cianótico',  desc:'Ciano gelado',           mode:'dark', ac:'#4fb3d4', bu:'#2a5a7a', bg:'#080d12', s1:'#101820', s2:'#182530', s3:'#1f303d', bd:'#263a4a', chkBg:'#101820', chkBd:'#263a4a', chkDone:'#4fb3d4', chkMark:'#000'},
+  toxic:     {n:'Tóxico',     desc:'Verde ácido',            mode:'dark', ac:'#7ab876', bu:'#3a6b3a', bg:'#080f0a', s1:'#101a12', s2:'#17261a', s3:'#1e3023', bd:'#253a2b', chkBg:'#101a12', chkBd:'#253a2b', chkDone:'#7ab876', chkMark:'#000'},
+  ember:     {n:'Brasa',      desc:'Laranja queimado',       mode:'dark', ac:'#e08a4f', bu:'#8b2942', bg:'#110c09', s1:'#1a1410', s2:'#231c16', s3:'#2b241d', bd:'#362d24', chkBg:'#1a1410', chkBd:'#362d24', chkDone:'#e08a4f', chkMark:'#000'},
+  moonlight: {n:'Luar',       desc:'Azul pálido',            mode:'dark', ac:'#a8bedb', bu:'#5a6b8a', bg:'#0a0d12', s1:'#121820', s2:'#1a222c', s3:'#222c38', bd:'#2c3642', chkBg:'#121820', chkBd:'#2c3642', chkDone:'#a8bedb', chkMark:'#000'},
+  rose:      {n:'Rosa Morta', desc:'Rosa pálido',            mode:'dark', ac:'#d4a0b8', bu:'#7a4a5e', bg:'#100c0e', s1:'#191317', s2:'#221a1e', s3:'#2a2226', bd:'#342b30', chkBg:'#191317', chkBd:'#342b30', chkDone:'#d4a0b8', chkMark:'#000'},
+  abyss:     {n:'Abismo',     desc:'Azul-marinho',           mode:'dark', ac:'#7a9fd4', bu:'#4a5e8a', bg:'#080a12', s1:'#10141e', s2:'#181e2c', s3:'#1f2638', bd:'#272e42', chkBg:'#10141e', chkBd:'#272e42', chkDone:'#7a9fd4', chkMark:'#000'},
+  bone:      {n:'Osso',       desc:'Bege frio',              mode:'dark', ac:'#c9b394', bu:'#7a6a55', bg:'#0e0d0b', s1:'#171613', s2:'#1f1e1a', s3:'#27261f', bd:'#31302a', chkBg:'#171613', chkBd:'#31302a', chkDone:'#c9b394', chkMark:'#000'},
+  deepbone:  {n:'Osso Profundo', desc:'Bege mineral · brutal', mode:'dark', look:'brutal', ac:'#D2CCC0', bu:'#55524B', bg:'#0A0A09', s1:'#121211', s2:'#1A1A18', s3:'#242421', bd:'#34332F', chkBg:'#121211', chkBd:'#34332F', chkDone:'#D2CCC0', chkMark:'#0A0A09', tx:'#E4DED4', mu:'#9A958B', ok:'#A9B3A0', wr:'#C2AE86', er:'#C98077', onAc:'#0A0A09', radius:'2px', bevel:'6px', noise:'0.045', prHigh:'#E4DED4', prMed:'#A39E94', prLow:'#7C776F', surfaceCard:'#121211', surfacePanel:'#1A1A18'},
+  chrome:    {n:'Cromo',       desc:'Metal frio · brutal',   mode:'dark', look:'brutal', ac:'#E6E6EC', bu:'#3A3A42', bg:'#050506', s1:'#0D0D0F', s2:'#151518', s3:'#1F1F23', bd:'#35353B', chkBg:'#0D0D0F', chkBd:'#35353B', chkDone:'#E6E6EC', chkMark:'#050506', tx:'#F0F0F2', mu:'#9C9CA6', ok:'#B6C2C4', wr:'#C9BC94', er:'#C77C78', onAc:'#050506', radius:'1px', bevel:'4px', noise:'0.035', prHigh:'#F4F4F8', prMed:'#A7A7B2', prLow:'#74747E', surfaceCard:'#0D0D0F', surfacePanel:'#151518'},
+  'deepbone-light': {n:'Osso Profundo Claro', desc:'Bege claro · brutal', mode:'light', look:'brutal', ac:'#1B1A17', bu:'#8D887B', bg:'#DEDAD0', s1:'#D3CEC3', s2:'#E9E6DF', s3:'#F4F2EC', bd:'#A9A496', chkBg:'#D3CEC3', chkBd:'#A9A496', chkDone:'#1B1A17', chkMark:'#F2F0EA', tx:'#12110E', mu:'#4F4C44', ok:'#44503F', wr:'#5F4F26', er:'#842F27', onAc:'#F2F0EA', radius:'2px', bevel:'6px', noise:'0.05', prHigh:'#12110E', prMed:'#4A473F', prLow:'#6C675B', surfaceCard:'#F4F2EC', surfacePanel:'#D3CEC3'}
 };
 const PR = ['Alta','Média','Baixa'];
-const PRC = ['#e0626a','#e0a33b','#6f8de0'];
+const PRC = ['var(--pr-high, #e0626a)','var(--pr-med, #e0a33b)','var(--pr-low, #6f8de0)'];
 const DAYS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 const DAYS_FULL = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const DEF_SKILLS = [
@@ -174,7 +177,8 @@ function applyTheme() {
   const themeId = S.cfg.theme || 'obsidian';
   const t = THEMES[themeId] || THEMES.obsidian;
   const custom = S.cfg.accentColor;
-  const root = document.documentElement.style;
+  const rootEl = document.documentElement;
+  const root = rootEl.style;
   root.setProperty('--ac', custom || t.ac);
   root.setProperty('--bu', t.bu);
   root.setProperty('--bg', t.bg);
@@ -186,6 +190,30 @@ function applyTheme() {
   root.setProperty('--chk-bd', t.chkBd || t.bd);
   root.setProperty('--chk-done', t.chkDone || t.ac);
   root.setProperty('--chk-mark', t.chkMark || '#000');
+
+  // Chaves opcionais (Decisão 21). Ausentes => remove o inline e deixa o fallback do CSS.
+  const optionalVars = {
+    tx: '--tx', mu: '--mu', ok: '--ok', wr: '--wr', er: '--er', onAc: '--on-ac',
+    radius: '--radius', radiusSm: '--radius-sm', radiusPill: '--radius-pill',
+    bevel: '--bevel', noise: '--noise-opacity',
+    prHigh: '--pr-high', prMed: '--pr-med', prLow: '--pr-low',
+    surfaceCard: '--surface-card', surfacePanel: '--surface-panel',
+    fontDisplay: '--font-display', fontMono: '--font-mono', titleTrack: '--title-track'
+  };
+  Object.keys(optionalVars).forEach(key => {
+    const value = t[key];
+    if (value !== undefined && value !== null && value !== '') root.setProperty(optionalVars[key], value);
+    else root.removeProperty(optionalVars[key]);
+  });
+
+  // Eixos estruturais. Sem a chave, o atributo sai do DOM.
+  if (t.look) rootEl.setAttribute('data-look', t.look);
+  else rootEl.removeAttribute('data-look');
+  if (t.mode) rootEl.setAttribute('data-mode', t.mode);
+  else rootEl.removeAttribute('data-mode');
+  if (t.mode) root.setProperty('color-scheme', t.mode);
+  else root.removeProperty('color-scheme');
+
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', t.bg);
 }

@@ -11,7 +11,7 @@
 @media(max-width:640px){
   #nav{display:none}
   /* Menu inferior aparece só no mobile */
-  .bottom-nav{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--s1);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:50;justify-content:space-around;align-items:stretch}
+  .bottom-nav{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--surface-panel,var(--s1));border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:50;justify-content:space-around;align-items:stretch}
   .bottom-nav button{flex:1;background:none;border:none;border-radius:0;color:var(--mu);font-size:10px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:52px;cursor:pointer}
   .bottom-nav button.on{color:var(--ac)}
   .bottom-nav .bn-icon{font-size:18px;line-height:1}
@@ -88,7 +88,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @keyframes v141up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 
 /* FAB (botão flutuante de adicionar) — padrão oculto, mobile ativa */
-.fab{display:none;position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:var(--ac);color:#000;border:none;font-size:30px;font-weight:700;line-height:1;padding:0;box-shadow:var(--sh);z-index:45;align-items:center;justify-content:center}
+.fab{display:none;position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:var(--ac);color:var(--on-ac,#000);border:none;font-size:30px;font-weight:700;line-height:1;padding:0;box-shadow:var(--sh);z-index:45;align-items:center;justify-content:center}
 .fab:hover{border:none;filter:brightness(1.08)}.fab[hidden]{display:none!important}
 
 /* --- DESKTOP (≥ 1024px) --- */
@@ -111,7 +111,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .logo{grid-area:1/1}.header-right{grid-area:1/2; display:flex; gap: 4px; align-items: center;}
   #timerWidget{grid-area:1/3; display:none;}
   #lvl{display:none}
-  .bottom-nav{background:color-mix(in srgb,var(--s1) 94%,transparent);backdrop-filter:blur(12px)}
+  .bottom-nav{background:color-mix(in srgb,var(--surface-panel,var(--s1)) 94%,transparent);backdrop-filter:blur(12px)}
   .bottom-nav button{position:relative;font-size:10.5px;min-height:56px}
   .bottom-nav button.on::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--ac)}
   .bottom-nav .bn-icon{font-size:20px}
@@ -323,7 +323,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     position:relative;
     height:28px;
     padding:2px 8px;
-    border-radius:14px;
+    border-radius:min(var(--radius-pill,16px),14px);
     font-size:10px;
     border-color:color-mix(in srgb,var(--bd) 70%,transparent);
     background:color-mix(in srgb,var(--s1) 85%,transparent);
@@ -363,7 +363,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     padding:0;
     justify-content:center;
     border-radius:6px;
-    font-size:13px;
+    font-size:0;
   }
 }
 
