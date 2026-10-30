@@ -106,6 +106,7 @@
     return {
       taskId: str(r.task_id), subId: nullStr(r.sub_id) || null,
       startedAt: isoMs(r.started_at), accumulated: num(r.accumulated_seconds, 0),
+      subStartedAt: isoMs(r.sub_started_at), subAccumulated: num(r.sub_accumulated_seconds, 0),
       paused: !!r.paused, targetMin: (r.target_min == null) ? null : num(r.target_min, 0),
       phase: nullStr(r.phase) || null, focusMin: (r.focus_min == null) ? null : num(r.focus_min, 0),
       restMin: (r.rest_min == null) ? null : num(r.rest_min, 0), cycleCount: num(r.cycle_count, 0),

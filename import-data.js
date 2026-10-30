@@ -113,7 +113,8 @@
       taskId: t.taskId, subId: t.subId || null, startedAt: t.startedAt || null,
       accumulated: Math.round(t.accumulated || 0), paused: !!t.paused,
       targetMin: t.targetMin, phase: t.phase || null, focusMin: t.focusMin, restMin: t.restMin,
-      cycleCount: t.cycleCount || 0, updatedAt: t.updatedAt || 0
+      cycleCount: t.cycleCount || 0, updatedAt: t.updatedAt || 0,
+      subStartedAt: t.subStartedAt || null, subAccumulated: Math.round(t.subAccumulated || 0)
     };
   }
   // S.timer → linha active_timer (task_id null = "sem sessão").
@@ -122,11 +123,12 @@
     try { dev = localStorage.getItem('atelier_sync_device_id'); } catch (e) {}
     var t = S.timer;
     if (!t) {
-      return { user_id: uid, task_id: null, sub_id: null, started_at: null, accumulated_seconds: 0, paused: false, target_min: null, phase: null, focus_min: null, rest_min: null, cycle_count: 0, device_id: dev, client_updated_at: int(S.timerStoppedAt, 0) };
+      return { user_id: uid, task_id: null, sub_id: null, started_at: null, accumulated_seconds: 0, sub_started_at: null, sub_accumulated_seconds: 0, paused: false, target_min: null, phase: null, focus_min: null, rest_min: null, cycle_count: 0, device_id: dev, client_updated_at: int(S.timerStoppedAt, 0) };
     }
     return {
       user_id: uid, task_id: nullStr(t.taskId), sub_id: nullStr(t.subId),
       started_at: iso(t.startedAt), accumulated_seconds: int(t.accumulated, 0),
+      sub_started_at: iso(t.subStartedAt), sub_accumulated_seconds: int(t.subAccumulated, 0),
       paused: !!t.paused, target_min: (t.targetMin == null) ? null : int(t.targetMin, 0),
       phase: nullStr(t.phase), focus_min: (t.focusMin == null) ? null : int(t.focusMin, 0),
       rest_min: (t.restMin == null) ? null : int(t.restMin, 0), cycle_count: int(t.cycleCount, 0),

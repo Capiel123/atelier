@@ -453,8 +453,9 @@ function cardTask(t, score) {
       <div class="acts">
       ${runningThis ? `<button data-a="stopTimer" style="background:var(--bu)">⏸</button>` : `<button data-a="startTimer" data-id="${t.id}" ${S.timer?'disabled':''}>▶</button>`}
       <button data-a="log" data-id="${t.id}" data-m="10">+10m</button>
-      <button data-a="log" data-id="${t.id}" data-m="-10">-10m</button>
+      <button data-a="log" data-id="${t.id}" data-m="5">+5m</button>
       <button data-a="log" data-id="${t.id}" data-m="-5">-5m</button>
+      <button data-a="log" data-id="${t.id}" data-m="-10">-10m</button>
       <button data-a="setnext" data-id="${t.id}">${t.next?'⭐':'☆'}</button>
       <button data-a="moveUp" data-id="${t.id}" title="Subir">↑</button>
       <button data-a="moveDown" data-id="${t.id}" title="Descer">↓</button>
@@ -469,7 +470,7 @@ function cardTask(t, score) {
     <details data-eid="${t.id}" ${openEdits.has(t.id)?'open':''}>
       <summary>Editar detalhes</summary>
       <div class="form"><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades<div class="pill-stack">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="--pc:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label><label class="full">Labels<div class="pill-stack">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="--pc:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label><label class="full">Nova subtarefa<input data-a="sadd" data-id="${t.id}" placeholder="Enter"></label></div>
-      <div class="acts" style="margin-top:10px"><button data-a="log" data-id="${t.id}" data-m="10">+10m</button><button data-a="log" data-id="${t.id}" data-m="-10">-10m</button></div>
+      <div class="acts" style="margin-top:10px"><button data-a="log" data-id="${t.id}" data-m="10">+10m</button><button data-a="log" data-id="${t.id}" data-m="5">+5m</button><button data-a="log" data-id="${t.id}" data-m="-10">-10m</button></div>
          <div class="acts" style="margin-top:4px">${DAYS.map((d,i) => `<button data-a="cp" data-id="${t.id}" data-i="${i}">${d}</button>`).join('')}<button data-a="cp" data-id="${t.id}" data-i="q">Fila</button></div>
     </details>
   </div>`;
@@ -811,6 +812,9 @@ function viewStats() {
   const xp = xpProgression();
   const allLogs = S.tasks.flatMap(t => (t.logs || []).map(l => ({...l, taskId: t.id})));
   const weekLogs = allLogs.filter(l => l.end && iso(new Date(l.end)) >= weekAgoStr);
+  // "Pomodoros hoje": logs de foco concluído (note 'pomodoro') com end hoje.
+  // Paradas manuais (note '') e logs sem end não contam.
+  const pomodorosToday = allLogs.filter(l => l.end && l.note === 'pomodoro' && iso(new Date(l.end)) === td).length;
   const weekMin = weekLogs.reduce((a,l) => a + (+l.minutes||0), 0);
   const weekTasksDone = S.tasks.filter(t => t.done && t.doneAt && iso(new Date(t.doneAt)) >= weekAgoStr).length;
   const totalTasks = S.tasks.length; const doneTasks = S.tasks.filter(t => t.done).length;
@@ -845,7 +849,7 @@ function viewStats() {
 
   const xpBlock = `<h3 style="margin-top:0">Progressão</h3><div class="xp-hero"><div><div class="xp-level-label">Nível</div><div class="xp-level">${xp.lv}</div></div><div class="xp-bar-wrap"><div style="font-size:12px;color:var(--mu);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b style="color:var(--tx)">${Math.round(xp.inLevel)}</b> / ${xp.forLevel} XP neste nível</span><span>faltam <b style="color:var(--ac)">${xp.toNext}</b></span></div><div class="xp-bar"><div style="width:${(xp.progress*100)}%"></div></div><div class="xp-meta">Total: <b>${Math.round(xp.gxp)}</b> XP · Semana: <b>+${xp.weekXp}</b> · Mês: <b>+${xp.monthXp}</b></div></div></div><h4>Top habilidades por XP</h4>${xp.topSkills.length ? xp.topSkills.map(s => {const skXp = Math.round(num(s.xp)); const info = levelInfo(skXp); return `<div class="skill-xp-row"><div class="sxr-label" style="color:${s.color}">${esc(s.n)}</div><div class="sxr-bar"><div style="width:${(skXp/xp.maxSkillXp*100)}%;background:${s.color}"></div></div><div class="sxr-val"><b>N${info.lv}</b> · ${skXp} XP</div></div>`;}).join('') : '<div class="msg">Sem habilidades ainda.</div>'}`;
 
-  const overviewBlock = `<h3>Visão geral</h3><div class="kpi-grid"><div class="kpi"><div class="kpi-label">Horas (7d)</div><div class="kpi-value">${fmtMin(weekMin)}</div><div class="kpi-sub">${weekLogs.length} sessões</div></div><div class="kpi"><div class="kpi-label">Tarefas (7d)</div><div class="kpi-value">${weekTasksDone}</div><div class="kpi-sub">concluídas</div></div><div class="kpi"><div class="kpi-label">Dias seguidos</div><div class="kpi-value">${streak}</div><div class="kpi-sub">com atividade</div></div><div class="kpi"><div class="kpi-label">Conclusão</div><div class="kpi-value">${completionRate}%</div><div class="kpi-sub">${doneTasks}/${totalTasks}</div></div><div class="kpi"><div class="kpi-label">Tempo médio</div><div class="kpi-value">${avgTaskMin?fmtMin(avgTaskMin):'—'}</div><div class="kpi-sub">por tarefa</div></div><div class="kpi"><div class="kpi-label">Rendimento total</div><div class="kpi-value" style="font-size:16px">${fmtMoney(earnedPrimary, primary)}</div><div class="kpi-sub">projetos concluídos</div></div></div><h3>Consistência</h3>${renderHeatmap()}<h3>Últimos 7 dias</h3><div class="bar-chart">${weekDays.map(x => `<div class="bar-col ${x.isToday?'today':''}"><div class="bar-val">${x.mins?fmtMin(x.mins):''}</div><div class="bar-fill" style="height:${(x.mins/maxWeekMin*100)}%"></div><div class="bar-label">${x.label}</div></div>`).join('')}</div>`;
+  const overviewBlock = `<h3>Visão geral</h3><div class="kpi-grid"><div class="kpi"><div class="kpi-label">Horas (7d)</div><div class="kpi-value">${fmtMin(weekMin)}</div><div class="kpi-sub">${weekLogs.length} sessões</div></div><div class="kpi"><div class="kpi-label">Tarefas (7d)</div><div class="kpi-value">${weekTasksDone}</div><div class="kpi-sub">concluídas</div></div><div class="kpi"><div class="kpi-label">Pomodoros hoje</div><div class="kpi-value">${pomodorosToday}</div><div class="kpi-sub">focos concluídos</div></div><div class="kpi"><div class="kpi-label">Dias seguidos</div><div class="kpi-value">${streak}</div><div class="kpi-sub">com atividade</div></div><div class="kpi"><div class="kpi-label">Conclusão</div><div class="kpi-value">${completionRate}%</div><div class="kpi-sub">${doneTasks}/${totalTasks}</div></div><div class="kpi"><div class="kpi-label">Tempo médio</div><div class="kpi-value">${avgTaskMin?fmtMin(avgTaskMin):'—'}</div><div class="kpi-sub">por tarefa</div></div><div class="kpi"><div class="kpi-label">Rendimento total</div><div class="kpi-value" style="font-size:16px">${fmtMoney(earnedPrimary, primary)}</div><div class="kpi-sub">projetos concluídos</div></div></div><h3>Consistência</h3>${renderHeatmap()}<h3>Últimos 7 dias</h3><div class="bar-chart">${weekDays.map(x => `<div class="bar-col ${x.isToday?'today':''}"><div class="bar-val">${x.mins?fmtMin(x.mins):''}</div><div class="bar-fill" style="height:${(x.mins/maxWeekMin*100)}%"></div><div class="bar-label">${x.label}</div></div>`).join('')}</div>`;
 
   const calibBlock = calib.insufficient ? `<div class="card"><div class="calib-headline">Calibração de estimativas</div><div class="msg">Conclua ${calib.need - calib.count} tarefa${calib.need-calib.count>1?'s':''} mais com estimativa para ver a calibração.</div></div>` : `<div class="card calib-block"><div class="calib-headline">Nas últimas ${calib.count} tarefas com estimativa, você gasta <b style="color:${Math.abs(calib.pct)>30?'var(--wr)':'var(--ok)'}">${Math.abs(calib.pct)}% ${calib.pct>=0?'acima':'abaixo'}</b> do previsto.</div><div class="msg">${calib.pct > 30 ? 'Multiplique suas estimativas por ~' + ((100+calib.pct)/100).toFixed(1) + 'x.' : calib.pct < -20 ? 'Você tende a superestimar. Pode ser mais ousado.' : 'Boa calibração.'}</div></div>`;
 
@@ -1000,11 +1004,11 @@ function viewConfig() {
 
     <div class="section-group"><h3 style="margin-top:0">Aparência</h3><div class="msg" style="margin-bottom:10px">O tema altera fundo, superfícies e cores de destaque.</div>${renderThemePreview()}<div class="theme-grid">${themeCards}</div>${customRow}</div>
 
-    <div class="section-group"><h3 style="margin-top:0">Logo</h3><div class="msg">Opcional. PNG, SVG ou WEBP (máx 500KB). O texto "ATELIER" continua aparecendo ao lado, em fonte gótica.</div>${S.cfg.logo ? `<div style="margin:8px 0;display:flex;align-items:center;gap:8px"><img src="${esc(S.cfg.logo)}" alt="Logo" style="max-height:44px;max-width:160px;background:var(--s2);padding:6px;border-radius:8px"><span style="font-family:'Grenze Gotisch',serif;font-size:24px;color:var(--ac);font-weight:700">ATELIER</span></div>` : ''}<div class="form"><label class="full">Enviar logo<input type="file" id="logoInput" accept="image/png,image/svg+xml,image/webp"></label></div>${S.cfg.logo ? `<div class="acts" style="margin-top:6px"><button data-a="logoRemove">Remover logo</button></div>` : ''}</div>
+    <div class="section-group"><h3 style="margin-top:0">Logo</h3><div class="msg">Opcional. PNG, SVG ou WEBP (máx 500KB). O texto "ATELIER" continua aparecendo ao lado, em fonte gótica.</div>${S.cfg.logo ? `<div style="margin:8px 0;display:flex;align-items:center;gap:8px"><img src="${esc(S.cfg.logo)}" alt="Logo" style="max-height:44px;max-width:160px;background:var(--s2);padding:6px;border-radius:8px"><span style="font-family:var(--font-display);font-size:24px;color:var(--ac);font-weight:700">ATELIER</span></div>` : ''}<div class="form"><label class="full">Enviar logo<input type="file" id="logoInput" accept="image/png,image/svg+xml,image/webp"></label></div>${S.cfg.logo ? `<div class="acts" style="margin-top:6px"><button data-a="logoRemove">Remover logo</button></div>` : ''}</div>
 
     ${renderAreasSection()}
 
-    <div class="section-group"><h3 style="margin-top:0">Timer de foco</h3><div class="msg">Durações rápidas (blocos de foco):</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">${(S.cfg.focusDurations||[]).map(m => `<span class="tag" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px">${m}min<button data-a="focusDurRem" data-m="${m}" style="padding:0 4px;background:none;border:none;color:var(--mu);cursor:pointer;font-size:11px">✕</button></span>`).join('')}</div><div class="add" style="margin-top:6px"><input type="number" id="focusDurAdd" placeholder="Nova duração (min)" style="max-width:180px"><button data-a="focusDurAdd">+</button></div><div class="form" style="margin-top:8px"><label>Duração padrão (foco)<select data-c="defaultFocus">${selOptions((S.cfg.focusDurations||[]).map(m => [m, m+'min']), S.cfg.defaultFocus||25)}</select></label><label>Descanso (min)<input type="number" data-c="brk" value="${S.cfg.brk||10}"></label><label class="full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-c="focusNoStop" ${S.cfg.focusNoStop?'checked':''} style="width:auto">Sempre sair do foco sem parar timer</label></div><div class="msg">Ao terminar cada bloco, o app entra em descanso automaticamente e avisa com flash e som.</div></div>
+    <div class="section-group"><h3 style="margin-top:0">Timer de foco</h3><div class="msg">Durações rápidas (blocos de foco):</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">${(S.cfg.focusDurations||[]).map(m => `<span class="tag" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px">${m}min<button data-a="focusDurRem" data-m="${m}" style="padding:0 4px;background:none;border:none;color:var(--mu);cursor:pointer;font-size:11px">✕</button></span>`).join('')}</div><div class="add" style="margin-top:6px"><input type="number" id="focusDurAdd" placeholder="Nova duração (min)" style="max-width:180px"><button data-a="focusDurAdd">+</button></div><div class="form" style="margin-top:8px"><label>Duração padrão (foco)<select data-c="defaultFocus">${selOptions((S.cfg.focusDurations||[]).map(m => [m, m+'min']), S.cfg.defaultFocus||25)}</select></label><label>Descanso curto (min)<input type="number" data-c="brk" value="${S.cfg.brk||5}"></label><label>Descanso longo (min)<input type="number" data-c="longBrk" value="${S.cfg.longBrk||15}"></label><label class="full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-c="focusNoStop" ${S.cfg.focusNoStop?'checked':''} style="width:auto">Sempre sair do foco sem parar timer</label></div><div class="msg">Ao terminar o foco, o app sugere um descanso (curto ou longo); ele só inicia se você confirmar. O descanso longo é sugerido a cada 4 pomodoros.</div></div>
 
     <div class="section-group"><h3 style="margin-top:0">Configurações</h3><div class="form"><label>Alerta de foco (min)<input type="number" data-c="focus" value="${S.cfg.focus||50}"></label><label>Capacidade diária<input type="number" data-c="cap" value="${S.cfg.cap||360}"></label><label>Moeda principal<select data-c="primaryCurrency">${selOptions(Object.keys(CURRENCIES).map(c=>[c,CURRENCIES[c].sym+' '+c]), cur)}</select></label><label>Câmbio USD→BRL<input type="number" step="0.01" data-c="usdRate" value="${S.cfg.usdRate||5.2}"></label><label>Câmbio EUR→BRL<input type="number" step="0.01" data-c="eurRate" value="${S.cfg.eurRate||5.6}"></label><label>Densidade tarefas<select data-c="taskDensity">${selOptions([['auto','Auto (mobile: compacto)'],['compact','Sempre compacto'],['full','Sempre completo']], S.cfg.taskDensity||'auto')}</select></label><label class="full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" data-c="autoPriority" ${S.cfg.autoPriority?'checked':''} style="width:auto">Prioridade automática</label></div></div>
 
@@ -1174,7 +1178,7 @@ function showFocusCompleteModal(t) {
   </div>`;
   document.body.appendChild(modal);
 }
-function updateFocusTimer() {if (!focusTaskId || !S.timer || S.timer.taskId !== focusTaskId) return; if (S.timer.paused) return; const elapsedSec = timerElapsedSec(); const targetMin = S.timer.targetMin || focusTargetMin; const remainingSec = Math.max(0, targetMin * 60 - elapsedSec); const te = document.getElementById('focusTime'); if (te) te.textContent = fmtClock(remainingSec); const prog = targetMin > 0 ? Math.min(1, (elapsedSec/60) / targetMin) : 0; const circ = 2 * Math.PI * 100; const c = document.querySelector('.focus-progress'); if (c) c.style.strokeDashoffset = circ * (1 - prog);}
+function updateFocusTimer() {if (!focusTaskId || !S.timer || S.timer.taskId !== focusTaskId) return; if (S.timer.paused) return; const elapsedSec = timerElapsedSec(); const targetMin = S.timer.targetMin || focusTargetMin; const remainingSec = Math.max(0, targetMin * 60 - elapsedSec); const te = document.getElementById('focusTime'); if (te) te.textContent = fmtClock(remainingSec); const prog = targetMin > 0 ? Math.min(1, (elapsedSec/60) / targetMin) : 0; const circ = 2 * Math.PI * 100; const c = document.querySelector('.focus-progress'); if (c) c.style.strokeDashoffset = circ * (1 - prog); const sp = document.getElementById('focusSpent'); if (sp) {const m = Math.floor(subElapsedSec() / 60); if (sp.dataset.m !== String(m)) {sp.dataset.m = String(m); sp.textContent = fmtMin(m);}}}
 
 function renderFocus() {
   if (!focusTaskId) return;
@@ -1187,23 +1191,31 @@ function renderFocus() {
   const isPomodoro = running && S.timer.phase && S.timer.targetMin;
   const phase = (running && S.timer.phase) ? S.timer.phase : 'focus';
   const isPaused = running && S.timer.paused;
+  const restPending = running && phase === 'rest' && isPaused && (S.timer.accumulated || 0) === 0;
+  const restDone = running && phase === 'rest' && isPaused && (S.timer.accumulated || 0) > 0;
   const hasTarget = running && S.timer.targetMin;
   const elapsedSec = running ? timerElapsedSec() : 0;
   const targetMin = hasTarget ? S.timer.targetMin : focusTargetMin;
   const remainingSec = hasTarget ? Math.max(0, targetMin * 60 - elapsedSec) : targetMin * 60;
-  const progress = hasTarget ? Math.min(1, (elapsedSec/60) / targetMin) : 0;
+  const progress = (hasTarget && !restPending && !restDone) ? Math.min(1, (elapsedSec/60) / targetMin) : 0;
   const circ = 2 * Math.PI * 100;
   const offset = circ * (1 - progress);
-  const timeStr = running && !hasTarget ? fmtClock(elapsedSec) : fmtClock(running ? remainingSec : targetMin * 60);
+  const timeStr = (restPending || restDone) ? '✓' : (running && !hasTarget ? fmtClock(elapsedSec) : fmtClock(running ? remainingSec : targetMin * 60));
+  const spentMin = running ? Math.floor(subElapsedSec() / 60) : 0;
   const cycleCount = (running && S.timer.cycleCount) || 0;
   const durations = getFocusDurations();
   const runningSubId = running ? S.timer.subId : null;
   const runningSub = runningSubId ? t.subs.find(s => s.id === runningSubId) : null;
   const firstPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
+  const shortRest = S.cfg.brk || 5;
+  const longRest = S.cfg.longBrk || 15;
+  const recommendLong = (cycleCount % 4) === 0;
 
   const ringColor = !running ? 'var(--bu)' : (phase === 'rest' ? 'var(--ok)' : (isPaused ? 'var(--wr)' : 'var(--ac)'));
   let eyebrow;
   if (!running) eyebrow = 'Pronto para focar';
+  else if (restDone) eyebrow = 'Descanso concluído';
+  else if (restPending) eyebrow = 'Foco concluído';
   else if (runningSub) eyebrow = (isPaused ? 'Pausado · ' : 'Sessão · ') + runningSub.t.slice(0, 30);
   else if (isPaused) eyebrow = 'Pausado';
   else if (phase === 'rest') eyebrow = 'Descanso · ciclo ' + cycleCount;
@@ -1220,9 +1232,13 @@ function renderFocus() {
   const skipBtn = (running && isPomodoro) ? `<button data-a="focusSkip" class="focus-btn ghost">⏭ Pular</button>` : '';
   const durationsHtml = !running ? `<div class="focus-durations">${durations.map(m => `<button data-a="focusSetTarget" data-m="${m}" class="${focusTargetMin===m?'on':''}">${m}min</button>`).join('')}</div>` : '';
   const cycleDots = isPomodoro && cycleCount > 0 ? `<div style="font-size:14px;color:var(--mu);margin-top:4px;letter-spacing:2px">${'🍅'.repeat(Math.min(cycleCount, 8))}</div>` : '';
-  const phaseSubtitle = isPomodoro
-    ? (phase === 'rest' ? `Descanso · ${targetMin}min` : `Foco · ${targetMin}min${firstPending && !running ? ' · inicia em: '+firstPending.t.slice(0,20) : ''}`)
-    : (running ? 'Sessão livre' : `Bloco de ${targetMin}min`);
+
+  let phaseSubtitle;
+  if (restPending) phaseSubtitle = `Foco concluído · descanso ${recommendLong ? longRest : shortRest}min sugerido`;
+  else if (restDone) phaseSubtitle = 'Descanso concluído';
+  else if (isPomodoro) phaseSubtitle = (phase === 'rest' ? `Descanso · ${targetMin}min` : `Foco · ${targetMin}min${firstPending && !running ? ' · inicia em: '+firstPending.t.slice(0,20) : ''}`);
+  else phaseSubtitle = (running ? 'Sessão livre' : `Bloco de ${targetMin}min`);
+
   const hint = firstPending && !running ? 'Iniciando na primeira subtarefa pendente' : '';
 
   const subs = activeSubs(t);
@@ -1234,11 +1250,41 @@ function renderFocus() {
         const origIdx = (t.subs||[]).findIndex(x => x.id === s.id);
         return `<div class="focus-sub${isRun ? ' run' : ''}">
           <input type="checkbox" data-a="focusSub" data-sub="${s.id}" data-i="${origIdx}" ${s.d ? 'checked' : ''} title="${s.d ? 'Marcar como pendente' : 'Concluir subtarefa'}">
-          <span class="${s.d ? 'x' : ''}" style="flex:1" data-a="focusSelectSub" data-sub="${s.id}" title="${s.d ? '' : (isRun ? 'Etapa atual em andamento' : 'Focar nesta etapa')}">${isRun ? '▶ ' : ''}${esc(s.t)}</span>
+          <span class="${s.d ? 'x' : ''}" style="flex:1" contenteditable="true" data-subedit="${t.id}:${s.id}" role="textbox" aria-label="Renomear subtarefa" title="Clique para renomear">${esc(s.t)}</span>
+          <button class="focus-play" data-a="focusSelectSub" data-sub="${s.id}" title="${isRun ? 'Etapa atual em andamento' : 'Focar nesta subtarefa'}" aria-label="Focar nesta subtarefa" ${(isRun || s.d) ? 'disabled' : ''}>▶</button>
         </div>`;
       }).join('')}
       <input data-a="sadd" data-id="${t.id}" placeholder="Nova subtarefa (Enter)" style="margin-top:8px;width:100%">
     </div>`;
+
+  // Quadrado: tempo no segmento atual (congela no descanso, recomeça ao trocar de sub/foco).
+  const spentHtml = running ? `<div class="focus-spent" id="focusSpent" data-m="${spentMin}">${fmtMin(spentMin)}</div>` : '';
+
+  let restChoiceHtml = '';
+  if (restPending) {
+    restChoiceHtml = `<div class="focus-rest-choice">
+      <div class="focus-rest-choice-title">Fazer um descanso?</div>
+      <button data-a="focusRest" data-long="0" class="focus-btn ${recommendLong ? 'ghost' : 'start'}">☕ Curto (${shortRest}min)</button>
+      <button data-a="focusRest" data-long="1" class="focus-btn ${recommendLong ? 'start' : 'ghost'}">☕ Longo (${longRest}min)</button>
+      <button data-a="focusSkip" class="focus-btn ghost">→ Pular e focar</button>
+      <button data-a="focusStop" class="focus-btn ghost">⏹ Parar</button>
+    </div>`;
+  } else if (restDone) {
+    restChoiceHtml = `<div class="focus-rest-choice">
+      <button data-a="focusSkip" class="focus-btn start">▶ Voltar ao foco</button>
+      <button data-a="focusStop" class="focus-btn ghost">⏹ Parar</button>
+    </div>`;
+  }
+
+  const actionsHtml = (restPending || restDone)
+    ? restChoiceHtml
+    : `<div class="focus-actions">
+        ${primaryBtn}
+        ${skipBtn}
+        <button data-a="log" data-id="${t.id}" data-m="5" class="focus-btn ghost">+5m</button>
+        <button data-a="log" data-id="${t.id}" data-m="-10" class="focus-btn ghost">-10m</button>
+        <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
+      </div>`;
 
   el.innerHTML = `
     <div class="focus-content" data-phase="${phase}">
@@ -1253,15 +1299,11 @@ function renderFocus() {
         <div class="focus-time" id="focusTime">${timeStr}</div>
       </div>
       <div class="focus-phase-label" data-phase="${phase}">${esc(phaseSubtitle)}</div>
+      ${spentHtml}
       ${hint ? `<div class="focus-hint" style="margin-top:6px;opacity:1;color:var(--ac);font-size:11px">${esc(hint)}</div>` : ''}
       ${cycleDots}
       ${durationsHtml}
-      <div class="focus-actions">
-        ${primaryBtn}
-        ${skipBtn}
-        <button data-a="log" data-id="${t.id}" data-m="-10" class="focus-btn ghost">-10m</button>
-        <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
-      </div>
+      ${actionsHtml}
       ${subsHtml}
     </div>`;
 }

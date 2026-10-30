@@ -259,7 +259,7 @@ function seed() {
   const p1 = mkProject({id:'p1', n:'Prospecção internacional', area:'Carreira', reward:'Jantar fora'});
   return {
     v: VERSION,
-    cfg: {focus:50, brk:10, cap:360, logo:null, notif:false, autoPriority:true, reviewChecks:{}, weekPriority:{}, theme:'obsidian', accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
+    cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, reviewChecks:{}, weekPriority:{}, theme:'obsidian', accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
     areas: AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()})),
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
@@ -282,7 +282,7 @@ function migrate(raw) {
   s.energy = s.energy && typeof s.energy === 'object' ? s.energy : {};
   s.xpPool = num(s.xpPool);
   s.cfg = s.cfg || {};
-  s.cfg.focus = s.cfg.focus ?? 50; s.cfg.brk = s.cfg.brk ?? 10; s.cfg.cap = s.cfg.cap ?? 360;
+  s.cfg.focus = s.cfg.focus ?? 50; s.cfg.brk = s.cfg.brk ?? 5; s.cfg.longBrk = s.cfg.longBrk ?? 15; s.cfg.cap = s.cfg.cap ?? 360;
   s.cfg.logo = s.cfg.logo ?? null; s.cfg.notif = s.cfg.notif ?? false;
   s.cfg.autoPriority = s.cfg.autoPriority ?? true;
   s.cfg.reviewChecks = s.cfg.reviewChecks || {}; s.cfg.weekPriority = s.cfg.weekPriority || {};
@@ -382,8 +382,10 @@ function migrate(raw) {
       targetMin: s.timer.targetMin || null,
       phase: s.timer.phase || null,
       focusMin: s.timer.focusMin || s.timer.targetMin || null,
-      restMin: s.timer.restMin || s.cfg.brk || 10,
+      restMin: s.timer.restMin || s.cfg.brk || 5,
       cycleCount: s.timer.cycleCount || 0,
+      subStartedAt: s.timer.subStartedAt ?? s.timer.startedAt ?? null,
+      subAccumulated: s.timer.subAccumulated ?? (s.timer.accumulated || 0),
       updatedAt: s.timer.updatedAt || s.timer.startedAt || Date.now()
     };
   }

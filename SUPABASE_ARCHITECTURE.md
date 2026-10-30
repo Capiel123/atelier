@@ -121,7 +121,7 @@ Justificativa: previsível, sem merge automático arriscado de campos semanticam
 
 ## 7. Timer (sessão ativa)
 
-- Tabela `active_timer` com **uma linha por usuário** (`user_id` PK, linha persistente — `task_id = null` indica “sem timer”): `task_id`, `sub_id`, `started_at`, `accumulated_seconds`, `paused`, `target_min`, `phase`, `focus_min`, `rest_min`, `cycle_count`, `device_id`, `updated_at`, `client_updated_at`.
+- Tabela `active_timer` com **uma linha por usuário** (`user_id` PK, linha persistente — `task_id = null` indica “sem timer”): `task_id`, `sub_id`, `started_at`, `accumulated_seconds`, `sub_started_at`, `sub_accumulated_seconds`, `paused`, `target_min`, `phase`, `focus_min`, `rest_min`, `cycle_count`, `device_id`, `updated_at`, `client_updated_at`.
 - Sincroniza ao iniciar, pausar, retomar, trocar fase, trocar subtarefa e parar.
 - **Adoção em outro dispositivo:** ao receber uma linha remota mais nova, o app adota o timer (se o task/sub existir localmente; caso contrário, aguarda o pull das tarefas).
 - **Conflito:** vence o `updated_at` mais recente; o timer perdedor é descartado (estado efêmero), sem gerar log. Ao parar/concluir fase, os minutos entram em `tasks.logs` e são sincronizados como parte da tarefa.

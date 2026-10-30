@@ -597,3 +597,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(max-width:640px){
   [data-look="brutal"] .card{border-left-width:2px !important}
 }
+
+/* =========================================================
+   MODO FOCO — edição de subtarefa no mobile
+   Evita o zoom automático do iOS (fonte <16px) e mantém a
+   etapa editada visível acima do teclado virtual.
+   ========================================================= */
+@media(max-width:640px){
+  .focus-sub [data-subedit]{font-size:16px}
+  .focus-sub [data-subedit]:focus{scroll-margin-block:16px}
+  .focus-sub .focus-play{width:44px;height:44px}
+}

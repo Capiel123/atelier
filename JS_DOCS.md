@@ -27,7 +27,7 @@ O JavaScript tem quatro arquivos centrais (`estado.js`, `logica.js`, `interface.
 - Energia/prioridade: `getTodayEnergy`, `setEnergy`, `computeTaskScore`, `scoreBreakdown`, `buildCtx`, `isStuck`, `isUrgentStuck`, `isOverEstimate`.
 - Vagas: `jobStage`, `jobScore`, `changeJobStage`, `recordJobInteraction`, `createFollowUpTask`, `jobStats`.
 - Contatos: `contactStatus`, `contactScore`, `logInteraction`, `snoozeContact`, `upcomingBirthdays`.
-- Timer: `timerElapsedSec`, `startTimer`, `pauseTimer`, `resumeTimer`, `advancePhase`, `stopTimer`, `beep`.
+- Timer: `timerElapsedSec`, `subElapsedSec`, `startTimer`, `pauseTimer`, `resumeTimer`, `advancePhase`, `startRest`, `completeRest`, `stopTimer`, `beep`.
 - Tarefas rápidas: `parseQuickLine`, `addQuick`, `addBulk`, `postponeTask`, `reorderTask`.
 - Busca e métricas: `globalSearch`, `calibrationStats`, `heatmapData`, `networkStats`, `xpProgression`.
 - Registros de trabalho e relatório: `workLogsForTask`, `saveWorkLog`, `projectNameById`, `reportWeekRange`, `buildWeeklyReport`, `weeklyReportMarkdown`.
@@ -86,7 +86,7 @@ A UI usa metadados como `data-p` (campo ligado a uma entidade) e `data-c` (confi
 
 ### Timer
 
-`startTimer()` registra tarefa/subtarefa, `startedAt`, acumulado e fase. O tempo decorrido é calculado a partir do timestamp atual; não depende apenas de um contador que soma a cada segundo. `advancePhase()` alterna foco/descanso e os fluxos de parada adicionam logs.
+`startTimer()` registra tarefa/subtarefa, `startedAt` (fase) e `subStartedAt` (segmento), acumulados e fase. O tempo decorrido é calculado a partir dos timestamps atuais; não depende de um contador que soma a cada segundo. `advancePhase()` conclui o foco e **pausa** no descanso sugerido (`startRest()` inicia curto/longo; `completeRest()` sugere voltar); os fluxos de parada adicionam logs.
 
 ### Importação
 

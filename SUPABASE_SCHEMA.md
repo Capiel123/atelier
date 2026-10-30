@@ -9,8 +9,9 @@
 |---|---|---|
 | 1 | `supabase/migrations/0001_schema.sql` | Tabelas, PKs, FKs compostas, índices, checks, trigger `set_server_updated_at`, comentários. |
 | 2 | `supabase/migrations/0002_rls.sql` | Habilita RLS e cria as políticas por operação. |
+| 3 | `supabase/migrations/0003_timer_sub_segment.sql` | `active_timer`: colunas `sub_started_at` e `sub_accumulated_seconds` (segmento da subtarefa no timer). |
 
-Aplicar sempre em ordem. As migrações usam `if not exists`, `or replace` e `drop ... if exists` para serem reexecutáveis sem duplicar.
+Aplicar sempre em ordem. As migrações usam `if not exists`, `or replace` e `drop ... if exists` para serem reexecutáveis sem duplicar. A `0003` foi aplicada em 2026-10-30 (colunas verificadas no SQL Editor); não altera RLS nem grants (colunas herdam o acesso de tabela).
 
 ## 2. Convenções do schema
 
@@ -66,7 +67,7 @@ FKs compostas `(user_id, project_id) → projects`, `(user_id, linked_task_id) �
 Índice `(user_id, date)`; índice **único parcial** `(user_id, task_id, date) where task_id is not null`.
 
 ### 3.12 `active_timer`
-`user_id` (PK) · `task_id` · `sub_id` · `started_at` · `accumulated_seconds` · `paused` · `target_min` · `phase` · `focus_min` · `rest_min` · `cycle_count` · `device_id` · `updated_at` · `client_updated_at`
+`user_id` (PK) · `task_id` · `sub_id` · `started_at` · `accumulated_seconds` · `sub_started_at` · `sub_accumulated_seconds` · `paused` · `target_min` · `phase` · `focus_min` · `rest_min` · `cycle_count` · `device_id` · `updated_at` · `client_updated_at`
 
 ## 4. Políticas RLS
 

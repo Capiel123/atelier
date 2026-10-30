@@ -353,14 +353,27 @@ document.addEventListener('click', ev => {
       const task = T(focusTaskId);
       if (!task) break;
       const firstPending = (task.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
+      const hadTimer = !!S.timer;
       startTimer(task.id, firstPending ? firstPending.id : null, focusTargetMin);
       renderFocus();
+      // Feedback de início: 1 beep + pulso curto (CSS desativa sob reduced-motion).
+      if (!hadTimer && S.timer && S.timer.targetMin > 0) {
+        beep();
+        const ft = document.getElementById('focusTime');
+        if (ft) {
+          ft.classList.remove('focus-starting');
+          void ft.offsetWidth;
+          ft.classList.add('focus-starting');
+          setTimeout(() => ft.classList.remove('focus-starting'), 650);
+        }
+      }
       return;
     }
     case 'focusPause': pauseTimer(); return;
     case 'focusResume': resumeTimer(); return;
     case 'focusSkip': advancePhase(); return;
-    case 'focusStop': stopTimer(); return;
+    case 'focusRest': startRest(btn.dataset.long === '1'); return;
+    case 'focusStop': stopTimer(); if (focusTaskId) renderFocus(); return;
     case 'focusCompleteYes': {
       document.getElementById('focusCompleteModal')?.remove();
       const ft = T(id);
@@ -378,6 +391,7 @@ document.addEventListener('click', ev => {
       const subId = btn.dataset.sub;
       if (!subId) break;
       if (S.timer && S.timer.taskId === task.id) {
+        if (S.timer.subId === subId) return; // já é a etapa ativa: não reinicia o segmento
         switchTimerSub(subId);
         renderFocus();
         toast('Etapa alterada');
@@ -557,13 +571,9 @@ document.addEventListener('change', ev => {
         sb.d = el.checked;
         if (sb.d) awardSubXp(t, sb);
         if (sb.d && S.timer && S.timer.taskId === t.id && S.timer.subId === sb.id) {
-          // registra o segmento na subtarefa atual antes de avançar
-          const elapsed = Math.round(timerElapsedSec() / 60);
-          if (elapsed > 0) recordTimerMinutes(t, elapsed, S.timer.subId, 'pomodoro', S.timer);
+          // conclui a subtarefa ativa: registra o segmento e avança para a próxima pendente
           const nextPending = activeSubs(t).filter(s => !s.d)[0];
-          S.timer.subId = nextPending ? nextPending.id : null;
-          S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.updatedAt = Date.now();
-          renderTimer();
+          switchTimerSub(nextPending ? nextPending.id : null);
         }
         touch(t);
         save();
@@ -667,7 +677,10 @@ document.addEventListener('keydown', ev => {
   if (ev.key === ' ' && focusTaskId) {
     ev.preventDefault();
     const task = T(focusTaskId);
-    if (S.timer && S.timer.taskId === focusTaskId) {if (S.timer.paused) resumeTimer(); else pauseTimer();}
+    if (S.timer && S.timer.taskId === focusTaskId) {
+      if (S.timer.phase === 'rest' && S.timer.paused) return; // descanso aguardando escolha/retorno
+      if (S.timer.paused) resumeTimer(); else pauseTimer();
+    }
     else if (task) {const firstPending = (task.subs||[]).filter(s => !s.d).sort((a,b) => (a.order||0)-(b.order||0))[0]; startTimer(task.id, firstPending ? firstPending.id : null, focusTargetMin); renderFocus();}
     return;
   }
@@ -736,6 +749,21 @@ document.addEventListener('blur', ev => {
   // Remove o prefixo visual "▶ " que aparece quando a subtarefa está rodando
   const newText = el.textContent.trim().replace(/^▶\s*/, '');
   if (newText && newText !== sb.t) {sb.t = newText; touch(t); save();}
+}, true);
+
+/* --- RENOMEAR SUBTAREFA NO FOCO: Enter confirma, Esc cancela --- */
+document.addEventListener('focusin', ev => {
+  const el = ev.target;
+  if (!el || !el.dataset || !el.dataset.subedit || !el.closest || !el.closest('#focusOverlay')) return;
+  el._origText = el.textContent;
+  // Mantém a etapa editada visível acima do teclado virtual sem mexer no timer.
+  if (el.scrollIntoView) setTimeout(() => { try { el.scrollIntoView({block: 'nearest'}); } catch (e) {} }, 60);
+});
+document.addEventListener('keydown', ev => {
+  const el = ev.target;
+  if (!el || !el.dataset || !el.dataset.subedit || !el.closest || !el.closest('#focusOverlay')) return;
+  if (ev.key === 'Enter') {ev.preventDefault(); el.blur();}
+  else if (ev.key === 'Escape') {ev.preventDefault(); if (el._origText != null) el.textContent = el._origText; el.blur();}
 }, true);
 
 /* --- MODAL DE INTERAÇÃO (precisa de listener dedicado, criado dinamicamente) --- */
@@ -904,5 +932,5 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
 /* --- TICKS DE FUNDO (atualizações periódicas) --- */
 setInterval(() => {if (S.timer) renderTimer();}, 500);                             // relógio do timer no topo
 setInterval(() => {const slot = currentEnergySlot(); if (slot !== lastSlot) {lastSlot = slot; if (S && S.cfg.autoPriority && tab === 'week') refreshTaskList();}}, 60000); // reordena quando muda o período do dia
-setInterval(() => {if (!S.timer || S.timer.paused || !S.timer.targetMin) return; if (timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase();}, 800); // troca de fase do pomodoro
+setInterval(() => {if (!S.timer || S.timer.paused || !S.timer.targetMin) return; if (S.timer.phase === 'focus' && timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase(); else if (S.timer.phase === 'rest' && timerElapsedSec() / 60 >= S.timer.targetMin) completeRest();}, 800); // foco conclui sozinho; descanso só sugere retorno
 setInterval(() => {if (focusTaskId) updateFocusTimer();}, 500);                    // anel do modo foco

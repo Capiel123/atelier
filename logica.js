@@ -197,11 +197,14 @@ function upcomingBirthdays(withinDays = 14) {const out = []; const today = new D
 /* --- TIMER --- */
 function tfnv(s) { var h = 0x811c9dc5; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; } return h.toString(36); }
 // Identidade determinística de um bloco de timer (idempotência dos logs entre
-// dispositivos e em repetições). Usa campos absolutos que sincronizam: a fase
-// começou em (startedAt - accumulated*1000) e o ciclo diferencia blocos do Pomodoro.
+// dispositivos e em repetições). A âncora é o INÍCIO DO SEGMENTO da subtarefa
+// (subStartedAt - subAccumulated*1000), não da fase — assim trocar de sub e
+// voltar não colide o id. Fallback para startedAt/accumulated (timers antigos).
 function timerBlockId(timer, taskId, subId) {
-  var phaseStart = Math.round(((timer && timer.startedAt) || Date.now()) - (((timer && timer.accumulated) || 0) * 1000));
-  return 'tmr_' + tfnv(String(taskId || '') + '|' + String(subId || '') + '|' + phaseStart + '|' + ((timer && timer.cycleCount) || 0));
+  var st = (timer && timer.subStartedAt != null) ? timer.subStartedAt : ((timer && timer.startedAt) || Date.now());
+  var acc = (timer && timer.subAccumulated != null) ? timer.subAccumulated : ((timer && timer.accumulated) || 0);
+  var segStart = Math.round(st - (acc * 1000));
+  return 'tmr_' + tfnv(String(taskId || '') + '|' + String(subId || '') + '|' + segStart + '|' + ((timer && timer.cycleCount) || 0));
 }
 // Divide [startMs, endMs) nas fronteiras de meia-noite local (datas corretas).
 function splitByLocalDay(startMs, endMs) {
@@ -236,35 +239,71 @@ function recordTimerMinutes(t, minutes, subId, note, timer) {
   touch(t);
 }
 function timerElapsedSec() {if (!S.timer) return 0; const acc = S.timer.accumulated || 0; const run = S.timer.startedAt ? (Date.now() - S.timer.startedAt) / 1000 : 0; return acc + run;}
-function startTimer(taskId, subId, targetMin) {if (S.timer) {toast('Timer já rodando', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 10, cycleCount: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
-function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulated = timerElapsedSec(); S.timer.startedAt = null; S.timer.paused = true; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('⏸ Pausado');}
-function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.paused = false; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
+// Tempo decorrido no SEGMENTO atual da subtarefa (quadrado + atribuição de minutos).
+// Congela durante o descanso (os minutos de foco já foram gravados ao concluir a fase).
+function subElapsedSec() {
+  if (!S.timer) return 0;
+  if (S.timer.phase === 'rest') return (S.timer.subAccumulated != null) ? S.timer.subAccumulated : (S.timer.accumulated || 0);
+  const acc = (S.timer.subAccumulated != null) ? S.timer.subAccumulated : (S.timer.accumulated || 0);
+  const st = (S.timer.subStartedAt != null) ? S.timer.subStartedAt : (S.timer.startedAt || null);
+  return acc + (st ? (Date.now() - st) / 1000 : 0);
+}
+function startTimer(taskId, subId, targetMin) {if (S.timer) {toast('Timer já rodando', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 5, cycleCount: 0, subStartedAt: Date.now(), subAccumulated: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
+function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulated = timerElapsedSec(); S.timer.subAccumulated = subElapsedSec(); S.timer.startedAt = null; S.timer.subStartedAt = null; S.timer.paused = true; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('⏸ Pausado');}
+function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.subStartedAt = Date.now(); S.timer.paused = false; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
 function advancePhase() {
   if (!S.timer) return;
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   if (S.timer.phase === 'focus') {
-    const el = Math.round(timerElapsedSec() / 60);
+    const segSec = subElapsedSec();
+    const el = Math.round(segSec / 60);
     if (t && el > 0) { recordTimerMinutes(t, el, S.timer.subId, 'pomodoro', S.timer); toast('+' + el + 'min de foco registrados'); }
-    S.timer.phase = 'rest'; S.timer.targetMin = S.timer.restMin || 10;
-    S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
+    // O descanso NÃO inicia sozinho: entra em "descanso sugerido" (pausado).
+    S.timer.phase = 'rest'; S.timer.targetMin = S.timer.restMin || S.cfg.brk || 5;
+    S.timer.accumulated = 0; S.timer.startedAt = null; S.timer.paused = true;
+    S.timer.subAccumulated = Math.round(segSec); S.timer.subStartedAt = null; // congela o quadrado
     S.timer.cycleCount = (S.timer.cycleCount || 0) + 1;
     beep(); setTimeout(beep, 220);
-    toast('✓ Foco concluído · descanso de ' + S.timer.targetMin + 'min');
+    toast('✓ Foco concluído · escolha o descanso');
   } else {
+    // descanso → foco (pular o descanso ou voltar ao foco)
     S.timer.phase = 'focus'; S.timer.targetMin = S.timer.focusMin || focusTargetMin;
     S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
+    S.timer.subAccumulated = 0; S.timer.subStartedAt = Date.now(); // quadrado recomeça
     beep();
-    toast('☀ Descanso acabou · de volta ao foco');
+    toast('☀ De volta ao foco');
   }
   S.timer.updatedAt = Date.now();
   save(); renderTimer();
   if (focusTaskId) {renderFocus(); const overlay = document.getElementById('focusOverlay'); if (overlay) {overlay.classList.remove('flash'); void overlay.offsetWidth; overlay.classList.add('flash'); setTimeout(() => overlay.classList.remove('flash'), 1250);}}
 }
+// Inicia o descanso escolhido (curto ou longo), só a partir do estado "descanso sugerido".
+function startRest(long) {
+  if (!S.timer || S.timer.phase !== 'rest' || !S.timer.paused) return;
+  S.timer.restMin = long ? (S.cfg.longBrk || 15) : (S.cfg.brk || 5);
+  S.timer.targetMin = S.timer.restMin;
+  S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
+  S.timer.updatedAt = Date.now();
+  beep(); save(); renderTimer();
+  if (focusTaskId) renderFocus();
+  toast('☕ Descanso de ' + S.timer.targetMin + 'min');
+}
+// Quando o descanso chega ao fim, para e sugere voltar ao foco (não inicia sozinho).
+function completeRest() {
+  if (!S.timer || S.timer.phase !== 'rest' || S.timer.paused) return;
+  S.timer.accumulated = (S.timer.targetMin || 0) * 60;
+  S.timer.startedAt = null; S.timer.paused = true;
+  S.timer.updatedAt = Date.now();
+  beep(); save(); renderTimer();
+  if (focusTaskId) renderFocus();
+  toast('☀ Descanso concluído');
+}
 function stopTimer(override) {
   if (!S.timer) return;
-  const elapsed = override != null ? override : Math.round(timerElapsedSec() / 60);
+  const elapsed = override != null ? override : Math.round(subElapsedSec() / 60);
   const t = S.tasks.find(x => x.id === S.timer.taskId);
-  if (t && elapsed > 0) { recordTimerMinutes(t, elapsed, S.timer.subId, '', S.timer); toast('+' + elapsed + 'min'); }
+  // No descanso, os minutos de foco já foram registrados ao concluir a fase.
+  if (t && elapsed > 0 && S.timer.phase !== 'rest') { recordTimerMinutes(t, elapsed, S.timer.subId, '', S.timer); toast('+' + elapsed + 'min'); }
   S.timerStoppedAt = Date.now();
   S.timer = null; save(); renderTimer();
   if (['week','skills','proj','stats'].includes(tab)) render();
@@ -295,14 +334,15 @@ function moveSubTo(t, subId, toIndex) {
   touch(t); save(); render();
 }
 // Troca a subtarefa em foco, registrando o segmento atual na subtarefa anterior (atribuição por sub).
+// NÃO zera startedAt/accumulated: o círculo (fase) continua; só o quadrado (segmento) reinicia.
 function switchTimerSub(newSubId) {
   if (!S.timer) return;
   const t = S.tasks.find(x => x.id === S.timer.taskId);
-  const elapsed = Math.round(timerElapsedSec() / 60);
-  if (t && elapsed > 0) recordTimerMinutes(t, elapsed, S.timer.subId, 'pomodoro', S.timer);
+  const elapsed = Math.round(subElapsedSec() / 60);
+  if (t && elapsed > 0 && S.timer.phase !== 'rest') recordTimerMinutes(t, elapsed, S.timer.subId, 'pomodoro', S.timer);
   S.timer.subId = newSubId;
-  S.timer.accumulated = 0;
-  S.timer.startedAt = Date.now();
+  S.timer.subAccumulated = 0;
+  S.timer.subStartedAt = (S.timer.phase === 'rest') ? null : Date.now();
   S.timer.updatedAt = Date.now();
   save(); renderTimer();
 }
