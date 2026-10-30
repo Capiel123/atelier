@@ -9,7 +9,7 @@
 // o navegador de que existe algo novo para baixar.
 // 💡 Regra prática: use a data de hoje + um sufixo se publicar
 // mais de uma vez no mesmo dia.
-const CACHE_VERSION = 'atelier-2026-10-30-v64';
+const CACHE_VERSION = 'atelier-2026-10-30-v65';
 
 // Dois caches separados:
 // - SHELL: arquivos fixos do app (HTML, CSS, JS) baixados na instalação
@@ -58,7 +58,11 @@ self.addEventListener('install', (event) => {
       // 💡 Isso evita que UM arquivo com nome errado quebre a instalação inteira.
       return Promise.all(
         SHELL_ASSETS.map(url =>
-          cache.add(url).catch(err => console.warn('Falha ao cachear:', url, err))
+          // cache:'reload' ignora o cache HTTP do navegador no precache — sem isso,
+          // um deploy recente pode ser cacheado com os arquivos antigos.
+          fetch(url, { cache: 'reload' })
+            .then(res => { if (res && res.ok) return cache.put(url, res); console.warn('Falha ao cachear:', url, res && res.status); })
+            .catch(err => console.warn('Falha ao cachear:', url, err))
         )
       );
     })

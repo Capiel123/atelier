@@ -879,7 +879,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   if (!isHttp || !('serviceWorker' in navigator)) return;
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js')
+    navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' })
       .then((reg) => {
         reg.update().catch(() => {});
         setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000); // verifica updates 1x/hora
