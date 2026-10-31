@@ -401,6 +401,9 @@
     var localAccent = (S.cfg && S.cfg.accentColor != null) ? S.cfg.accentColor : null;
     S.cfg = cfg; S.energy = data.energy || {}; S.xpPool = numVal(data.xpPool, 0);
     S.commands = Array.isArray(data.commands) ? data.commands : [];
+    // Fase 4: S.pomodoros viaja no blob de user_settings (JSONB), sem tabela nova.
+    // Se o remoto ainda não tem o campo (cliente antigo), preserva o local.
+    if (Array.isArray(data.pomodoros)) S.pomodoros = data.pomodoros;
     S.cfg.theme = localTheme;
     S.cfg.accentColor = localAccent;
     localStorage.setItem(SETTINGS_CU_KEY, String(cu));

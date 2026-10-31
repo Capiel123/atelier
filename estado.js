@@ -220,6 +220,7 @@ function applyTheme() {
 
 /* --- MODELOS (fábricas de objetos) --- */
 function mkTask(t, o={}) {return {id: uid(), t, desc:'', pr:1, est:0, spent:0, day:null, order:0, next:false, done:false, doneAt:null, area:'Carreira', skills:[], proj:'', due:'', time:'', section:'', subs:[], logs:[], xpClaimed:false, type:'', color:'', labels:[], createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0, lastPostponedAt: null, ...o};}
+function mkPomodoro(o={}) {return {id: o.id || uid(), date: o.date || iso(new Date()), ts: o.ts || Date.now(), targetMin: o.targetMin ?? null, taskId: o.taskId || null, subId: o.subId || null};}
 function mkSkill(n, color) {return {id: uid(), n, color: color || '#9a94a3', archived:false, xp:0, order:0, deletedAt: null, createdAt: Date.now(), updatedAt: Date.now()};}
 function mkContact(o={}) {return {id: uid(), n:'', type:'pro', cat:'Prospect', where:'', url:'', role:'', context:'', interests:'', notes:'', priority:1, lastContact:'', nextContact:'', nextAction:'', cadence:30, archived:false, lastConversation:'', waitingFor:false, waitingSince:null, tags:[], birthday:'', importantDates:[], snoozedUntil:'', snoozeReason:'', interactions:[], sentCount:0, receivedCount:0, clientId:null, deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
 function mkCommand(n, cat, cmd, example='') {return {id: uid(), n, cat, cmd, example, order:0, updatedAt: Date.now()};}
@@ -264,7 +265,7 @@ function seed() {
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
     goals: [mkGoal({id:'g1', t:'2-3 clientes recorrentes'})],
-    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, timerStoppedAt: 0, clearedDone: {}, workLogs: [],
+    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, timerStoppedAt: 0, clearedDone: {}, workLogs: [], pomodoros: [],
     _seedId: uid(),
     lastModified: Date.now()
   };
@@ -295,6 +296,9 @@ function migrate(raw) {
   s.cfg.sectionsCollapsed = s.cfg.sectionsCollapsed || {commitment:false, work:false, personal:false, done:true};
   if (s.cfg.sectionsCollapsed.done === undefined) s.cfg.sectionsCollapsed.done = true;
   s.timer = s.timer || null;
+  // Fase 4: S.pomodoros é a fonte de verdade do KPI. NÃO reconstruir de t.logs
+  // (histórico antigo contaminado); se já existe, preservar como está.
+  if (!Array.isArray(s.pomodoros)) s.pomodoros = [];
 
   const isV1 = !s.v || s.v < 2, isV2 = !s.v || s.v < 3, isV3 = !s.v || s.v < 4;
   const isV4 = !s.v || s.v < 5, isV5 = !s.v || s.v < 6;

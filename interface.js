@@ -812,9 +812,9 @@ function viewStats() {
   const xp = xpProgression();
   const allLogs = S.tasks.flatMap(t => (t.logs || []).map(l => ({...l, taskId: t.id})));
   const weekLogs = allLogs.filter(l => l.end && iso(new Date(l.end)) >= weekAgoStr);
-  // "Pomodoros hoje": logs de foco concluído (note 'pomodoro') com end hoje.
-  // Paradas manuais (note '') e logs sem end não contam.
-  const pomodorosToday = allLogs.filter(l => l.end && l.note === 'pomodoro' && iso(new Date(l.end)) === td).length;
+  // "Pomodoros hoje": fonte de verdade é S.pomodoros (Fase 4).
+  // t.logs mantém note:'pomodoro' apenas como espelho; NÃO há fallback para logs.
+  const pomodorosToday = (S.pomodoros || []).filter(p => p.date === td).length;
   const weekMin = weekLogs.reduce((a,l) => a + (+l.minutes||0), 0);
   const weekTasksDone = S.tasks.filter(t => t.done && t.doneAt && iso(new Date(t.doneAt)) >= weekAgoStr).length;
   const totalTasks = S.tasks.length; const doneTasks = S.tasks.filter(t => t.done).length;
@@ -1187,33 +1187,34 @@ function renderFocus() {
   let el = document.getElementById('focusOverlay');
   if (!el) {el = document.createElement('div'); el.id = 'focusOverlay'; el.className = 'focus-overlay'; document.body.appendChild(el);}
 
-  const running = S.timer && S.timer.taskId === t.id;
-  const isPomodoro = running && S.timer.phase && S.timer.targetMin;
-  const phase = (running && S.timer.phase) ? S.timer.phase : 'focus';
-  const isPaused = running && S.timer.paused;
-  const restPending = running && phase === 'rest' && isPaused && (S.timer.accumulated || 0) === 0;
-  const restDone = running && phase === 'rest' && isPaused && (S.timer.accumulated || 0) > 0;
-  const hasTarget = running && S.timer.targetMin;
-  const elapsedSec = running ? timerElapsedSec() : 0;
+  const timerOnThisTask = S.timer && S.timer.taskId === t.id;
+  const timerRunning = S.timer && !S.timer.paused;
+  const isPomodoro = timerRunning && S.timer.phase === 'focus' && S.timer.targetMin;
+  const cycleCount = (timerRunning && S.timer.cycleCount) || 0;
+  const phase = (timerOnThisTask && S.timer.phase) ? S.timer.phase : 'focus';
+  const isPaused = timerOnThisTask && S.timer.paused;
+  const restPending = timerOnThisTask && phase === 'rest' && isPaused && (S.timer.accumulated || 0) === 0;
+  const restDone = timerOnThisTask && phase === 'rest' && isPaused && (S.timer.accumulated || 0) > 0;
+  const hasTarget = timerOnThisTask && S.timer.targetMin;
+  const elapsedSec = timerOnThisTask ? timerElapsedSec() : 0;
   const targetMin = hasTarget ? S.timer.targetMin : focusTargetMin;
   const remainingSec = hasTarget ? Math.max(0, targetMin * 60 - elapsedSec) : targetMin * 60;
   const progress = (hasTarget && !restPending && !restDone) ? Math.min(1, (elapsedSec/60) / targetMin) : 0;
   const circ = 2 * Math.PI * 100;
   const offset = circ * (1 - progress);
-  const timeStr = (restPending || restDone) ? '✓' : (running && !hasTarget ? fmtClock(elapsedSec) : fmtClock(running ? remainingSec : targetMin * 60));
-  const spentMin = running ? Math.floor(subElapsedSec() / 60) : 0;
-  const cycleCount = (running && S.timer.cycleCount) || 0;
+  const timeStr = (restPending || restDone) ? '✓' : (!timerOnThisTask ? fmtClock(targetMin * 60) : (!hasTarget ? fmtClock(elapsedSec) : fmtClock(remainingSec)));
+  const spentMin = timerOnThisTask ? Math.floor(subElapsedSec() / 60) : 0;
   const durations = getFocusDurations();
-  const runningSubId = running ? S.timer.subId : null;
+  const runningSubId = timerOnThisTask ? S.timer.subId : null;
   const runningSub = runningSubId ? t.subs.find(s => s.id === runningSubId) : null;
   const firstPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
   const shortRest = S.cfg.brk || 5;
   const longRest = S.cfg.longBrk || 15;
   const recommendLong = (cycleCount % 4) === 0;
 
-  const ringColor = !running ? 'var(--bu)' : (phase === 'rest' ? 'var(--ok)' : (isPaused ? 'var(--wr)' : 'var(--ac)'));
+  const ringColor = !timerOnThisTask ? 'var(--bu)' : (phase === 'rest' ? 'var(--ok)' : (isPaused ? 'var(--wr)' : 'var(--ac)'));
   let eyebrow;
-  if (!running) eyebrow = 'Pronto para focar';
+  if (!timerOnThisTask) eyebrow = 'Pronto para focar';
   else if (restDone) eyebrow = 'Descanso concluído';
   else if (restPending) eyebrow = 'Foco concluído';
   else if (runningSub) eyebrow = (isPaused ? 'Pausado · ' : 'Sessão · ') + runningSub.t.slice(0, 30);
@@ -1222,31 +1223,33 @@ function renderFocus() {
   else eyebrow = 'Foco · ciclo ' + (cycleCount + 1);
 
   let primaryBtn;
-  if (!running) {
+  if (!timerOnThisTask) {
     const label = `▶ Iniciar ${targetMin}min`;
     primaryBtn = `<button data-a="focusStart" class="focus-btn start">${label}</button>`;
   }
   else if (isPaused) primaryBtn = `<button data-a="focusResume" class="focus-btn start">▶ Retomar</button>`;
   else primaryBtn = `<button data-a="focusPause" class="focus-btn pause">⏸ Pausar</button>`;
 
-  const skipBtn = (running && isPomodoro) ? `<button data-a="focusSkip" class="focus-btn ghost">⏭ Pular</button>` : '';
-  const durationsHtml = !running ? `<div class="focus-durations">${durations.map(m => `<button data-a="focusSetTarget" data-m="${m}" class="${focusTargetMin===m?'on':''}">${m}min</button>`).join('')}</div>` : '';
-  const cycleDots = isPomodoro && cycleCount > 0 ? `<div style="font-size:14px;color:var(--mu);margin-top:4px;letter-spacing:2px">${'🍅'.repeat(Math.min(cycleCount, 8))}</div>` : '';
+  const skipBtn = (timerOnThisTask && isPomodoro) ? `<button data-a="focusSkip" class="focus-btn ghost">⏭ Pular</button>` : '';
+  const durationsHtml = !timerOnThisTask ? `<div class="focus-durations">${durations.map(m => `<button data-a="focusSetTarget" data-m="${m}" class="${focusTargetMin===m?'on':''}">${m}min</button>`).join('')}</div>` : '';
+  const cycleDots = timerRunning && cycleCount > 0 ? `<div style="font-size:14px;color:var(--mu);margin-top:4px;letter-spacing:2px">${'🍅'.repeat(Math.min(cycleCount, 8))}</div>` : '';
 
   let phaseSubtitle;
   if (restPending) phaseSubtitle = `Foco concluído · descanso ${recommendLong ? longRest : shortRest}min sugerido`;
   else if (restDone) phaseSubtitle = 'Descanso concluído';
-  else if (isPomodoro) phaseSubtitle = (phase === 'rest' ? `Descanso · ${targetMin}min` : `Foco · ${targetMin}min${firstPending && !running ? ' · inicia em: '+firstPending.t.slice(0,20) : ''}`);
-  else phaseSubtitle = (running ? 'Sessão livre' : `Bloco de ${targetMin}min`);
+  else if (!timerOnThisTask) phaseSubtitle = `Bloco de ${targetMin}min`;
+  else if (phase === 'rest' && S.timer.targetMin) phaseSubtitle = `Descanso · ${S.timer.targetMin}min`;
+  else if (S.timer.targetMin) phaseSubtitle = `Foco · ${S.timer.targetMin}min`;
+  else phaseSubtitle = 'Sessão livre';
 
-  const hint = firstPending && !running ? 'Iniciando na primeira subtarefa pendente' : '';
+  const hint = firstPending && !timerOnThisTask ? 'Iniciando na primeira subtarefa pendente' : '';
 
   const subs = activeSubs(t);
   const subsHtml = `
     <div class="focus-subs">
       <div class="focus-subs-title">Subtarefas (${subs.filter(s=>s.d).length}/${subs.length})</div>
       ${subs.map((s) => {
-        const isRun = running && runningSubId === s.id;
+        const isRun = timerOnThisTask && runningSubId === s.id;
         const origIdx = (t.subs||[]).findIndex(x => x.id === s.id);
         return `<div class="focus-sub${isRun ? ' run' : ''}">
           <input type="checkbox" data-a="focusSub" data-sub="${s.id}" data-i="${origIdx}" ${s.d ? 'checked' : ''} title="${s.d ? 'Marcar como pendente' : 'Concluir subtarefa'}">
@@ -1258,7 +1261,30 @@ function renderFocus() {
     </div>`;
 
   // Quadrado: tempo no segmento atual (congela no descanso, recomeça ao trocar de sub/foco).
-  const spentHtml = running ? `<div class="focus-spent" id="focusSpent" data-m="${spentMin}">${fmtMin(spentMin)}</div>` : '';
+  // Com o timer em outra tarefa, mostra "—": o overlay não reflete o timer de A.
+  const spentHtml = timerOnThisTask
+    ? `<div class="focus-spent" id="focusSpent" data-m="${spentMin}">${fmtMin(spentMin)}</div>`
+    : (S.timer ? '<div class="focus-spent">—</div>' : '');
+
+  // Aviso H1: timer em OUTRA tarefa (rodando ou pausado). Tempo sempre no mesmo
+  // significado: com targetMin mostra o restante; sem targetMin, o decorrido.
+  let elsewhereHtml = '';
+  if (S.timer && S.timer.taskId !== t.id) {
+    const tt = S.tasks.find(x => x.id === S.timer.taskId);
+    const sub = S.timer.subId && tt ? (tt.subs || []).find(s => s.id === S.timer.subId) : null;
+    const lbl = (tt && tt.t) || 'outra tarefa';
+    const here = String(t.t || '');
+    const cut = (v, n) => v.length > n ? v.slice(0, n - 1) + '…' : v;
+    const secs = S.timer.targetMin ? Math.max(0, S.timer.targetMin * 60 - timerElapsedSec()) : timerElapsedSec();
+    const what = (S.timer.paused ? '⏸ Timer pausado em: ' : '⏱ Timer ativo em: ') + lbl + (sub ? ' · ' + sub.t : '') + ' · ' + fmtClock(secs);
+    elsewhereHtml = `<div class="focus-elsewhere" style="margin:2px 0 10px;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s1);font-size:12px;color:var(--tx);text-align:left">
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(what)}">${esc(what)}</div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button data-a="focusGoToActiveTimer" class="focus-btn ghost">Voltar para ${esc(cut(lbl, 18))}</button>
+        <button data-a="focusStopAndStartHere" class="focus-btn ghost">Parar ${esc(cut(lbl, 18))} e iniciar ${esc(cut(here, 18))}</button>
+      </div>
+    </div>`;
+  }
 
   let restChoiceHtml = '';
   if (restPending) {
@@ -1290,6 +1316,7 @@ function renderFocus() {
     <div class="focus-content" data-phase="${phase}">
       <button class="focus-close" data-a="closeFocus">✕</button>
       <div class="focus-eyebrow" data-phase="${phase}">${esc(eyebrow)}</div>
+      ${elsewhereHtml}
       <h1 class="focus-title">${esc(t.t)}</h1>
       <div class="focus-timer-wrap">
         <svg class="focus-circle" viewBox="0 0 240 240">

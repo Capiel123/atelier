@@ -248,21 +248,31 @@ function subElapsedSec() {
   const st = (S.timer.subStartedAt != null) ? S.timer.subStartedAt : (S.timer.startedAt || null);
   return acc + (st ? (Date.now() - st) / 1000 : 0);
 }
-function startTimer(taskId, subId, targetMin) {if (S.timer) {toast('Timer já rodando', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 5, cycleCount: 0, subStartedAt: Date.now(), subAccumulated: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
+function startTimer(taskId, subId, targetMin) {if (S.timer) {if (S.timer.taskId === taskId) toast('Timer já rodando', true); else if (S.timer.paused) toast('Timer pausado em outra tarefa. Pare-o antes de iniciar esta.', true); else toast('Timer ativo em outra tarefa. Pare-o antes de iniciar esta.', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 5, cycleCount: 0, subStartedAt: Date.now(), subAccumulated: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
 function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulated = timerElapsedSec(); S.timer.subAccumulated = subElapsedSec(); S.timer.startedAt = null; S.timer.subStartedAt = null; S.timer.paused = true; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('⏸ Pausado');}
 function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.subStartedAt = Date.now(); S.timer.paused = false; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
-function advancePhase() {
+function advancePhase(isNatural = true) {
   if (!S.timer) return;
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   if (S.timer.phase === 'focus') {
     const segSec = subElapsedSec();
     const el = Math.round(segSec / 60);
-    if (t && el > 0) { recordTimerMinutes(t, el, S.timer.subId, 'pomodoro', S.timer); toast('+' + el + 'min de foco registrados'); }
+    if (t && el > 0) { recordTimerMinutes(t, el, S.timer.subId, isNatural ? 'pomodoro' : '', S.timer); toast('+' + el + 'min de foco registrados'); }
+    // Fase 4: pomodoro concluído naturalmente entra em S.pomodoros (fonte do KPI).
+    // Idempotência por id; skip preserva note:'' em t.logs e NÃO cria pomodoro.
+    if (isNatural) {
+      const pomTs = Date.now();
+      const pomId = 'pom_' + tfnv(String(S.timer.taskId || '') + '|' + String(S.timer.targetMin || '') + '|' + pomTs);
+      if (!Array.isArray(S.pomodoros)) S.pomodoros = [];
+      if (!S.pomodoros.some(p => p.id === pomId)) {
+        S.pomodoros.push(mkPomodoro({ id: pomId, date: iso(new Date(pomTs)), ts: pomTs, targetMin: S.timer.targetMin, taskId: S.timer.taskId || null, subId: S.timer.subId || null }));
+      }
+    }
     // O descanso NÃO inicia sozinho: entra em "descanso sugerido" (pausado).
     S.timer.phase = 'rest'; S.timer.targetMin = S.timer.restMin || S.cfg.brk || 5;
     S.timer.accumulated = 0; S.timer.startedAt = null; S.timer.paused = true;
     S.timer.subAccumulated = Math.round(segSec); S.timer.subStartedAt = null; // congela o quadrado
-    S.timer.cycleCount = (S.timer.cycleCount || 0) + 1;
+    if (isNatural) S.timer.cycleCount = (S.timer.cycleCount || 0) + 1;
     beep(); setTimeout(beep, 220);
     toast('✓ Foco concluído · escolha o descanso');
   } else {
@@ -339,7 +349,7 @@ function switchTimerSub(newSubId) {
   if (!S.timer) return;
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   const elapsed = Math.round(subElapsedSec() / 60);
-  if (t && elapsed > 0 && S.timer.phase !== 'rest') recordTimerMinutes(t, elapsed, S.timer.subId, 'pomodoro', S.timer);
+  if (t && elapsed > 0 && S.timer.phase !== 'rest') recordTimerMinutes(t, elapsed, S.timer.subId, '', S.timer);
   S.timer.subId = newSubId;
   S.timer.subAccumulated = 0;
   S.timer.subStartedAt = (S.timer.phase === 'rest') ? null : Date.now();

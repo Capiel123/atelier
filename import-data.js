@@ -149,7 +149,7 @@
     var tables = {};
     tables.user_settings = [{
       user_id: uid,
-      data: { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands) },
+      data: { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands), pomodoros: arr(S.pomodoros) },
       client_updated_at: int(S.lastModified, 0)
     }];
     tables.labels = arr(S.labels).map(function (l) { return label(l, uid); });
@@ -250,8 +250,8 @@
       if (table === 'work_logs') return workLog(entity, uid);
       return null;
     },
-    settingsPayload: function (S) { return { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands) }; },
-    settingsRow: function (S, uid) { return { user_id: uid, data: { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands) }, client_updated_at: int(S.lastModified, 0) }; },
+    settingsPayload: function (S) { return { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands), pomodoros: arr(S.pomodoros) }; },
+    settingsRow: function (S, uid) { return { user_id: uid, data: { cfg: cfgForImport(S.cfg), energy: (S.energy || {}), xpPool: int(S.xpPool, 0), commands: arr(S.commands), pomodoros: arr(S.pomodoros) }, client_updated_at: int(S.lastModified, 0) }; },
     timerPayload: timerPayload,
     timerRow: timerRow
   };

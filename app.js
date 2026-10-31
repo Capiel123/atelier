@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','toggleSection','resetXp']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
 
 /* --- RASTREAR <details> ABERTOS (para persistir após render) --- */
 // 💡 Sem isso, cada re-render fecharia o painel "Editar" que o usuário abriu.
@@ -371,7 +371,27 @@ document.addEventListener('click', ev => {
     }
     case 'focusPause': pauseTimer(); return;
     case 'focusResume': resumeTimer(); return;
-    case 'focusSkip': advancePhase(); return;
+    case 'focusGoToActiveTimer': if (S.timer) openFocus(S.timer.taskId); return;
+    case 'focusStopAndStartHere': {
+      const task = T(focusTaskId);
+      if (!task) break;
+      stopTimer();
+      const firstPending = (task.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
+      startTimer(task.id, firstPending ? firstPending.id : null, focusTargetMin);
+      renderFocus();
+      if (S.timer && S.timer.targetMin > 0) {
+        beep();
+        const ft = document.getElementById('focusTime');
+        if (ft) {
+          ft.classList.remove('focus-starting');
+          void ft.offsetWidth;
+          ft.classList.add('focus-starting');
+          setTimeout(() => ft.classList.remove('focus-starting'), 650);
+        }
+      }
+      return;
+    }
+    case 'focusSkip': advancePhase(false); return;
     case 'focusRest': startRest(btn.dataset.long === '1'); return;
     case 'focusStop': stopTimer(); if (focusTaskId) renderFocus(); return;
     case 'focusCompleteYes': {
@@ -932,5 +952,5 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
 /* --- TICKS DE FUNDO (atualizações periódicas) --- */
 setInterval(() => {if (S.timer) renderTimer();}, 500);                             // relógio do timer no topo
 setInterval(() => {const slot = currentEnergySlot(); if (slot !== lastSlot) {lastSlot = slot; if (S && S.cfg.autoPriority && tab === 'week') refreshTaskList();}}, 60000); // reordena quando muda o período do dia
-setInterval(() => {if (!S.timer || S.timer.paused || !S.timer.targetMin) return; if (S.timer.phase === 'focus' && timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase(); else if (S.timer.phase === 'rest' && timerElapsedSec() / 60 >= S.timer.targetMin) completeRest();}, 800); // foco conclui sozinho; descanso só sugere retorno
+setInterval(() => {if (!S.timer || S.timer.paused || !S.timer.targetMin) return; if (S.timer.phase === 'focus' && timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase(true); else if (S.timer.phase === 'rest' && timerElapsedSec() / 60 >= S.timer.targetMin) completeRest();}, 800); // foco conclui sozinho; descanso só sugere retorno
 setInterval(() => {if (focusTaskId) updateFocusTimer();}, 500);                    // anel do modo foco
