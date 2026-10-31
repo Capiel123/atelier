@@ -130,6 +130,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(min-width:641px){
   .week-toggle-btn{display:none!important}
   .week-collapsible--hidden{display:block!important}
+  /* Seletor de energia da Semana só no mobile (dentro do recolhível) */
+  .week-collapsible > .energy-row{display:none!important}
   /* Filtros e Auto ficam no tasks-header no desktop;
      a .week-controls-row fica visível mas compacta */
   .week-controls-row{margin-bottom:6px}

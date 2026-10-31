@@ -60,8 +60,11 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .week-summary-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .week-summary-day .th-day{font-size:17px;font-weight:700;color:var(--ac);text-transform:capitalize}
 
-/* Sem data-theme no DOM: o Cromo é o único tema com bg #050506 no meta theme-color. */
-:root:has(meta[name="theme-color"][content="#050506"]) .th-day{font-family:var(--font-display)}
+/* A fonte de display (Grenze) é exclusiva do wordmark (.logo-text).
+   Títulos de conteúdo, inclusive o resumo da Semana no Cromo, usam a fonte de leitura. */
+.week-summary-top,
+.week-summary-top .th-day,
+.week-summary-top .th-date{font-family:var(--font-body,'DM Sans',system-ui,sans-serif)}
 .week-summary-day .th-date{color:var(--mu);font-size:11px;margin-left:6px}
 .week-summary-card .th-stats{display:flex;gap:6px;font-size:11px;color:var(--mu);flex-wrap:wrap;justify-content:flex-end}
 .week-summary-card .th-stats b{color:var(--tx);font-variant-numeric:tabular-nums}

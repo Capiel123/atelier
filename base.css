@@ -54,6 +54,7 @@
   --noise-opacity:0;
   --fab-bg:color-mix(in srgb,var(--bg) 86%,var(--s2));
   --fab-border:var(--ac);
+  --font-body:'DM Sans',system-ui,sans-serif;
   --font-display:'DM Sans',system-ui,sans-serif;
   --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   box-sizing:border-box;
@@ -66,7 +67,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 
 /* --- ESTILO GLOBAL DO CORPO --- */
-body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 'DM Sans',system-ui,sans-serif;transition:background .3s ease;isolation:isolate}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 var(--font-body,'DM Sans',system-ui,sans-serif);transition:background .3s ease;isolation:isolate}
 
 /* Ruído de fundo (Etapa 6).
    Fica numa camada fixa atrás do conteúdo: z-index:-1 dentro do stacking
