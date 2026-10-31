@@ -23,6 +23,9 @@ document.addEventListener('click', ev => {
   if (ev.target.classList.contains('shortcuts-modal')) {ev.target.remove(); return;}
   if (ev.target.classList.contains('more-sheet')) {hideMoreSheet(); return;}
 
+  // Inputs de edição inline (título/estimativa) não podem expandir o card.
+  if (ev.target.closest && ev.target.closest('input.inline-edit, textarea.inline-edit')) return;
+
   const btn = ev.target.closest('[data-a]');
   if (!btn || btn.tagName === 'INPUT' || btn.tagName === 'SELECT') return;
   const a = btn.dataset.a; const id = btn.dataset.id; const i = btn.dataset.i; const sub = btn.dataset.sub;
@@ -152,7 +155,7 @@ document.addEventListener('click', ev => {
       if (!id) break;
       selectedTaskId = id;
       if (expandedTasks.has(id)) expandedTasks.delete(id);
-      else expandedTasks.add(id);
+      else {expandedTasks.add(id); subsCollapsed.delete(id);}
       if (tab === 'q') {
         const ql = document.getElementById('queueList');
         if (ql) ql.innerHTML = dayTasks(null).length ? dayTasks(null).map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>';
@@ -175,8 +178,8 @@ document.addEventListener('click', ev => {
     case 'expandTask': {
       if (!id) break;
       if (expandedTasks.has(id)) expandedTasks.delete(id);
-      else expandedTasks.add(id);
-      refreshTaskList();
+      else {expandedTasks.add(id); subsCollapsed.delete(id);}
+      if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
       return;
     }
     case 'selectTask': {
@@ -185,18 +188,63 @@ document.addEventListener('click', ev => {
       refreshTaskList();
       return;
     }
+    case 'editInline': {
+      if (!id) return;
+      const kind = btn.dataset.kind === 'est' ? 'est' : 'title';
+      // Reconsulta o card vivo: um render anterior pode ter substituído o botão.
+      const card = document.querySelector('[data-card="' + id + '"]');
+      if (!card) return;
+      const target = kind === 'title' ? card.querySelector('.tt-title-text') : card.querySelector('.tm-est');
+      if (target) startInlineEdit(kind, id, target);
+      return;
+    }
+    case 'openTaskDetails': {
+      if (!id) return;
+      // No estado 2 (subs recolhidas) os detalhes não são renderizados: reabre
+      // a lista e o formulário antes de localizar o <details>.
+      if (subsCollapsed.has(id)) {
+        subsCollapsed.delete(id);
+        if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
+      }
+      const det = document.querySelector(`details[data-eid="${id}"]`);
+      if (!det) return;
+      document.querySelectorAll('.act-menu[open]').forEach(m => {m.open = false;});
+      det.open = true;
+      openEdits.add(id);
+      det.scrollIntoView({behavior:'smooth', block:'nearest'});
+      return;
+    }
+    case 'showAllSubs': {
+      if (!id) break;
+      subsShowAll.add(id);
+      if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
+      return;
+    }
+    case 'hideAllSubs': {
+      if (!id) break;
+      subsShowAll.delete(id);
+      if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
+      return;
+    }
+    case 'toggleSubs': {
+      if (!id) break;
+      if (subsCollapsed.has(id)) subsCollapsed.delete(id);
+      else subsCollapsed.add(id);
+      if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
+      return;
+    }
     case 'expandSubs': {
       if (!id) break;
       expandedSubs.add(id);
       subsCollapsed.delete(id);
-      refreshTaskList();
+      if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
       return;
     }
       case 'collapseSubs': {
       if (!id) break;
       subsCollapsed.add(id);
       expandedSubs.delete(id);
-      refreshTaskList();
+      if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
       return;
     }
     case 'collapseCard': {
@@ -204,13 +252,15 @@ document.addEventListener('click', ev => {
       expandedTasks.delete(id);
       expandedSubs.delete(id);
       subsCollapsed.add(id);
-      refreshTaskList();
+      subsShowAll.delete(id);
+      if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
       return;
     }
     case 'expandAll': {      forcedCompact = false;
       expandedTasks.clear();
       expandedSubs.clear();
       subsCollapsed.clear();
+      subsShowAll.clear();
       render();
       return;
     }
@@ -219,6 +269,7 @@ document.addEventListener('click', ev => {
       expandedTasks.clear();
       expandedSubs.clear();
       subsCollapsed.clear();
+      subsShowAll.clear();
       render();
       return;
     }
@@ -322,7 +373,7 @@ document.addEventListener('click', ev => {
     case 'startSubTimer': startTimer(t.id, btn.dataset.sub, S.cfg.defaultFocus || 25); return;
     case 'stopTimer': stopTimer(); return;
     case 'setnext': if (!t) break; if (t.next) {t.next = false; touch(t);} else {S.tasks.forEach(x => {if (x.next) {x.next = false; touch(x);}}); t.next = true; touch(t); toast('⭐');} break;
-    case 'moveUp': case 'moveDown': if (!t) break; reorderTask(t, a === 'moveUp' ? -1 : 1); break;
+    case 'moveUp': case 'moveDown': if (!t) break; reorderTask(t, a === 'moveUp' ? -1 : 1); return;
     case 'setTaskColor': if (!t) break; t.color = btn.dataset.color || ''; touch(t); break;
     case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: t.subs.map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
     case 'del': if (!t) break; S.tasks = S.tasks.filter(x => x.id !== id); break;
@@ -655,6 +706,15 @@ document.addEventListener('input', ev => {
   if (ev.target.id && ev.target.id.startsWith('contactSearch_')) {const type = ev.target.id.replace('contactSearch_',''); contactFilterState[type].text = ev.target.value; clearTimeout(searchDebounce); searchDebounce = setTimeout(() => {render(); const inp = document.getElementById('contactSearch_' + type); if (inp) {inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);}}, 200);}
 });
 
+/* --- PILLS: preserva o grupo "+ Editar" aberto entre renders --- */
+document.addEventListener('toggle', ev => {
+  const d = ev.target;
+  if (!d || !d.matches || !d.matches('details.pill-more')) return;
+  const key = d.dataset.pillGroup;
+  if (!key) return;
+  if (d.open) openPillGroups.add(key); else openPillGroups.delete(key);
+}, true);
+
 /* --- ENTER (adicionar rápido) --- */
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Enter') return;
@@ -668,7 +728,27 @@ document.addEventListener('keydown', ev => {
   if (el.id === 'qa') {if (el.value.trim()) {addQuick(dv(el.dataset.d), el.value); el.value = ''; save(); render();} ev.preventDefault();}
   else if (el.id === 'qaJob') {if (el.value.trim()) {const job = parseJobLine(el.value); if (job) S.applications.push(job); el.value = ''; save(); render();} ev.preventDefault();}
   else if (el.id === 'clientN') {if (el.value.trim()) {snapshot(); S.clients.push(mkClient({n: el.value.trim()})); el.value=''; save(); render();} ev.preventDefault();}
-  else if (el.dataset.a === 'sadd' && el.value.trim()) {const t = T(el.dataset.id); if (t) {t.subs = t.subs || []; t.subs.push({id: uid(), t: el.value.trim(), d:false, xpClaimed:false, est:0, order:t.subs.length, logs:[], deletedAt: null}); touch(t); el.value = ''; save(); render(); if (focusTaskId) renderFocus();} ev.preventDefault();}
+  else if (el.dataset.a === 'sadd' && el.value.trim()) {
+    const t = T(el.dataset.id);
+    if (t) {
+      t.subs = t.subs || [];
+      t.subs.push({id: uid(), t: el.value.trim(), d:false, xpClaimed:false, est:0, order:t.subs.length, logs:[], deletedAt: null});
+      // Mostra a subtarefa recém-criada mesmo quando a lista tem limite visual.
+      if (typeof expandedSubs !== 'undefined') expandedSubs.add(t.id);
+      if (typeof subsCollapsed !== 'undefined') subsCollapsed.delete(t.id);
+      if (typeof subsShowAll !== 'undefined' && activeSubs(t).length > 5) subsShowAll.add(t.id);
+      touch(t); el.value = ''; save();
+      if (typeof focusTaskId !== 'undefined' && focusTaskId === t.id && document.getElementById('focusOverlay')) {
+        renderFocus();
+      } else if (typeof refreshTaskSubs !== 'function' || !refreshTaskSubs(t.id)) {
+        render();
+      }
+      // O card não é mais recriado por inteiro; mesmo assim, garante o foco no
+      // input após o patch do DOM (o renderFocus ainda recria o overlay).
+      if (typeof focusSubAddInput === 'function') focusSubAddInput(t.id);
+    }
+    ev.preventDefault();
+  }
   else if (el.dataset.pgadd && el.value.trim()) {const p = S.projects.find(x => x.id === el.dataset.pgadd); if (p) {p.goals = p.goals || []; p.goals.push({id: uid(), t: el.value.trim(), d:false, order:p.goals.length}); touch(p); el.value = ''; save(); render();} ev.preventDefault();}
 });
 
@@ -750,10 +830,87 @@ document.addEventListener('dragend', ev => {
   clearSubDropMarks();
 });
 
+/* --- EDIÇÃO INLINE: TÍTULO E TEMPO ESTIMADO --- */
+// Substitui o texto pelo input no próprio card, sem abrir "Editar detalhes".
+// Enter/blur salva (com render para atualizar os totais); Esc cancela.
+function startInlineEdit(kind, taskId, target) {
+  const t = T(taskId);
+  if (!t || !target) return;
+  const open = document.querySelector('input.inline-edit');
+  if (open) {
+    open.blur();
+    if (open.isConnected) return;
+    // O commit pode ter re-renderizado o card; reconsulta o alvo vivo.
+    const liveCard = document.querySelector('[data-card="' + taskId + '"]');
+    if (!liveCard) return;
+    target = kind === 'est' ? liveCard.querySelector('.tm-est') : liveCard.querySelector('.tt-title-text');
+    if (!target) return;
+  }
+  const input = document.createElement('input');
+  input.className = 'inline-edit inline-edit--' + kind;
+  input.dataset.inlineKind = kind;
+  input.dataset.inlineId = taskId;
+  input._inlineTrigger = target;
+  if (kind === 'est') {
+    input.type = 'number';
+    input.min = '0';
+    input.step = '5';
+    input.inputMode = 'numeric';
+    input.value = t.est ? String(t.est) : '';
+    input.placeholder = '—';
+    input.setAttribute('aria-label', 'Tempo estimado em minutos');
+  } else {
+    input.type = 'text';
+    input.value = t.t;
+    input.setAttribute('aria-label', 'Título da tarefa');
+  }
+  target.replaceWith(input);
+  input.focus();
+  try { input.select(); } catch (e) {}
+}
+
+function commitInlineEdit(input) {
+  if (!input || input._inlineDone) return;
+  input._inlineDone = true;
+  const kind = input.dataset.inlineKind;
+  const t = T(input.dataset.inlineId);
+  const trigger = input._inlineTrigger;
+  if (!t) { input.remove(); return; }
+  const cancelled = !!input._inlineCancel;
+  let changed = false;
+
+  if (!cancelled) {
+    if (kind === 'est') {
+      const v = Math.max(0, Math.round(+input.value || 0));
+      if (v !== (t.est || 0)) { snapshot(); t.est = v; touch(t); save(); changed = true; }
+    } else {
+      const v = input.value.trim();
+      if (v && v !== t.t) { snapshot(); t.t = v; touch(t); save(); changed = true; }
+    }
+  }
+
+  if (trigger) {
+    if (kind === 'est') trigger.textContent = t.est ? fmtMin(t.est) : '—';
+    else trigger.textContent = t.t;
+    input.replaceWith(trigger);
+  } else {
+    input.remove();
+  }
+
+  // Estimativa e título afetam resumo, progresso, score, ordenação e o card
+  // "Próxima"; um render mantém a tela coerente (o input inline já foi removido).
+  if (changed && typeof render === 'function') { render(); return; }
+
+  if (trigger && typeof trigger.focus === 'function') {
+    try { trigger.focus({preventScroll: true}); } catch (e) {}
+  }
+}
+
 /* --- CONTENTEDITABLE DE SUBTAREFAS E METAS (salvar ao perder foco) --- */
 document.addEventListener('blur', ev => {
   const el = ev.target;
   if (!el.dataset) return;
+  if (el.classList && el.classList.contains('inline-edit')) { commitInlineEdit(el); return; }
   if (el.dataset.pgedit) {
     const [pid, gid] = el.dataset.pgedit.split(':');
     const p = S.projects.find(x => x.id === pid); if (!p) return;
@@ -769,6 +926,14 @@ document.addEventListener('blur', ev => {
   // Remove o prefixo visual "▶ " que aparece quando a subtarefa está rodando
   const newText = el.textContent.trim().replace(/^▶\s*/, '');
   if (newText && newText !== sb.t) {sb.t = newText; touch(t); save();}
+}, true);
+
+/* --- EDIÇÃO INLINE: Enter confirma, Esc cancela --- */
+document.addEventListener('keydown', ev => {
+  const el = ev.target;
+  if (!el || !el.classList || !el.classList.contains('inline-edit')) return;
+  if (ev.key === 'Enter') {ev.preventDefault(); el.blur();}
+  else if (ev.key === 'Escape') {ev.preventDefault(); el._inlineCancel = true; el.blur();}
 }, true);
 
 /* --- RENOMEAR SUBTAREFA NO FOCO: Enter confirma, Esc cancela --- */

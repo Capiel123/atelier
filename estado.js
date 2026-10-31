@@ -162,6 +162,10 @@ let searchQuery = '';
 let expandedTasks = new Set();
 let expandedSubs = new Set();
 let subsCollapsed = new Set();
+// Mostra todas as subtarefas de um card quando ele tem mais que o limite visual.
+let subsShowAll = new Set();
+// Mantém aberto o grupo "+ Editar" de pills durante o re-render do formulário.
+const openPillGroups = new Set();
 let forcedCompact = null;
 let selectedTaskId = null;
 let mobileFiltersOpen = false;
@@ -234,6 +238,8 @@ function defaultCommands() {
   return [
     mkCommand('Atalhos de teclado','Ritual','Ctrl+Z desfaz · Ctrl+K busca · N nova tarefa · F modo foco · Esc sair · Espaço inicia/pausa · ? este painel',''),
     mkCommand('Criar tarefa','Tarefas','Digite no campo. Tokens: ~30 (min), !a (alta), #projeto','Editar teaser ~45 !a'),
+    mkCommand('Play / Foco','Tarefas','Clique no ▶ do card para iniciar o timer normal. No card expandido, o ⛶ ao lado entra no modo foco. O mesmo botão vira ⏸ quando a tarefa está rodando.',''),
+    mkCommand('Editar rápido','Tarefas','No card expandido, clique no tempo estimado (ex.: 30min) para editá-lo inline. O ✎ ao lado do título edita o título. Enter salva; Esc cancela.',''),
     mkCommand('Buscar global','Sistema','Ctrl+K abre busca em tudo (tarefas, projetos, contatos, vagas…)',''),
     mkCommand('Adicionar contato','Rede/Amizades','Aba Rede ou Amizades. Campos: nome, categoria, última conversa, tags',''),
     mkCommand('Log de interação','Rede/Amizades','Botões "Enviei" (saída) e "Recebi" (resposta). Atualizam score',''),

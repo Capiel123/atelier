@@ -387,6 +387,79 @@ function renderFilteredTasks() {
 
 function refreshTaskList() {const el = document.getElementById('taskList'); if (el) el.innerHTML = renderFilteredTasks();}
 
+/* --- ATUALIZAÇÕES PARCIAIS DO CARD (foco e performance) --- */
+// Troca só a lista de subtarefas do card (sem recriar #app), mantendo o input
+// de adição vivo. Para cards ainda sem .subs, insere a lista depois da barra.
+function refreshTaskSubs(taskId) {
+  const t = T(taskId);
+  const card = document.querySelector(`[data-card="${taskId}"]`);
+  if (!t || !card) return false;
+  const oldBadge = card.querySelector(':scope > .subs-badge');
+  const subsEl = card.querySelector('.subs');
+  if (subsEl) {
+    subsEl.outerHTML = renderSubs(t);
+  } else {
+    const queueBody = card.querySelector('.queue-body');
+    const toolbar = card.querySelector(':scope > .card-toolbar');
+    if (queueBody) {
+      const acts = queueBody.querySelector('.acts');
+      if (!acts) return false;
+      acts.insertAdjacentHTML('beforebegin', renderSubs(t));
+    } else if (toolbar) {
+      toolbar.insertAdjacentHTML('afterend', renderSubs(t));
+    } else {
+      return false;
+    }
+  }
+  // Havia um badge "n/m subs" no lugar da lista (subtarefas recolhidas);
+  // com a lista recém-inserida ele ficaria duplicado.
+  if (oldBadge && oldBadge.isConnected) oldBadge.remove();
+  const actives = activeSubs(t); const done = actives.filter(s => s.d).length;
+  const qCount = card.querySelector('.queue-subcount');
+  if (qCount) { qCount.textContent = actives.length ? `${done}/${actives.length} sub` : ''; qCount.style.display = actives.length ? '' : 'none'; }
+  return true;
+}
+
+// Re-renderiza apenas um card da view atual (Semana ou Fila).
+function refreshTaskCard(taskId) {
+  const t = T(taskId);
+  const el = document.querySelector(`[data-card="${taskId}"]`);
+  if (!t || !el) return false;
+  const score = isDoneThisWeek(t) ? null : (S.cfg.autoPriority ? computeTaskScore(t, buildCtx()) : null);
+  el.outerHTML = tab === 'q'
+    ? cardQueue(t)
+    : (getTaskCompactMode() && !expandedTasks.has(t.id) ? cardTaskCompact(t, score) : cardTask(t, score));
+  return true;
+}
+
+// Devolve o foco ao input de subtarefa e coloca o cursor no fim.
+// Usado depois de adicionar uma sub (o teclado do mobile não deve fechar).
+function focusSubAddInput(taskId) {
+  setTimeout(() => {
+    const inFocus = typeof focusTaskId !== 'undefined' && focusTaskId === taskId && document.getElementById('focusOverlay');
+    let inp = document.querySelector(inFocus ? '#focusOverlay [data-a="sadd"]' : `[data-card="${taskId}"] [data-a="sadd"]`);
+    if (!inp) inp = document.querySelector(`[data-a="sadd"][data-id="${taskId}"]`);
+    if (!inp) return;
+    try { inp.focus({preventScroll:true}); } catch (e) { inp.focus(); }
+    const end = inp.value.length;
+    try { inp.setSelectionRange(end, end); } catch (e) {}
+  }, 0);
+}
+
+// Renderiza pills de habilidades/labels com limite visual. As selecionadas
+// aparecem primeiro; o restante fica sob "+ Editar" (sem perder os checkboxes).
+const PILL_VISIBLE_LIMIT = 6;
+function pillPicker(items, selectedIds, kind, taskId) {
+  const selected = new Set(selectedIds || []);
+  const ordered = items.slice().sort((a, b) => (selected.has(b.id) ? 1 : 0) - (selected.has(a.id) ? 1 : 0));
+  const visible = ordered.slice(0, PILL_VISIBLE_LIMIT);
+  const rest = ordered.slice(PILL_VISIBLE_LIMIT);
+  const group = `${taskId}:${kind}`;
+  const open = rest.length && openPillGroups.has(group) ? ' open' : '';
+  const pill = x => `<label><input type="checkbox" data-${kind}-task="${taskId}" data-${kind}-id="${x.id}" ${selected.has(x.id)?'checked':''}><span style="--pc:${x.color}">${esc(x.n)}</span></label>`;
+  return `<div class="pill-stack">${visible.map(pill).join('')}</div>${rest.length ? `<details class="pill-more" data-pill-group="${group}"${open}><summary>+ Editar (${rest.length})</summary><div class="pill-stack">${rest.map(pill).join('')}</div></details>` : ''}`;
+}
+
 function cardTaskCompact(t, score) {
   const skillObjs = (t.skills || []).map(id => S.skills.find(s => s.id === id)).filter(Boolean);
   const borderColor = t.color || (skillObjs[0]?.color) || areaColor(t.area);
@@ -396,7 +469,7 @@ function cardTaskCompact(t, score) {
   const _as = activeSubs(t); const subsTotal = _as.length; const subsDone = _as.filter(s => s.d).length;
   const isSelected = selectedTaskId === t.id;
   const doneNow = isDoneThisWeek(t);
-  return `<div class="card compact ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-a="expandTask" data-id="${t.id}">
+  return `<div class="card compact ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}" data-a="expandTask" data-id="${t.id}">
     <div class="row" style="align-items:center; width:100%;">
       <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti">
@@ -420,59 +493,76 @@ function cardTask(t, score) {
   const borderColor = t.color || (skillObjs[0]?.color) || areaColor(t.area);
   const type = TASK_TYPES.find(x => x.id === t.type); const proj = S.projects.find(p => p.id === t.proj);
   const spent = taskMinutes(t); const pctT = t.est ? Math.min(100, Math.round(spent / t.est * 100)) : 0;
-  const _as = activeSubs(t); const subsDone = _as.filter(s => s.d).length; const subsTotal = _as.length;
-  const subPct = subsTotal ? Math.round(subsDone / subsTotal * 100) : 0;
+  const subsTotal = activeSubs(t).length;
   const runningThis = S.timer && S.timer.taskId === t.id && !S.timer.subId;
   const isQuick = t.est && t.est <= 10;
   const labels = (t.labels||[]).map(lid => S.labels.find(l => l.id === lid)).filter(Boolean);
   const stuck = isStuck(t); const urgentStuck = isUrgentStuck(t); const over = isOverEstimate(t);
-  const subsExpanded = subsCollapsed.has(t.id) ? false : (expandedSubs.has(t.id) ? true : !getTaskCompactMode());
   const k = f => `tasks:${t.id}:${f}`;
   const isSelected = selectedTaskId === t.id;
   const doneNow = isDoneThisWeek(t);
+  // Estado 2 (comprimido): subs recolhidas pelo cabeçalho "Fases"; o card
+  // continua expandido (barra de ações visível), mas sem a lista e sem detalhes.
+  const subsCollapsedNow = subsTotal > 0 && subsCollapsed.has(t.id);
   const scoreTip = score != null ? scoreBreakdown(t, buildCtx()) : '';
+  // Sinalizadores aparecem na toolbar (desktop) e, no mobile, junto da linha
+  // de labels para não gastar uma faixa vertical só com a pontuação.
+  const flagsHtml = `${stuck ? `<span class="postpone-badge ${urgentStuck?'urgent':'stuck'}">⟳ ${t.postponedCount}x</span>` : ''}${over ? '<span class="parkinson-badge">⏱ 2×</span>' : ''}${score != null ? `<span class="score-badge ${scoreClass(score)}" title="${esc(scoreTip)}">${score}</span>` : ''}`;
 
-  return `<div class="card ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}">
+  return `<div class="card ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}">
     <div class="row" style="align-items:flex-start;">
       <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
-        <div class="tt">${type ? `<span class="type-icon ${type.id}">${type.icon}</span>` : ''}<span>${esc(t.t)}</span>${isQuick ? '<span class="quick-ind">⚡</span>' : ''}${t.time ? `<span class="tag" style="color:var(--wr)">⏰ ${esc(t.time)}</span>` : ''}</div>
+        <div class="tt">${type ? `<span class="type-icon ${type.id}">${type.icon}</span>` : ''}<span class="tt-title-text">${esc(t.t)}</span><button type="button" class="tt-edit" data-a="editInline" data-kind="title" data-id="${t.id}" title="Editar título" aria-label="Editar título">✎</button>${isQuick ? '<span class="quick-ind">⚡</span>' : ''}${t.time ? `<span class="tag" style="color:var(--wr)">⏰ ${esc(t.time)}</span>` : ''}</div>
         ${t.desc ? `<div class="tdesc">${esc(t.desc)}</div>` : ''}
-        <div class="meta"><i class="dot" data-pr="${t.pr}" style="background:${PRC[t.pr]}"></i>${PR[t.pr]}<span class="tag" style="color:${areaColor(t.area)}">${esc(areaLabel(t.area))}</span>${skillObjs.map(s => `<span class="tag" style="color:${s.color}">${esc(s.n)}</span>`).join('')}${proj ? `<span class="tag">${esc(proj.n)}</span>` : ''}${t.due ? `<span class="tag">prazo ${fmtDate(t.due)}</span>` : ''}${t.next ? '<span class="tag" style="color:var(--ac)">⭐</span>' : ''}${labels.slice(0,4).map(l => `<span class="label-pill" style="--lc:${l.color}">${esc(l.n)}</span>`).join('')}${labels.length>4 ? `<span class="label-pill">+${labels.length-4}</span>` : ''}</div>
+        <div class="meta"><i class="dot" data-pr="${t.pr}" style="background:${PRC[t.pr]}"></i>${PR[t.pr]}<span class="tag" style="color:${areaColor(t.area)}">${esc(areaLabel(t.area))}</span>${flagsHtml ? `<span class="task-flags task-flags--inline">${flagsHtml}</span>` : ''}${skillObjs.map(s => `<span class="tag" style="color:${s.color}">${esc(s.n)}</span>`).join('')}${proj ? `<span class="tag">${esc(proj.n)}</span>` : ''}${t.due ? `<span class="tag">prazo ${fmtDate(t.due)}</span>` : ''}${t.next ? '<span class="tag" style="color:var(--ac)">⭐</span>' : ''}${labels.slice(0,4).map(l => `<span class="label-pill" style="--lc:${l.color}">${esc(l.n)}</span>`).join('')}${labels.length>4 ? `<span class="label-pill">+${labels.length-4}</span>` : ''}</div>
       </div>
       <div class="tm" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
-        <b>${fmtMin(spent)}</b>${t.est?' / '+fmtMin(t.est):''}
+        <div class="tm-time"><b>${fmtMin(spent)}</b><span class="tm-sep">/</span><button type="button" class="tm-est" data-a="editInline" data-kind="est" data-id="${t.id}" title="Editar tempo estimado" aria-label="Editar tempo estimado">${t.est ? fmtMin(t.est) : '—'}</button><span class="tm-chev" aria-hidden="true">▴</span></div>
         <div class="mini"><div style="width:${pctT}%"></div></div>
-        ${subsTotal?`<div style="font-size:10px;margin-top:2px">${subsDone}/${subsTotal}</div>`:''}
-        <div class="chev" style="text-align:center; margin-top:4px;">▴</div>
       </div>
     </div>
 
-    ${(stuck || over || score != null) ? `<div class="meta" style="margin-top:6px">${stuck ? `<span class="postpone-badge ${urgentStuck?'urgent':'stuck'}">⟳ ${t.postponedCount}x</span>` : ''}${over ? '<span class="parkinson-badge">⏱ 2×</span>' : ''}${score != null ? `<span class="score-badge ${scoreClass(score)}" title="${esc(scoreTip)}">${score}</span>` : ''}</div>` : ''}
-
+    <div class="card-toolbar">
+      ${flagsHtml ? `<div class="task-flags">${flagsHtml}</div>` : ''}
       <div class="acts">
-      ${runningThis ? `<button data-a="stopTimer" style="background:var(--bu)">⏸</button>` : `<button data-a="startTimer" data-id="${t.id}" ${S.timer?'disabled':''}>▶</button>`}
-      <button data-a="log" data-id="${t.id}" data-m="10">+10m</button>
-      <button data-a="log" data-id="${t.id}" data-m="5">+5m</button>
-      <button data-a="log" data-id="${t.id}" data-m="-5">-5m</button>
-      <button data-a="log" data-id="${t.id}" data-m="-10">-10m</button>
-      <button data-a="setnext" data-id="${t.id}">${t.next?'⭐':'☆'}</button>
-      <button data-a="moveUp" data-id="${t.id}" title="Subir">↑</button>
-      <button data-a="moveDown" data-id="${t.id}" title="Descer">↓</button>
-      <button data-a="focusMode" data-id="${t.id}">⛶</button>
-      <select class="postpone-sel" data-a="postpone" data-id="${t.id}"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
-      ${doneNow ? `<button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo do trabalho">✎ resumo</button>` : ''}
-      <button data-a="del" data-id="${t.id}">✕</button>
+      <div class="act-group act-play">
+        ${runningThis ? `<button data-a="stopTimer" class="act-main" style="background:var(--bu)" title="Pausar timer">⏸</button>` : `<button data-a="startTimer" data-id="${t.id}" class="act-main" ${S.timer?'disabled':''} title="Iniciar timer">▶</button>`}
+        <button data-a="focusMode" data-id="${t.id}" class="act-icon" title="Modo foco" aria-label="Modo foco">⛶</button>
+      </div>
+      <div class="time-stepper" role="group" aria-label="Ajustar tempo">
+        <button data-a="log" data-id="${t.id}" data-m="-5" title="Menos 5 minutos">−5m</button>
+        <span class="time-stepper-value" title="Gasto / estimado">${fmtMin(spent)}${t.est?'/'+fmtMin(t.est):''}</span>
+        <button data-a="log" data-id="${t.id}" data-m="5" title="Mais 5 minutos">+5m</button>
+      </div>
+      <select class="postpone-sel" data-a="postpone" data-id="${t.id}" aria-label="Adiar tarefa"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
+      <details class="act-menu copy-menu">
+        <summary title="Copiar para dia" aria-label="Copiar para dia">⧉</summary>
+        <div class="act-menu-panel">
+          ${DAYS.map((d,di) => `<button data-a="cp" data-id="${t.id}" data-i="${di}">${d}</button>`).join('')}
+          <button data-a="cp" data-id="${t.id}" data-i="q">Fila</button>
+        </div>
+      </details>
+      <button data-a="setnext" data-id="${t.id}" title="Próxima tarefa">${t.next?'⭐':'☆'}</button>
+      <button data-a="del" data-id="${t.id}" class="act-del" title="Excluir tarefa">✕</button>
+      <details class="act-menu task-more-menu">
+        <summary title="Mais ações" aria-label="Mais ações">⋯</summary>
+        <div class="act-menu-panel">
+          <button data-a="moveUp" data-id="${t.id}" title="Subir">↑ Subir</button>
+          <button data-a="moveDown" data-id="${t.id}" title="Descer">↓ Descer</button>
+          ${doneNow ? `<button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo do trabalho">✎ Resumo</button>` : ''}
+          <button data-a="openTaskDetails" data-id="${t.id}">✎ Editar detalhes</button>
+        </div>
+      </details>
+      </div>
     </div>
-    
-    ${subsTotal ? (subsExpanded ? renderSubs(t) : `<div class="subs-badge" data-a="expandSubs" data-id="${t.id}"><span>${subsDone}/${subsTotal} subs · ${subPct}%</span><span class="chev">▾</span></div>`) : ''}
 
-    <details data-eid="${t.id}" ${openEdits.has(t.id)?'open':''}>
+    ${renderSubs(t)}
+
+    ${subsCollapsedNow ? '' : `<details data-eid="${t.id}" ${openEdits.has(t.id)?'open':''}>
       <summary>Editar detalhes</summary>
-      <div class="form"><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades<div class="pill-stack">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="--pc:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label><label class="full">Labels<div class="pill-stack">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="--pc:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label><label class="full">Nova subtarefa<input data-a="sadd" data-id="${t.id}" placeholder="Enter"></label></div>
-      <div class="acts" style="margin-top:10px"><button data-a="log" data-id="${t.id}" data-m="10">+10m</button><button data-a="log" data-id="${t.id}" data-m="5">+5m</button><button data-a="log" data-id="${t.id}" data-m="-10">-10m</button></div>
-         <div class="acts" style="margin-top:4px">${DAYS.map((d,i) => `<button data-a="cp" data-id="${t.id}" data-i="${i}">${d}</button>`).join('')}<button data-a="cp" data-id="${t.id}" data-i="q">Fila</button></div>
-    </details>
+      <div class="form"><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades${pillPicker(alive(S.skills).filter(s=>!s.archived), t.skills||[], 'skill', t.id)}</label><label class="full">Labels${pillPicker(S.labels, t.labels||[], 'label', t.id)}</label><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label></div>
+    </details>`}
   </div>`;
 }
 
@@ -489,23 +579,39 @@ function taskAreaOptions(t) {
 }
 
 function renderSubs(t) {
+  const SUBS_VISIBLE_LIMIT = 5;
   const runningSub = S.timer && S.timer.taskId === t.id ? S.timer.subId : null;
   const actives = activeSubs(t);
   const subsDone = actives.filter(s => s.d).length;
   const subsTotal = actives.length;
   const subPct = subsTotal ? Math.round(subsDone / subsTotal * 100) : 0;
-  return `<div class="subs">
-    <div style="display:flex;gap:6px;margin-bottom:4px;align-items:stretch">
-      <div class="subs-badge" data-a="collapseSubs" data-id="${t.id}" style="flex:1;margin:0" title="Esconder subtarefas">
+  // Estado 3 (completo) é o padrão ao expandir o card. Clicar no cabeçalho
+  // "Fases" recolhe para o estado 2: só a contagem, sem lista/adição/detalhes.
+  const collapsed = subsTotal > 0 && subsCollapsed.has(t.id);
+  const showAll = subsShowAll.has(t.id) || subsTotal <= SUBS_VISIBLE_LIMIT;
+  const visibleSubs = collapsed ? [] : (showAll ? actives : actives.slice(0, SUBS_VISIBLE_LIMIT));
+  const hiddenCount = subsTotal - visibleSubs.length;
+  const canHide = !collapsed && subsTotal > SUBS_VISIBLE_LIMIT && showAll;
+  const rowsHtml = visibleSubs.map((s) => {
+    const mins = subMinutes(t, s.id); const isRunning = runningSub === s.id;
+    return `<div class="sub ${isRunning?'run':''}" data-subrow="${t.id}:${s.id}"><span class="sub-drag" draggable="true" data-dragsub="${t.id}:${s.id}" title="Arrastar para reordenar">⋮⋮</span><button class="chk s" data-a="stog" data-id="${t.id}" data-sub="${s.id}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?'▶ ':''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="stopTimer">⏸</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" ${S.timer?'disabled':''}>▶</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-sub="${s.id}" title="Subir">↑</button><button class="btn-sm" data-a="subDown" data-id="${t.id}" data-sub="${s.id}" title="Descer">↓</button><button class="btn-sm" data-a="sdel" data-id="${t.id}" data-sub="${s.id}">✕</button></div>`;
+  }).join('');
+  const addHtml = collapsed ? '' : `<div class="sub-add">
+      <input data-a="sadd" data-id="${t.id}" placeholder="+ Adicionar subtarefa" aria-label="Adicionar subtarefa">
+    </div>`;
+  return `<div class="subs${collapsed ? ' subs--collapsed' : ''}">
+    ${subsTotal ? `<div class="subs-head">
+      <button type="button" class="subs-count subs-toggle" data-a="toggleSubs" data-id="${t.id}" aria-expanded="${!collapsed}" title="${collapsed ? 'Mostrar subtarefas' : 'Recolher subtarefas'}">
         <span>Fases (${subsDone}/${subsTotal} · ${subPct}%)</span>
-        <span class="chev">▴</span>
-      </div>
-      <button data-a="collapseCard" data-id="${t.id}" title="Recolher card" style="padding:0 12px;font-size:12px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--mu);cursor:pointer;flex:none;font-weight:600">⊟</button>
-    </div>
-    ${actives.map((s) => {
-      const mins = subMinutes(t, s.id); const isRunning = runningSub === s.id;
-      return `<div class="sub ${isRunning?'run':''}" data-subrow="${t.id}:${s.id}"><span class="sub-drag" draggable="true" data-dragsub="${t.id}:${s.id}" title="Arrastar para reordenar">⋮⋮</span><button class="chk s" data-a="stog" data-id="${t.id}" data-sub="${s.id}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?'▶ ':''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="stopTimer">⏸</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" ${S.timer?'disabled':''}>▶</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-sub="${s.id}" title="Subir">↑</button><button class="btn-sm" data-a="subDown" data-id="${t.id}" data-sub="${s.id}" title="Descer">↓</button><button class="btn-sm" data-a="sdel" data-id="${t.id}" data-sub="${s.id}">✕</button></div>`;
-    }).join('')}</div>`;
+        <span class="chev subs-chev" aria-hidden="true">${collapsed ? '▾' : '▴'}</span>
+      </button>
+      <button data-a="collapseCard" data-id="${t.id}" title="Recolher card" class="subs-collapse">⊟</button>
+    </div>` : ''}
+    ${rowsHtml}
+    ${!collapsed && hiddenCount > 0 ? `<button class="subs-showall" data-a="showAllSubs" data-id="${t.id}">Ver todas as ${subsTotal} subtarefas</button>` : ''}
+    ${canHide ? `<button class="subs-showall" data-a="hideAllSubs" data-id="${t.id}" title="Voltar a mostrar só as ${SUBS_VISIBLE_LIMIT} primeiras">Mostrar menos</button>` : ''}
+    ${addHtml}
+  </div>`;
 }
 
 function viewQueue() {
@@ -524,7 +630,7 @@ function cardQueue(t) {
   const borderColor = t.color || (skillObjs[0]?.color) || areaColor(t.area);
   const _as = activeSubs(t); const subsTotal = _as.length; const subsDone = _as.filter(s => s.d).length;
 
-  let html = `<div class="card ${isExpanded?'':'compact'} queue-card ${isSelected?'selected':''}" style="--c:${borderColor}" data-a="toggleQueueCard" data-id="${t.id}">
+  let html = `<div class="card ${isExpanded?'':'compact'} queue-card ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}" data-a="toggleQueueCard" data-id="${t.id}">
     <div class="row" style="align-items:center;cursor:pointer;flex:1;min-width:0">
       <div class="ti" style="min-width:0">
         <div class="tt">${esc(t.t)}</div>
@@ -532,7 +638,7 @@ function cardQueue(t) {
           <i class="dot" data-pr="${t.pr}" style="background:${PRC[t.pr]}"></i>
           ${t.time ? `<span class="tag" style="color:var(--wr)">⏰ ${esc(t.time)}</span>` : ''}
           ${t.est ? `<span class="tag">⏱ ${fmtMin(t.est)}</span>` : ''}
-          ${subsTotal ? `<span class="tag">${subsDone}/${subsTotal} sub</span>` : ''}
+          ${subsTotal ? `<span class="tag queue-subcount">${subsDone}/${subsTotal} sub</span>` : ''}
           ${skillObjs.map(s => `<span class="tag" style="color:${s.color}">${esc(s.n)}</span>`).join('')}
           ${labelObjs.slice(0,4).map(l => `<span class="label-pill" style="--lc:${l.color}">${esc(l.n)}</span>`).join('')}${labelObjs.length>4 ? `<span class="label-pill">+${labelObjs.length-4}</span>` : ''}
         </div>
@@ -543,8 +649,7 @@ function cardQueue(t) {
   if (isExpanded) {
     html += `<div class="queue-body" style="margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">
       <textarea data-p="${esc(k('desc'))}" placeholder="Descrição e notas da tarefa..." rows="2" style="margin-bottom:8px">${esc(t.desc||'')}</textarea>
-      ${subsTotal ? renderSubs(t) : ''}
-      <input data-a="sadd" data-id="${t.id}" placeholder="Nova subtarefa (Enter)" style="margin-top:6px">
+      ${renderSubs(t)}
 
       <div class="acts" style="margin-top:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--mu);margin-right:2px">Agendar para:</span>

@@ -610,3 +610,76 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .focus-sub [data-subedit]:focus{scroll-margin-block:16px}
   .focus-sub .focus-play{width:44px;height:44px}
 }
+
+/* =========================================================
+   V24 — REFORMA DOS CARDS DE TAREFA · FASE 2 (mobile)
+   Alvos maiores para stepper, menus e excluir; o ✕ vai para
+   o fim da barra e mantém a cor de perigo só no hover/foco.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  .acts{gap:5px;row-gap:7px}
+  .act-group{gap:3px}
+  .time-stepper{min-height:40px}
+  .time-stepper button{min-height:38px;padding:0 9px}
+  .time-stepper-value{min-width:54px;font-size:11px}
+  .act-menu>summary{display:inline-flex;align-items:center;min-height:40px;padding:8px 10px;font-size:14px}
+  .act-menu-panel{min-width:150px}
+  .act-menu-panel button{min-height:40px;font-size:13px}
+  .act-del{order:99}
+}
+
+/* =========================================================
+   V25 — SUBTAREFAS INLINE E PILLS (mobile)
+   Input de adicionar com 16px (evita zoom no iOS), alvos de
+   toque maiores e "Ver todas" com altura confortável.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  .subs-count{min-height:44px}
+  .subs-collapse{min-height:44px;min-width:44px;padding:0 10px}
+  .subs-showall{min-height:44px;font-size:13px}
+  .sub-add input{min-height:44px;font-size:16px}
+  .pill-more>summary{min-height:44px;font-size:13px}
+}
+
+/* =========================================================
+   V26 — TOOLBAR COMPACTA E SUBTAREFAS RECOLHÍVEIS (mobile)
+   Mantém a pontuação e as ações na mesma faixa acima da divisória;
+   as subs ficam abaixo, com recuo menor no celular.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  .card-toolbar{gap:6px;margin-top:8px;padding-bottom:8px}
+  .card-toolbar .acts{flex-basis:100%}
+  .subs{margin:0;padding:8px 0 0 14px}
+  .subs-chev{font-size:12px}
+}
+
+/* =========================================================
+   V27 — EDIÇÃO INLINE DE TÍTULO E ESTIMATIVA (mobile)
+   O lápis fica sempre visível no toque; os inputs usam 16px
+   para o iOS não dar zoom e mantêm o alvo do tempo confortável.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  .tt-edit{opacity:.65;pointer-events:auto}
+  .tt .inline-edit{flex-basis:100%;font-size:16px}
+  .tm .inline-edit{width:72px;font-size:16px}
+  .tm-est::after{inset:-11px -8px}
+}
+
+/* =========================================================
+   V28 — PONTUAÇÃO NA LINHA DE LABELS (mobile)
+   A toolbar do card fica só com as ações; pontuação e
+   adiamentos sobem para .meta, ao lado da área/labels.
+   Libera uma faixa vertical sem esconder informação.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  .card-toolbar{margin-top:6px}
+  .card-toolbar .task-flags{display:none}
+  .task-flags--inline{display:inline-flex}
+  .task-flags--inline .score-badge{font-size:11px}
+  .tm-chev{font-size:12px}
+}

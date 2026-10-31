@@ -186,6 +186,11 @@
 .row{display:flex;gap:12px;align-items:flex-start}
 .ti{flex:1;min-width:0}
 .tt{font-weight:600;word-break:break-word;font-size:15.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tt-title-text{min-width:0;overflow-wrap:break-word}
+.tt-edit{display:inline-flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;margin-left:2px;padding:0;background:none;border:0;border-radius:4px;color:var(--mu);font-size:11px;line-height:1;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .15s,color .15s,background .15s;position:relative}
+.tt:hover .tt-edit,.tt:focus-within .tt-edit{opacity:.75;pointer-events:auto}
+.tt-edit:hover,.tt-edit:focus-visible{color:var(--ac);background:var(--s2);opacity:1;outline:none}
+.tt-edit::after{content:'';position:absolute;inset:-10px}
 .tdesc{font-size:13px;color:var(--mu);margin-top:4px;white-space:pre-wrap;word-break:break-word}
 
 /* Checkbox circular (25px padrão, .s é 18px) */
@@ -210,6 +215,15 @@
 }
 .tm{text-align:right;font-size:12px;color:var(--mu);min-width:80px}
 .tm b{color:var(--tx);font-variant-numeric:tabular-nums; font-size: 14px;}
+.tm-time{display:flex;align-items:baseline;justify-content:flex-end;gap:3px}
+.tm-sep{color:var(--mu);font-size:12px}
+.tm-chev{color:var(--mu);font-size:11px;line-height:1;margin-left:2px;align-self:center;flex:none}
+.tm-est{padding:0 2px;margin:0;background:none;border:0;border-bottom:1px dotted color-mix(in srgb,var(--mu) 55%,transparent);border-radius:0;color:var(--mu);font:inherit;font-size:12px;font-variant-numeric:tabular-nums;cursor:pointer;position:relative}
+.tm-est:hover,.tm-est:focus-visible{color:var(--ac);border-bottom-color:var(--ac);outline:none}
+.tm-est::after{content:'';position:absolute;inset:-8px -6px}
+.inline-edit{font:inherit;color:var(--tx);background:var(--s2);border:1px solid var(--ac);border-radius:var(--radius-sm,8px);padding:2px 6px;outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 18%,transparent)}
+.tt .inline-edit{flex:1 1 180px;min-width:120px;font-weight:600;font-size:15.5px;padding:1px 6px}
+.tm .inline-edit{width:64px;font-size:13px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;padding:1px 4px}
 .mini{height:4px;background:var(--s2);border-radius:2px;margin-top:6px;overflow:hidden}
 .mini div{height:100%;background:var(--ok);border-radius:2px;max-width:100%;transition:width .4s}
 
@@ -218,10 +232,52 @@
 .acts button{padding:4px 8px;font-size:12px}
 .acts select{width:auto;padding:4px 6px;font-size:12px}
 
+/* Toolbar do card: pontuação e ações rápidas na mesma linha, acima da
+   divisória que separa o cabeçalho da lista de subtarefas. */
+.card-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-bottom:10px;border-bottom:1px solid var(--bd)}
+.card-toolbar .task-flags{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:none}
+.card-toolbar .acts{margin:0;padding:0;border:0;flex:1;min-width:0}
+.task-flags--inline{display:none;align-items:center;gap:6px;flex-wrap:wrap;flex:none}
+
+/* --- BARRA DE AÇÕES REFORMADA (Fase 2) --- */
+.act-group{display:inline-flex;align-items:center;gap:2px;flex:none}
+.act-play .act-main{min-width:36px;font-weight:700}
+.act-play .act-icon{color:var(--mu);padding:4px 7px}
+.act-play .act-icon:hover{color:var(--ac)}
+
+.time-stepper{display:inline-flex;align-items:center;flex:none;background:var(--surface-panel,var(--s1));border:1px solid var(--bd);border-radius:var(--radius-sm,8px);overflow:hidden}
+.time-stepper button{padding:4px 7px;font-size:12px;background:transparent;border:0;border-radius:0;color:var(--mu)}
+.time-stepper button:hover{background:var(--s2);color:var(--ac)}
+.time-stepper-value{min-width:58px;padding:0 7px;text-align:center;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--tx);border-left:1px solid var(--bd);border-right:1px solid var(--bd);white-space:nowrap}
+
+.act-menu{position:relative;display:inline-flex;flex:none}
+.act-menu>summary{list-style:none;cursor:pointer;padding:4px 8px;font-size:12px;line-height:1.4;border:1px solid var(--bd);border-radius:var(--radius-sm,8px);background:var(--s2);color:var(--tx);user-select:none}
+.act-menu>summary::-webkit-details-marker{display:none}
+.act-menu>summary:hover,.act-menu[open]>summary{border-color:var(--ac);color:var(--ac)}
+.act-menu-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:25;display:flex;flex-direction:column;gap:2px;min-width:132px;padding:5px;background:var(--surface-panel,var(--s1));border:1px solid var(--bd);border-radius:var(--radius-sm,8px);box-shadow:0 8px 22px #0008}
+.act-menu-panel button{text-align:left;background:transparent;border:0;padding:7px 9px;font-size:12px;border-radius:calc(var(--radius-sm,8px) - 2px);white-space:nowrap}
+.act-menu-panel button:hover{background:var(--s2);color:var(--ac)}
+
+.act-del{margin-left:auto;color:var(--mu)}
+.act-del:hover,.act-del:focus-visible{color:var(--er);border-color:var(--er);background:color-mix(in srgb,var(--er) 12%,transparent)}
+
 /* Subtarefas */
-.subs{margin:10px 0 0 38px;padding-left:10px;border-left:1px solid var(--bd)}
+.subs{margin:0;padding:10px 0 0 38px}
 .subs-badge{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin-top:8px;background:var(--s2);border-radius:8px;font-size:12px;color:var(--mu);cursor:pointer}
 .subs-badge:hover{color:var(--tx)}
+.subs-head{display:flex;align-items:stretch;gap:6px;margin-bottom:4px}
+.subs-count{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:8px 12px;background:var(--s2);border:0;border-radius:var(--radius-sm,8px);font:inherit;font-size:12px;color:var(--mu);text-align:left;cursor:pointer}
+.subs-toggle:hover{color:var(--tx)}
+.subs-chev{margin-left:auto;flex:none;font-size:11px;opacity:.8}
+.subs-collapse{padding:0 12px;font-size:12px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--radius-sm,8px);color:var(--mu);cursor:pointer;flex:none;font-weight:600}
+.subs-collapse:hover{color:var(--ac);border-color:var(--ac)}
+.subs-showall{align-self:flex-start;background:transparent;border:0;color:var(--mu);font-size:12px;padding:6px 2px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.subs-showall:hover{color:var(--ac)}
+.sub-add{margin-top:8px}
+.sub-add input{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:var(--radius-sm,8px);padding:8px 10px;font-size:13px}
+.sub-add input:focus{border-color:var(--ac);outline:none}
+[data-look="brutal"] .sub-add input{background:transparent;border:0;border-bottom:1px dashed var(--bd);border-radius:0;padding-left:2px}
+[data-look="brutal"] .sub-add input:focus{border-bottom-color:var(--ac);outline:none}
 .sub{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0;padding:4px 0;border-left:3px solid transparent;padding-left:8px}
 .sub.run{border-left-color:var(--ac);background:color-mix(in srgb,var(--ac) 8%,transparent);border-radius:0 6px 6px 0}
 .sub .sub-txt{flex:1;min-width:0;overflow-wrap:break-word;word-break:normal}
@@ -453,6 +509,12 @@
     color: var(--pc);
     box-shadow: 0 0 10px color-mix(in srgb, var(--pc) 20%, transparent);
 }
+/* Grupo "+ Editar" das pills excedentes (Fase 4) */
+.pill-more{margin-top:6px}
+.pill-more>summary{display:inline-flex;align-items:center;gap:4px;list-style:none;cursor:pointer;padding:3px 0;font-size:11.5px;color:var(--mu)}
+.pill-more>summary::-webkit-details-marker{display:none}
+.pill-more>summary:hover{color:var(--ac)}
+.pill-more .pill-stack{padding-top:4px}
 /* =========================================================
    ETAPA 4 — ÍCONES GEOMÉTRICOS NO LOOK BRUTAL
    Só botões inequivocamente icon-only (um glifo, sem texto).

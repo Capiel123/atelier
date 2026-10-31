@@ -383,6 +383,15 @@ function reorderTask(t, delta) {
   if (idx < 0 || nidx < 0 || nidx >= list.length) return;
   [list[idx], list[nidx]] = [list[nidx], list[idx]];
   list.forEach((x, ix) => x.order = ix);
+  // A ordem manual só é visível com a prioridade automática desligada; sem isso
+  // as setas mudam `order` mas a lista continua ordenada por score (F09 da auditoria).
+  if (S.cfg.autoPriority) {
+    S.cfg.autoPriority = false;
+    if (typeof toast === 'function') toast('Ordem manual ativada (⭐ Auto desligado)');
+  }
+  // LWW: as duas tarefas trocadas precisam de updatedAt novo para o push
+  // enfileirar a nova ordem e o pull não revertê-la.
+  touch(list[idx]); touch(list[nidx]);
   save(); render();
 }
 
