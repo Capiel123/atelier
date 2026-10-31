@@ -48,8 +48,10 @@
     return Object.keys(themes).map(function (id) {
       var t = themes[id];
       var axis = (t.mode === 'light' ? 'CLARO' : 'ESCURO') + (t.look ? ' · ' + t.look.toUpperCase() : '');
-      return '<button type="button" class="theme-card ' + (id === selected ? 'on' : '') + '" data-ob-theme="' + esc(id) + '">' +
+      var art = (typeof themeArtVars === 'function') ? themeArtVars(t) : '';
+      return '<button type="button" class="theme-card ' + (id === selected ? 'on' : '') + '" data-ob-theme="' + esc(id) + '" style="' + art + '">' +
         '<div class="theme-swatch" style="background:' + esc(t.bg) + ';border-bottom:1px solid ' + esc(t.bd) + '">' +
+        '<span class="ts-aa" aria-hidden="true">Aa</span>' +
         '<span class="ts-dot" style="background:' + esc(t.ac) + ';color:' + esc(t.ac) + '"></span>' +
         '<span class="ts-bar" style="background:linear-gradient(90deg,' + esc(t.bu) + ',' + esc(t.ac) + ')"></span>' +
         '<span class="ts-dot" style="background:' + esc(t.bu) + ';color:' + esc(t.bu) + '"></span></div>' +

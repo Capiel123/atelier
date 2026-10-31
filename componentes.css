@@ -129,7 +129,7 @@
    💡 Para mudar o padding dos cards, altere .card aqui.
    A cor da borda esquerda vem de --c (definida por JS).
    ========================================================= */
-.card{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-left:3px solid var(--c,var(--bd));border-radius:var(--radius,12px);padding:14px;margin-bottom:10px;transition:.2s}
+.card{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-left:3px solid var(--c,var(--bd));border-radius:var(--radius,12px);padding:14px;margin-bottom:10px;transition:.2s;box-shadow:var(--card-shadow,none)}
 .card.done{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface-card,var(--s1)))}
 .card.done .tt, .card.done .compact-tt{text-decoration:line-through;opacity:.55}
 
@@ -254,7 +254,7 @@
 .act-menu>summary{list-style:none;cursor:pointer;padding:4px 8px;font-size:12px;line-height:1.4;border:1px solid var(--bd);border-radius:var(--radius-sm,8px);background:var(--s2);color:var(--tx);user-select:none}
 .act-menu>summary::-webkit-details-marker{display:none}
 .act-menu>summary:hover,.act-menu[open]>summary{border-color:var(--ac);color:var(--ac)}
-.act-menu-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:25;display:flex;flex-direction:column;gap:2px;min-width:132px;padding:5px;background:var(--surface-panel,var(--s1));border:1px solid var(--bd);border-radius:var(--radius-sm,8px);box-shadow:0 8px 22px #0008}
+.act-menu-panel{position:absolute;top:calc(100% + 5px);left:0;z-index:25;display:flex;flex-direction:column;gap:2px;min-width:132px;padding:5px;background:var(--surface-panel,var(--s1));border:1px solid var(--bd);border-style:var(--panel-border-style,solid);border-radius:var(--radius-sm,8px);box-shadow:0 8px 22px #0008}
 .act-menu-panel button{text-align:left;background:transparent;border:0;padding:7px 9px;font-size:12px;border-radius:calc(var(--radius-sm,8px) - 2px);white-space:nowrap}
 .act-menu-panel button:hover{background:var(--s2);color:var(--ac)}
 
@@ -679,3 +679,159 @@
 [data-look="brutal"][data-mode="dark"] .section-progress .fill{
   background:var(--bar-metal) !important;
 }
+
+/* =========================================================
+   IDENTIDADE VISUAL AVANÃ‡ADA (Fase Identidade v2)
+   Geometria de indicadores, barras de progresso animadas,
+   glassmorphism. Todos os efeitos especiais de texto estÃ£o
+   EXCLUSIVAMENTE na classe .logo (layout.css).
+   Nenhum tÃ­tulo de card (.tt, .compact-tt) ou input
+   recebe background-clip, text-shadow ou qualquer efeito
+   que prejudique a leitura.
+   ========================================================= */
+
+/* -----------------------------------------------------------
+   2.2 GEOMETRIA DOS DOTS DE PRIORIDADE
+   --dot-shape: circle | square | diamond | ring
+   ----------------------------------------------------------- */
+
+/* diamond: losango via clip-path */
+:root:not([data-look="brutal"]) .dot[style*="var(--pr"] {
+  /* fallback: herdado pelo dot-radius jÃ¡ existente */
+}
+
+/* Aplicamos via [data-dot-shape] injetado pelo JS em applyTheme se necessÃ¡rio,
+   mas para zero JS extra usamos as variÃ¡veis CSS com workaround de clip-path
+   baseado nos valores de --dot-shape usando @property + paint worklet nÃ£o estÃ¡
+   disponÃ­vel; em vez disso, usamos seletores por data-look ou overrides por
+   classe de tema injetada no <html>. Abordagem: applyTheme injeta data-dot-shape
+   e data-chk-shape no documentElement. */
+
+/* diamond */
+[data-dot-shape="diamond"] .dot{
+  clip-path:polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  border-radius:0 !important;
+}
+/* square */
+[data-dot-shape="square"] .dot{
+  border-radius:0 !important;
+  clip-path:none;
+}
+/* ring (anel): fundo transparente + borda colorida */
+[data-dot-shape="ring"] .dot{
+  background:transparent !important;
+  border:2px solid currentColor;
+  border-radius:50% !important;
+  clip-path:none;
+  /* herda a cor inline do JS via color ou background; usamos outline */
+}
+[data-dot-shape="ring"] .dot[style]{
+  /* A cor inline Ã© aplicada como background; convertemos para borda */
+  box-sizing:border-box;
+}
+
+/* -----------------------------------------------------------
+   2.2 GEOMETRIA DO CHECKBOX
+   --chk-shape: square | circle | hex
+   ----------------------------------------------------------- */
+
+/* circle: jÃ¡ Ã© o padrÃ£o via border-radius:50% em .chk */
+
+/* square: remove o border-radius */
+[data-chk-shape="square"] .chk{
+  border-radius:var(--radius-sm,2px) !important;
+  clip-path:none;
+}
+
+/* hex: hexÃ¡gono via clip-path */
+[data-chk-shape="hex"] .chk{
+  clip-path:polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  border-radius:0 !important;
+}
+/* Fallback para browsers sem clip-path: mantÃ©m cÃ­rculo */
+@supports not (clip-path: polygon(0 0)) {
+  [data-chk-shape="hex"] .chk{
+    border-radius:50% !important;
+    clip-path:none;
+  }
+}
+
+/* -----------------------------------------------------------
+   2.3 BARRAS DE PROGRESSO â€” TIPOS ESPECIAIS
+   --progress-type: solid | metal | liquid | glow
+   As regras abaixo sobrepÃµem o .fill existente apenas quando
+   o tipo ativo estÃ¡ setado via [data-progress-type="..."].
+   NÃ£o afetam os temas que nÃ£o setam o tipo.
+   ----------------------------------------------------------- */
+
+/* METAL: gradiente tridimensional com brilho central */
+[data-progress-type="metal"] .fill{
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ac) 90%, white) 0%,
+      color-mix(in srgb, var(--ac) 50%, var(--bu)) 45%,
+      color-mix(in srgb, var(--bu) 80%, black) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 2px,
+      color-mix(in srgb, var(--ac) 8%, transparent) 2px,
+      color-mix(in srgb, var(--ac) 8%, transparent) 3px
+    ) !important;
+  box-shadow:0 0 8px color-mix(in srgb, var(--ac) 30%, transparent) !important;
+}
+[data-progress-type="metal"] .section-progress > div{
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--ac) 90%, white) 0%,
+      color-mix(in srgb, var(--ac) 50%, var(--bu)) 50%,
+      color-mix(in srgb, var(--bu) 80%, black) 100%) !important;
+}
+
+/* LIQUID: gradiente diagonal animado â€” ilusÃ£o de fluxo */
+@keyframes liquidFlow{
+  0%{background-position:0% 50%}
+  100%{background-position:200% 50%}
+}
+[data-progress-type="liquid"] .fill{
+  background:linear-gradient(
+    135deg,
+    var(--bu) 0%,
+    var(--ac) 30%,
+    color-mix(in srgb, var(--ac) 70%, white) 50%,
+    var(--ac) 70%,
+    var(--bu) 100%
+  ) !important;
+  background-size:200% 100% !important;
+  animation:liquidFlow 3s linear infinite !important;
+  box-shadow:none !important;
+}
+
+/* GLOW: sÃ³lido com box-shadow colorida tipo neon */
+[data-progress-type="glow"] .fill{
+  background:linear-gradient(90deg, var(--bu), var(--ac)) !important;
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--ac) 60%, transparent),
+    0 0 12px color-mix(in srgb, var(--ac) 30%, transparent) !important;
+}
+[data-progress-type="glow"] .section-progress > div{
+  background:var(--ac) !important;
+  box-shadow:0 0 4px color-mix(in srgb, var(--ac) 70%, transparent) !important;
+}
+
+/* -----------------------------------------------------------
+   2.6 GLASSMORPHISM â€” MENUS E POPOVERS
+   Ativo quando --panel-glass:1 (injetado por applyTheme).
+   Usa @supports para garantir que browsers sem backdrop-filter
+   caiam no fundo sÃ³lido normal (sem qualidade visual degradada).
+   ----------------------------------------------------------- */
+@supports (backdrop-filter: blur(1px)){
+  :root[style*="--panel-glass: 1"] .act-menu-panel,
+  :root[style*="--panel-glass: 1"] .more-menu,
+  :root[style*="--panel-glass: 1"] .more-sheet-panel{
+    background:color-mix(in srgb, var(--surface-panel, var(--s1)) 80%, transparent);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+  }
+}
+

@@ -39,6 +39,55 @@ const THEMES = {
   chrome:    {n:'Cromo',       desc:'Metal frio · brutal',   mode:'dark', look:'brutal', ac:'#E6E6EC', bu:'#3A3A42', bg:'#050506', s1:'#0D0D0F', s2:'#151518', s3:'#1F1F23', bd:'#35353B', chkBg:'#0D0D0F', chkBd:'#35353B', chkDone:'#E6E6EC', chkMark:'#050506', tx:'#F0F0F2', mu:'#9C9CA6', ok:'#B6C2C4', wr:'#C9BC94', er:'#C77C78', onAc:'#050506', radius:'1px', bevel:'4px', noise:'0.035', prHigh:'#F4F4F8', prMed:'#A7A7B2', prLow:'#74747E', surfaceCard:'#1F1F23', surfacePanel:'#0A0A0B'},
   'deepbone-light': {n:'Osso Profundo Claro', desc:'Bege claro · brutal', mode:'light', look:'brutal', ac:'#1B1A17', bu:'#8D887B', bg:'#DEDAD0', s1:'#D3CEC3', s2:'#E9E6DF', s3:'#F4F2EC', bd:'#A9A496', chkBg:'#D3CEC3', chkBd:'#A9A496', chkDone:'#1B1A17', chkMark:'#F2F0EA', tx:'#12110E', mu:'#4F4C44', ok:'#44503F', wr:'#5F4F26', er:'#842F27', onAc:'#F2F0EA', radius:'2px', bevel:'6px', noise:'0.05', prHigh:'#12110E', prMed:'#4A473F', prLow:'#6C675B', surfaceCard:'#F4F2EC', surfacePanel:'#D3CEC3'}
 };
+
+/* --- IDENTIDADE VISUAL (Fase Identidade v2) ---
+   Tokens de arte e padrão visual por tema.
+   bgPattern / bgPatternSize / bgPatternOpacity: padrão de fundo via CSS.
+   dotShape: 'circle' | 'square' | 'diamond' | 'ring'
+   chkShape: 'square' | 'circle' | 'hex'
+   progressType: 'solid' | 'metal' | 'liquid' | 'glow'
+   logoEffect: 'none' | 'metal' | 'glow' | 'serif'
+   topOrnament: caractere decorativo (string) ou vazio
+   isGlass: boolean — glassmorphism nos menus/popovers */
+const THEME_IDENTITY = {
+  obsidian:  { dotShape:'circle',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false },
+  vampire:   { bgPattern:"radial-gradient(ellipse at 20% 30%, rgba(184,50,74,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 70%, rgba(92,18,40,0.06) 0%, transparent 50%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'diamond', chkShape:'square',  progressType:'solid',  logoEffect:'serif',  topOrnament:'✦',  isGlass:false },
+  occult:    { bgPattern:"repeating-linear-gradient(45deg, rgba(163,116,212,0.04) 0px, rgba(163,116,212,0.04) 1px, transparent 1px, transparent 12px), repeating-linear-gradient(-45deg, rgba(163,116,212,0.03) 0px, rgba(163,116,212,0.03) 1px, transparent 1px, transparent 12px)", bgPatternSize:'24px 24px', bgPatternOpacity:1, dotShape:'diamond', chkShape:'hex',     progressType:'glow',   logoEffect:'glow',   topOrnament:'◆',  isGlass:false },
+  noir:      { bgPattern:"repeating-linear-gradient(0deg, rgba(197,197,201,0.03) 0px, rgba(197,197,201,0.03) 1px, transparent 1px, transparent 4px)", bgPatternSize:'100% 4px', bgPatternOpacity:1, dotShape:'square',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false },
+  cyanotic:  { bgPattern:"linear-gradient(rgba(79,179,212,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(79,179,212,0.05) 1px, transparent 1px)", bgPatternSize:'30px 30px', bgPatternOpacity:1, dotShape:'ring',    chkShape:'square',  progressType:'glow',   logoEffect:'glow',   topOrnament:'',   isGlass:true  },
+  toxic:     { bgPattern:"repeating-linear-gradient(-45deg, rgba(122,184,118,0.05) 0px, rgba(122,184,118,0.05) 1px, transparent 1px, transparent 8px)", bgPatternSize:'12px 12px', bgPatternOpacity:1, dotShape:'square',  chkShape:'square',  progressType:'liquid', logoEffect:'none',   topOrnament:'',   isGlass:false },
+  ember:     { bgPattern:"radial-gradient(ellipse at 50% 80%, rgba(224,138,79,0.07) 0%, transparent 60%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'circle',  chkShape:'circle',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:false },
+  moonlight: { bgPattern:"radial-gradient(ellipse at 30% 20%, rgba(168,190,219,0.05) 0%, transparent 55%), radial-gradient(ellipse at 70% 80%, rgba(90,107,138,0.04) 0%, transparent 45%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'circle',  chkShape:'circle',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:true  },
+  rose:      { dotShape:'circle',  chkShape:'circle',  progressType:'solid',  logoEffect:'serif',  topOrnament:'❦',  isGlass:false },
+  abyss:     { bgPattern:"radial-gradient(1px 1px at 20% 30%, rgba(122,159,212,0.6) 0%, transparent 100%), radial-gradient(1px 1px at 60% 70%, rgba(122,159,212,0.5) 0%, transparent 100%), radial-gradient(1px 1px at 80% 15%, rgba(255,255,255,0.4) 0%, transparent 100%), radial-gradient(1px 1px at 10% 80%, rgba(122,159,212,0.45) 0%, transparent 100%), radial-gradient(1px 1px at 45% 55%, rgba(255,255,255,0.35) 0%, transparent 100%), radial-gradient(1px 1px at 90% 40%, rgba(122,159,212,0.5) 0%, transparent 100%)", bgPatternSize:'200px 200px', bgPatternOpacity:1, dotShape:'circle', chkShape:'circle', progressType:'glow', logoEffect:'none', topOrnament:'•', isGlass:false },
+  bone:      { bgPattern:"repeating-linear-gradient(0deg, rgba(201,179,148,0.03) 0px, rgba(201,179,148,0.03) 1px, transparent 1px, transparent 18px)", bgPatternSize:'100% 18px', bgPatternOpacity:1, dotShape:'circle',  chkShape:'square',  progressType:'solid',  logoEffect:'serif',  topOrnament:'',   isGlass:false },
+  deepbone:  { dotShape:'square',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false },
+  chrome:    { dotShape:'square',  chkShape:'square',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:true  },
+  'deepbone-light': { dotShape:'square', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false }
+};
+
+/* --- DIREÇÃO DE ARTE POR TEMA ---
+   Tokens opcionais que dão personalidade sem tocar nas cores base.
+   Mantidos num mapa separado para não poluir as 14 linhas de paleta;
+   o merge abaixo garante que as chaves existam em THEMES. */
+const THEME_ART = {
+  obsidian: {cardShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)'},
+  vampire: {fontDisplay: "'Grenze Gotisch', serif", titleTransform: 'capitalize', titleSpacing: '1px', cardShadow: '0 4px 12px rgba(0,0,0,0.6)', borderStyle: 'double'},
+  occult: {fontDisplay: "'Grenze Gotisch', serif", titleTransform: 'uppercase', titleSpacing: '2px', borderStyle: 'dashed'},
+  noir: {titleTransform: 'uppercase', titleSpacing: '2px', cardShadow: '0 2px 0 rgba(255,255,255,0.1)'},
+  cyanotic: {titleTransform: 'uppercase', titleSpacing: '1.5px', accentGlow: '0 0 8px color-mix(in srgb, var(--ac) 50%, transparent)'},
+  toxic: {titleTransform: 'uppercase', fontDisplay: 'var(--font-mono)'},
+  ember: {accentGlow: '0 0 10px color-mix(in srgb, var(--ac) 40%, transparent)', cardShadow: 'inset 0 -2px 5px rgba(0,0,0,0.5)'},
+  moonlight: {cardShadow: '0 4px 20px rgba(0,0,0,0.15)', fontStyle: 'italic'},
+  rose: {fontDisplay: "'Grenze Gotisch', serif", fontStyle: 'italic'},
+  abyss: {cardShadow: 'inset 0 0 20px rgba(0,0,0,0.4)'},
+  bone: {fontDisplay: "'Grenze Gotisch', serif", titleSpacing: '1px', cardShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)'},
+  deepbone: {fontDisplay: "'Grenze Gotisch', serif"},
+  chrome: {fontDisplay: "'Grenze Gotisch', serif"},
+  'deepbone-light': {fontDisplay: "'Grenze Gotisch', serif"}
+};
+Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
+Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });
 const PR = ['Alta','Média','Baixa'];
 const PRC = ['var(--pr-high, #e0626a)','var(--pr-med, #e0a33b)','var(--pr-low, #6f8de0)'];
 const DAYS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
@@ -202,8 +251,23 @@ function applyTheme() {
     bevel: '--bevel', noise: '--noise-opacity',
     prHigh: '--pr-high', prMed: '--pr-med', prLow: '--pr-low',
     surfaceCard: '--surface-card', surfacePanel: '--surface-panel',
-    fontDisplay: '--font-display', fontMono: '--font-mono', titleTrack: '--title-track'
+    fontDisplay: '--font-display', fontMono: '--font-mono', titleTrack: '--title-track',
+    titleTransform: '--title-transform', titleSpacing: '--title-spacing',
+    fontStyle: '--font-display-style', cardShadow: '--card-shadow',
+    accentGlow: '--ac-glow', borderStyle: '--panel-border-style',
+    // Identidade Visual Avançada (Fase Identidade v2)
+    bgPattern: '--bg-pattern', bgPatternSize: '--bg-pattern-size',
+    dotShape: '--dot-shape', chkShape: '--chk-shape',
+    progressType: '--progress-type', logoEffect: '--logo-effect',
+    topOrnament: '--top-ornament'
   };
+  // bgPatternOpacity: número (pode ser 0, não é falsy safe); tratamento explícito
+  if (t.bgPatternOpacity !== undefined && t.bgPatternOpacity !== null)
+    root.setProperty('--bg-pattern-opacity', String(t.bgPatternOpacity));
+  else root.removeProperty('--bg-pattern-opacity');
+  // isGlass: ativa glassmorphism nos menus/popovers
+  if (t.isGlass) root.setProperty('--panel-glass', '1');
+  else root.removeProperty('--panel-glass');
   Object.keys(optionalVars).forEach(key => {
     const value = t[key];
     if (value !== undefined && value !== null && value !== '') root.setProperty(optionalVars[key], value);
@@ -218,8 +282,35 @@ function applyTheme() {
   if (t.mode) root.setProperty('color-scheme', t.mode);
   else root.removeProperty('color-scheme');
 
+  // Identidade Visual Avançada — atributos data-* para seletores CSS
+  if (t.dotShape) rootEl.setAttribute('data-dot-shape', t.dotShape);
+  else rootEl.removeAttribute('data-dot-shape');
+  if (t.chkShape) rootEl.setAttribute('data-chk-shape', t.chkShape);
+  else rootEl.removeAttribute('data-chk-shape');
+  if (t.progressType && t.progressType !== 'solid') rootEl.setAttribute('data-progress-type', t.progressType);
+  else rootEl.removeAttribute('data-progress-type');
+  if (t.logoEffect && t.logoEffect !== 'none') rootEl.setAttribute('data-logo-effect', t.logoEffect);
+  else rootEl.removeAttribute('data-logo-effect');
+
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', t.bg);
+}
+
+/* Variáveis de direção de arte para o preview local de um card de tema. */
+function themeArtVars(t) {
+  if (!t) return '';
+  const vals = {
+    '--bg': t.bg,
+    '--ac': t.ac,
+    '--font-display': t.fontDisplay || 'inherit',
+    '--title-transform': t.titleTransform || 'none',
+    '--title-spacing': t.titleSpacing || 'normal',
+    '--font-display-style': t.fontStyle || 'normal',
+    '--card-shadow': t.cardShadow || 'none',
+    '--ac-glow': t.accentGlow || 'none',
+    '--panel-border-style': t.borderStyle || 'solid'
+  };
+  return Object.keys(vals).map(k => k + ':' + vals[k]).join(';');
 }
 
 /* --- MODELOS (fábricas de objetos) --- */

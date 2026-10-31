@@ -69,6 +69,26 @@ Os tokens padrão aparecem em `base.css`, mas `estado.js`/`applyTheme()` substit
 - `--fab-bg`: fundo do FAB; padrão `color-mix(in srgb,var(--bg) 86%,var(--s2))`.
 - `--fab-border`: borda de 1.5px do FAB; padrão `var(--ac)`. Nos temas brutal escuros: `color-mix(in srgb,var(--ac) 65%,var(--bg))`.
 
+### Direção de arte (v76)
+
+Tokens opcionais por tema, aplicados inline por `applyTheme()` e com fallback no `:root` de `base.css`:
+
+| Token | Uso | Fallback |
+|---|---|---|
+| `--font-display` | `h1`, `h2`, `h3`, `.tasks-header`, `.week-summary-top`, `.ts-aa` | `inherit` |
+| `--title-transform` | `text-transform` desses títulos | `none` |
+| `--title-spacing` | `letter-spacing` desses títulos | `normal` |
+| `--font-display-style` | `font-style` desses títulos | `normal` |
+| `--card-shadow` | `.card`, `.week-summary-card`, `.section-group`, `.theme-card` | `none` |
+| `--ac-glow` | `button:focus-visible` e hover de botões primários | `none` |
+| `--panel-border-style` | dropdowns, busca, atalhos, folha “Mais” e onboarding | `solid` |
+
+- **Wordmark separada:** `.logo-text` usa `--font-wordmark` (DM Sans nos temas legados; subset `Grenze Gotisch Wordmark` no look brutal), não `--font-display`. O subset gótico difícil de ler fica só na logo; títulos usam a Grenze completa quando o tema define.
+- **Resets:** `.tasks-header .count`, `.tasks-header-actions` e `.week-summary-top .th-stats` voltam para `--font-body`, `letter-spacing:normal`, `text-transform:none` e `font-style:normal`; sem isso, botões e números herdariam caixa alta/espaçamento.
+- **Tema card:** `themeArtVars(t)` gera o inline com `--bg`, `--ac`, `--font-display`, `--title-transform`, `--title-spacing`, `--font-display-style`, `--card-shadow`, `--ac-glow` e `--panel-border-style`; o `.theme-swatch` ganhou `.ts-aa` para prévia de fonte.
+- **Cuidado de cascata:** as regras de direção de arte ficam em `base.css` (títulos/foco) e são sobrescritas pelos estados locais de `.card` (`.selected`, `.highlight`, `.next-card-in`) e `.theme-card.on`; não usar `!important` para forçar sombra.
+
+
 `THEMES` define **14 temas**: os 11 legados — Obsidiana (`obsidian`), Vampiro (`vampire`), Oculto (`occult`), Noir (`noir`), Cianótico (`cyanotic`), Tóxico (`toxic`), Brasa (`ember`), Luar (`moonlight`), Rosa Morta (`rose`), Abismo (`abyss`) e Osso (`bone`) — e os três novos: Osso Profundo (`deepbone`), Cromo (`chrome`) e Osso Profundo Claro (`deepbone-light`). A logo é configurável à parte.
 
 Ao criar seletor visual ou componente, usar os tokens quando a cor deve acompanhar o tema. Evitar cores hardcoded em elementos gerais; cores hardcoded podem continuar apropriadas para semântica específica (por exemplo, categorias codificadas por cor), desde que isso seja intencional.

@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    LAYOUT.CSS
    Estrutura das telas: topo, menu de navegação, dias,
    cabeçalho do dia, menu "mais" (mobile), botões de topo.
@@ -15,8 +15,8 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .logo{font-weight:700;font-size:20px;letter-spacing:.04em;color:var(--ac);display:flex;align-items:center;gap:8px;cursor:pointer}
 .logo img{max-height:32px;max-width:100px;object-fit:contain;flex:none}
-.logo-text{font-family:'DM Sans',system-ui,sans-serif;font-family:var(--font-display);font-size:24px;letter-spacing:.06em;color:var(--ac);font-weight:700;line-height:1;white-space:nowrap}
-[data-look="brutal"] .logo-text{font-family:'Grenze Gotisch Wordmark','Grenze Gotisch','UnifrakturCook','DM Sans',serif;font-family:var(--font-display)}
+.logo-text{font-family:'DM Sans',system-ui,sans-serif;font-family:var(--font-wordmark,'DM Sans',system-ui,sans-serif);font-size:24px;letter-spacing:.06em;color:var(--ac);font-weight:700;line-height:1;white-space:nowrap}
+[data-look="brutal"] .logo-text{font-family:var(--font-wordmark,'Grenze Gotisch Wordmark','Grenze Gotisch','UnifrakturCook','DM Sans',serif)}
 
 /* Botão de busca do topo.
    A lupa é desenhada em CSS (círculo + haste) para não depender do
@@ -56,15 +56,12 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .today-hero .th-stats span { background: var(--s2); padding: 2px 8px; border-radius: 6px;}
 
 /* --- CARD DE RESUMO SEMANAL UNIFICADO --- */
-.week-summary-card{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:10px 12px 8px;margin-bottom:12px}
+.week-summary-card{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:10px 12px 8px;margin-bottom:12px;box-shadow:var(--card-shadow,none)}
 .week-summary-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-.week-summary-day .th-day{font-size:17px;font-weight:700;color:var(--ac);text-transform:capitalize}
+.week-summary-day .th-day{font-size:17px;font-weight:700;color:var(--ac);text-transform:var(--title-transform,none)}
 
-/* A fonte de display (Grenze) é exclusiva do wordmark (.logo-text).
-   Títulos de conteúdo, inclusive o resumo da Semana no Cromo, usam a fonte de leitura. */
-.week-summary-top,
-.week-summary-top .th-day,
-.week-summary-top .th-date{font-family:var(--font-body,'DM Sans',system-ui,sans-serif)}
+/* A direção de arte usa --font-display nos títulos; números e labels do
+   resumo continuam na fonte de leitura para não perder legibilidade. */
 .week-summary-day .th-date{color:var(--mu);font-size:11px;margin-left:6px}
 .week-summary-card .th-stats{display:flex;gap:6px;font-size:11px;color:var(--mu);flex-wrap:wrap;justify-content:flex-end}
 .week-summary-card .th-stats b{color:var(--tx);font-variant-numeric:tabular-nums}
@@ -117,3 +114,64 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .more-menu{position:absolute;right:0;top:100%;margin-top:4px;background:var(--surface-panel,var(--s1));border:1px solid var(--bd);border-radius:8px;padding:4px;z-index:10;min-width:160px;box-shadow:0 4px 16px #0008;display:flex;flex-direction:column;gap:1px}
 .more-menu button{background:transparent;border:none;text-align:left;padding:8px 10px;font-size:12px;border-radius:6px}
 .more-menu button:hover{background:var(--s2)}
+
+/* =========================================================
+   IDENTIDADE VISUAL AVANÇADA — LOGO E ORNAMENTOS (Fase Identidade v2)
+   Os efeitos de texto FICAM RESTRITOS ao .logo e .logo-text.
+   Nenhum título de leitura (.tt, .compact-tt, h2, inputs)
+   recebe background-clip, text-shadow ou filtros.
+   ========================================================= */
+
+/* 2.4 EFEITOS NO LOGO
+   metal: gradiente metálico + background-clip:text (SÓ .logo-text) */
+[data-logo-effect="metal"] .logo-text{
+  background:linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ac) 95%, white) 0%,
+    color-mix(in srgb, var(--ac) 60%, white) 30%,
+    var(--ac) 50%,
+    color-mix(in srgb, var(--ac) 50%, var(--bu)) 70%,
+    color-mix(in srgb, var(--bu) 70%, black) 100%
+  );
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+}
+/* Fallback para browsers sem background-clip:text */
+@supports not (-webkit-background-clip: text){
+  [data-logo-effect="metal"] .logo-text{
+    background:none;
+    -webkit-text-fill-color:unset;
+    color:var(--ac);
+  }
+}
+
+/* glow: text-shadow colorida (SÓ .logo-text) */
+[data-logo-effect="glow"] .logo-text{
+  color:var(--ac);
+  text-shadow:
+    0 0 8px color-mix(in srgb, var(--ac) 80%, transparent),
+    0 0 20px color-mix(in srgb, var(--ac) 40%, transparent);
+}
+
+/* serif: garante fonte de display gótica (SÓ .logo-text) */
+[data-logo-effect="serif"] .logo-text{
+  font-family:var(--font-wordmark,'Grenze Gotisch Wordmark','Grenze Gotisch',serif);
+  color:var(--ac);
+}
+
+/* 2.5 ORNAMENTO DO TOPO (.tasks-header::before)
+   Exibe --top-ornament em cor de accent, sutil.
+   Não polui o meio da tela — fica à esquerda do título. */
+.tasks-header::before{
+  content:var(--top-ornament,"");
+  color:var(--ac);
+  opacity:0.65;
+  font-size:14px;
+  flex:none;
+  margin-right:2px;
+  line-height:1;
+  font-family:inherit;
+  pointer-events:none;
+}

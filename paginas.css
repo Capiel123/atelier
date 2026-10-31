@@ -223,13 +223,14 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 /* =========================================================
    TEMAS / CONFIGURAÇÕES
    ========================================================= */
-.section-group{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:14px;margin-bottom:12px}
+.section-group{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:14px;margin-bottom:12px;box-shadow:var(--card-shadow,none)}
 .section-group h3{margin-top:0}
 .theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-.theme-card{background:var(--s2);border:2px solid var(--bd);border-radius:10px;padding:0;overflow:hidden;cursor:pointer;transition:.15s;text-align:left;color:var(--tx)}
+.theme-card{background:var(--s2);border:2px solid var(--bd);border-radius:10px;padding:0;overflow:hidden;cursor:pointer;transition:.15s;text-align:left;color:var(--tx);box-shadow:var(--card-shadow,none)}
 .theme-card:hover{border-color:var(--ac);transform:translateY(-1px)}
 .theme-card.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac),0 4px 12px color-mix(in srgb,var(--ac) 25%,transparent)}
 .theme-swatch{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;gap:6px}
+.theme-swatch .ts-aa{font-family:var(--font-display,inherit);text-transform:var(--title-transform,none);letter-spacing:var(--title-spacing,normal);font-style:var(--font-display-style,normal);font-size:15px;line-height:1;color:var(--ac);flex:none;font-weight:700}
 .theme-swatch .ts-dot{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
 .theme-swatch .ts-bar{flex:1;height:6px;border-radius:3px;margin:0 4px}
 .theme-info{padding:8px 10px;background:var(--s1);border-top:1px solid var(--bd)}
@@ -309,3 +310,9 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .ob-step .msg{margin:8px 0}
 .ob-card .theme-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
 @media (max-width:640px){.ob-card{padding:18px 16px}.ob-step h2{font-size:18px}}
+
+/* Direção de arte — estilo de borda dos painéis/modais.
+   Os aliases genéricos ficam para componentes futuros; os seletores reais
+   cobrem dropdown, busca, atalhos, folha "Mais" e onboarding. */
+.dropdown-menu,.modal-panel,.search-box,
+.act-menu-panel,.search-content,.shortcuts-content,.more-sheet-panel,.ob-card{border-style:var(--panel-border-style,solid)}

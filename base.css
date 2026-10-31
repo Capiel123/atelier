@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    BASE.CSS
    Fundação do app: variáveis de cor, reset, tipografia,
    controles genéricos (botões, inputs, textos).
@@ -52,11 +52,23 @@
   --cm:#e0a33b;--pe:#a08fc0; /* ⚠ --cm e --pe não são usados no código */
   --radius:12px;--radius-sm:8px;--radius-pill:16px;--dot-radius:50%;
   --noise-opacity:0;
+  /* Identidade Visual Avançada — fallbacks neutros (Fase Identidade v2) */
+  --bg-pattern:none;--bg-pattern-size:auto;--bg-pattern-opacity:0;
+  --dot-shape:circle;--chk-shape:square;
+  --progress-type:solid;--logo-effect:none;--top-ornament:"";
   --fab-bg:color-mix(in srgb,var(--bg) 86%,var(--s2));
   --fab-border:var(--ac);
   --font-body:'DM Sans',system-ui,sans-serif;
-  --font-display:'DM Sans',system-ui,sans-serif;
+  --font-display:inherit;
+  --font-wordmark:'DM Sans',system-ui,sans-serif;
   --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --title-transform:none;
+  --title-spacing:normal;
+  --font-display-style:normal;
+  --card-shadow:none;
+  --ac-glow:none;
+  --panel-border-style:solid;
+  --panel-border-width:1px;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px)
@@ -84,9 +96,27 @@ body::before{
   background-size:160px 160px;
 }
 
+/* Padrão de fundo temático (Fase Identidade v2).
+   Usa uma segunda camada pseudo sem noise; a opacidade é controlada
+   pela variável --bg-pattern-opacity injetada por applyTheme().
+   Fica em body::after para não colidir com o ruído em ::before. */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background-image:var(--bg-pattern,none);
+  background-size:var(--bg-pattern-size,auto);
+  background-repeat:repeat;
+  opacity:var(--bg-pattern-opacity,0);
+}
+
 /* --- CONTROLES GENÉRICOS (botão, input, select, textarea) --- */
 button,input,select,textarea{font:inherit;color:inherit;background:var(--s2);border:1px solid var(--bd);border-radius:var(--radius-sm,8px);padding:6px 9px}
 button{cursor:pointer}button:hover{border-color:var(--ac)}
+button:focus-visible{box-shadow:var(--ac-glow,none)}
+.btn-primary:hover,.week-add-btn:hover,.quick-actions .primary:hover,.next-card .nc-actions .go:hover,.focus-btn.start:hover{box-shadow:var(--ac-glow,none)}
 button:disabled{opacity:.4;cursor:not-allowed}
 input,textarea,select{width:100%}
 
@@ -96,8 +126,23 @@ summary{cursor:pointer;color:var(--mu);font-size:12px;user-select:none;padding:2
 textarea{margin:6px 0;font-family:inherit;resize:vertical}
 
 /* --- TÍTULOS DE SEÇÃO --- */
-h3{margin:16px 0 8px;color:var(--ac);font-size:14px;letter-spacing:.03em}
-h3 .count{color:var(--mu);font-weight:400;font-size:12px}
+h1,h2,h3,.tasks-header,.week-summary-top{
+  font-family:var(--font-display,inherit);
+  text-transform:var(--title-transform,none);
+  letter-spacing:var(--title-spacing,normal);
+  font-style:var(--font-display-style,normal)
+}
+/* Controles e números dentro dos cabeçalhos continuam na fonte de leitura. */
+.tasks-header .count,
+.tasks-header-actions,
+.week-summary-top .th-stats{
+  font-family:var(--font-body,'DM Sans',system-ui,sans-serif);
+  text-transform:none;
+  letter-spacing:normal;
+  font-style:normal
+}
+h3{margin:16px 0 8px;color:var(--ac);font-size:14px}
+h3 .count{color:var(--mu);font-weight:400;font-size:12px;font-family:var(--font-body,'DM Sans',system-ui,sans-serif);letter-spacing:normal;text-transform:none;font-style:normal}
 h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
 
 /* =========================================================
@@ -114,7 +159,8 @@ h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
   --dot-radius:0;
   --bevel:6px;
   --bevel-sm:clamp(3px,calc(var(--bevel,6px) - 2px),4px);
-  --font-display:'Grenze Gotisch Wordmark','Grenze Gotisch','UnifrakturCook','DM Sans',serif;
+  --font-display:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;
+  --font-wordmark:'Grenze Gotisch Wordmark','Grenze Gotisch','UnifrakturCook','DM Sans',serif;
 }
 
 [data-look="brutal"][data-mode="dark"]{
