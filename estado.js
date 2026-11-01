@@ -683,6 +683,31 @@ function restoreCopy(kind, confirmed) {
 function snapshot() {undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift();}
 function undo() {if (!undoStack.length) return toast('Nada para desfazer'); try {S = JSON.parse(undoStack.pop()); applyTheme(); save(); render(); toast('Desfeito');} catch(e) {toast('Erro', true);}}
 
+/* --- AVISOS INFORMATIVOS DISPENSÁVEIS (por dispositivo) ---
+   Preferência de UI local: NÃO vive em S — não sincroniza, não entra em
+   backup/snapshot/undo e não exige migrate(). Cada aviso guarda o "escopo"
+   em que foi dispensado; para o aviso de revisão o escopo é a semana ISO
+   (mesma chave de cfg.reviewChecks), então ele reaparece na semana seguinte. */
+const NOTICES_KEY = 'atelier_notices_v1';
+let noticesStore = null;
+function readNotices() {
+  if (noticesStore) return noticesStore;
+  try {noticesStore = JSON.parse(localStorage.getItem(NOTICES_KEY) || '{}') || {};} catch(e) {noticesStore = {};}
+  if (typeof noticesStore !== 'object' || Array.isArray(noticesStore)) noticesStore = {};
+  return noticesStore;
+}
+function isNoticeDismissed(id, scope) {
+  if (!id) return false;
+  const entry = readNotices()[id];
+  return !!entry && entry.scope === String(scope ?? '');
+}
+function dismissNoticeStore(id, scope) {
+  if (!id) return false;
+  const store = readNotices();
+  store[id] = {scope: String(scope ?? ''), at: Date.now()};
+  try {localStorage.setItem(NOTICES_KEY, JSON.stringify(store)); return true;} catch(e) {return false;}
+}
+
 /* --- LIXEIRA --- */
 function softDelete(collection, id) {
   const arr = S[collection]; if (!Array.isArray(arr)) return false;

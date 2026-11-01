@@ -21,6 +21,7 @@ document.addEventListener('toggle', ev => {
 document.addEventListener('click', ev => {
   // Fechar overlays ao clicar fora deles
   if (ev.target.classList.contains('shortcuts-modal')) {ev.target.remove(); return;}
+  if (ev.target.classList.contains('search-modal')) {closeSearch(); return;}
   if (ev.target.classList.contains('more-sheet')) {hideMoreSheet(); return;}
 
   // Inputs de edição inline (título/estimativa) não podem expandir o card.
@@ -72,6 +73,17 @@ document.addEventListener('click', ev => {
     }
     case 'dismissBackup': S.cfg.backupReminderDismissedAt = Date.now(); save(); renderBackupBanner(); return;
     case 'dismissRecovery': recoveryNotice = null; renderBackupBanner(); return;
+    // Aviso informativo dispensável: grava a preferência local (por semana, no
+    // caso do review-hint) e remove só o nó — sem render(), sem snapshot e sem
+    // entrar em MUTATING_ACTIONS (não altera S nem deve ser desfazível).
+    case 'dismissNotice': {
+      const noticeEl = btn.closest('.notice');
+      const noticeId = btn.dataset.notice || '';
+      if (noticeId) dismissNoticeStore(noticeId, noticeScopeFor(noticeId));
+      if (noticeEl) noticeEl.remove();
+      return;
+    }
+    case 'closeSearch': closeSearch(); return;
     case 'restoreSnapshot': {
       const info = readRestorableCopy('snapshot');
       if (!info || info.error) {toast('Cópia automática indisponível', true); return;}
@@ -758,6 +770,8 @@ document.addEventListener('keydown', ev => {
   const isTyping = ev.isComposing || (tgt && tgt.isContentEditable) || (tgt && ['INPUT','TEXTAREA','SELECT'].includes(tgt.tagName));
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {ev.preventDefault(); openSearch(); return;}
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z' && !ev.shiftKey) {if (isTyping) return; ev.preventDefault(); undo(); return;}
+  // Esc fecha a busca mesmo com o foco no input (o overlay abre com autofocus).
+  if (ev.key === 'Escape' && document.getElementById('searchModal')) {ev.preventDefault(); closeSearch(); return;}
   if (isTyping) return;
   if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('.section-header[data-a]')) {
     ev.preventDefault();
@@ -767,6 +781,14 @@ document.addEventListener('keydown', ev => {
   if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const qa = document.getElementById('qa') || document.getElementById('qaJob'); if (qa) qa.focus(); return;}
   if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const nt = S.tasks.find(t => t.next && !isDoneThisWeek(t)) || S.tasks.find(t => !isDoneThisWeek(t) && t.day === day); if (nt) openFocus(nt.id); else toast('Sem tarefa pendente'); return;}
   if (ev.key === 'Escape') {
+    // Aviso informativo focado: Esc dispensa (mesma regra do botão ✕).
+    const noticeEl = tgt && tgt.closest && tgt.closest('.notice');
+    if (noticeEl) {
+      const nid = noticeEl.dataset.notice;
+      if (nid) dismissNoticeStore(nid, noticeScopeFor(nid));
+      noticeEl.remove();
+      return;
+    }
     if (document.getElementById('searchModal')) {closeSearch(); return;}
     if (document.getElementById('closeFocusModal')) {document.getElementById('closeFocusModal').remove(); return;}
     if (focusTaskId) {closeFocus(); return;}

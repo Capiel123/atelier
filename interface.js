@@ -36,7 +36,7 @@ function openSearch() {
   const el = document.createElement('div');
   el.id = 'searchModal';
   el.className = 'search-modal';
-  el.innerHTML = '<div class="search-content"><input id="searchInput" placeholder="Buscar em tudo…" value="" autofocus><div id="searchResults"></div><div class="msg" style="margin-top:8px;font-size:11px">Esc fecha · Enter no primeiro resultado</div></div>';
+  el.innerHTML = '<div class="search-content"><div class="search-head"><input id="searchInput" placeholder="Buscar em tudo…" value="" autofocus><button type="button" class="icon-x search-close" data-a="closeSearch" aria-label="Fechar busca" title="Fechar busca (Esc)">✕</button></div><div id="searchResults"></div><div class="msg search-hint">Esc ou ✕ fecha · Enter no primeiro resultado</div></div>';
   document.body.appendChild(el);
   setTimeout(() => document.getElementById('searchInput')?.focus(), 30);
   renderSearchResults('');
@@ -110,6 +110,43 @@ function renderBackupBanner() {
   const days = never ? 0 : Math.floor((Date.now() - S.cfg.lastBackupAt) / 86400000);
   const text = never ? 'Você ainda não fez backup. Seus dados vivem só neste navegador.' : `Último backup: ${days} dia${days!==1?'s':''} atrás.`;
   el.innerHTML = `<div class="backup-banner"><span>${text}</span><button data-a="dl">Baixar JSON</button><button data-a="dismissBackup" title="Ocultar por 24h">✕</button></div>`;
+}
+
+/* --- AVISOS INFORMATIVOS (componente reutilizável) ---
+   Markup único: .notice + .notice-text + ação opcional + ✕ de dispensar.
+   Nunca use para avisos críticos (save bloqueado, dados ilegíveis, falha de
+   sync): esses continuam sem ✕ e sempre visíveis. */
+function notice(o) {
+  const opts = o || {};
+  const id = esc(opts.id || '');
+  const tone = opts.tone === 'warn' ? ' notice--warn' : '';
+  const label = esc(opts.dismissLabel || 'Dispensar aviso');
+  const actions = opts.actions ? `<div class="notice-actions">${opts.actions}</div>` : '';
+  const dismiss = opts.dismissible === false ? '' : `<button type="button" class="icon-x notice-dismiss" data-a="dismissNotice" data-notice="${id}" aria-label="${label}" title="${label}">✕</button>`;
+  return `<div class="notice${tone}" data-notice="${id}"><div class="notice-text">${opts.html || ''}</div>${actions}${dismiss}</div>`;
+}
+
+// Escopo de dispensa por aviso. O de revisão vale para a semana ISO corrente
+// (a mesma chave de cfg.reviewChecks); os demais são globais neste dispositivo.
+function noticeScopeFor(id, now = new Date()) {
+  return id === 'review-hint' ? iso(weekStart(now)) : 'global';
+}
+
+// "É dia de revisão semanal": aparece em Mon/Dom enquanto a revisão da semana
+// não estiver concluída e o usuário não tiver dispensado o aviso nesta semana.
+// Dispensar NÃO marca checks nem altera weekPriority.
+function reviewHintHTML(now = new Date()) {
+  const wIso = iso(weekStart(now));
+  const checks = S.cfg.reviewChecks?.[wIso];
+  const checkedCount = Object.keys(checks || {}).filter(k => checks[k]).length;
+  const reviewDone = checkedCount >= 4 && S.cfg.weekPriority?.[wIso]?.text;
+  if (!reviewDone && [0, 6].includes((now.getDay() + 6) % 7) && !isNoticeDismissed('review-hint', wIso)) {
+    return notice({
+      id: 'review-hint',
+      html: '<b>É dia de revisão semanal.</b> <a href="#" data-a="tab" data-t="review">Abrir →</a>'
+    });
+  }
+  return '';
 }
 
 /* --- MENU "MAIS" (mobile) --- */
@@ -206,10 +243,6 @@ function viewWeek() {
   const nextTask = S.tasks.find(t => t.next && !isDoneThisWeek(t));
   const slot = currentEnergySlot(); const currentE = getTodayEnergy()[slot];
   const slotLabel = {morning:'Manhã', afternoon:'Tarde', evening:'Noite'}[slot];
-  const wIso = iso(weekStart());
-  const reviewDone = S.cfg.reviewChecks?.[wIso] && Object.keys(S.cfg.reviewChecks[wIso]||{}).filter(k => S.cfg.reviewChecks[wIso][k]).length >= 4 && S.cfg.weekPriority?.[wIso]?.text;
-  const isReviewDay = [0, 6].includes(todayI());
-  const showReviewHint = isReviewDay && !reviewDone;
   const nextCard = nextTask ? `<div class="next-card"><div><div class="nc-label">⭐ Próxima</div><div class="nc-title">${esc(nextTask.t)}</div><div class="nc-meta">${PR[nextTask.pr]} · ${esc(areaLabel(nextTask.area))}${nextTask.est?' · '+fmtMin(nextTask.est):''}</div></div><div class="nc-actions"><button class="go" data-a="focusMode" data-id="${nextTask.id}">⛶ Focar</button><button data-a="setnext" data-id="${nextTask.id}">✕</button></div></div>` : '';
   const compact = getTaskCompactMode();
   const prCounts = [0,1,2].map(pr => ts.filter(t => !isDoneThisWeek(t) && t.pr === pr).length);
@@ -253,7 +286,7 @@ function viewWeek() {
   const toggleBtn = `<button class="week-toggle-btn" data-a="toggleWeekSummary" aria-expanded="${!collapsed}" aria-controls="weekCollapsible">${collapsed ? '▾ Ver resumo e filtros' : '▴ Ocultar'}</button>`;
 
   return `${summaryCard}
-    ${showReviewHint ? `<div class="warn" style="border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 10%,var(--s1));padding:8px 10px;border-radius:8px;font-size:12px;margin-bottom:8px"><b style="color:var(--ac)">É dia de revisão semanal.</b> <a href="#" data-a="tab" data-t="review" style="color:var(--ac);font-weight:700">Abrir →</a></div>` : ''}
+    ${reviewHintHTML()}
     <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDoneThisWeek(t)).length}/${a.length}</small></button>`;}).join('')}</div>
     ${toggleBtn}
     <div class="week-collapsible${collapsed?' week-collapsible--hidden':''}" id="weekCollapsible">

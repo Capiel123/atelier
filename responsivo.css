@@ -205,7 +205,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     flex-direction:column;
   }
   #app:has(.week-summary-card) > * { order:5; }
-  /* Aviso de revisão semanal (.warn inline) aparece no topo */
+  /* Aviso informativo no topo (o .notice equivalente está no bloco V83) */
   #app:has(.week-summary-card) > .warn { order:0!important; margin-bottom:6px; }
   #app:has(.week-summary-card) > .week-summary-card { order:1!important; }
   #app:has(.week-summary-card) > .days             { order:2!important; }
@@ -910,4 +910,27 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
       corner-shape:bevel;
     }
   }
+}
+
+/* =========================================================
+   V83 — AVISOS DISPENSÁVEIS E FECHAR BUSCA (mobile)
+   O ✕ do aviso (.notice) e o da busca (.search-close) usam o
+   mesmo utilitário .icon-x (componentes.css): ícone de 8×8 em
+   currentColor, traço 1,5px. Aqui só cresce o alvo de toque
+   para 44×44 (::after) e o aviso volta à primeira posição da
+   Semana, como fazia o antigo .warn inline.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  /* Ordem: aviso informativo no topo da Semana, antes do resumo. */
+  #app:has(.week-summary-card) > .notice{order:0!important;margin-bottom:6px}
+
+  .notice{padding:8px 8px 8px 10px;gap:6px}
+  .notice-text{min-width:0}
+
+  /* Alvo de toque 44×44 (36 visuais + 4 de cada lado). */
+  .notice .icon-x,
+  .search-close{width:36px;height:36px}
+  .notice .icon-x::after,
+  .search-close::after{content:'';position:absolute;inset:-4px}
 }

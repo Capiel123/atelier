@@ -131,6 +131,30 @@
 }
 @keyframes pwaSlide{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
 
+/* --- AVISO INFORMATIVO DISPENSÁVEL (.notice) ---
+   Markup único em interface.js (`notice()`), com ✕ opcional. Use SÓ para
+   avisos informativos: críticos (save bloqueado, dados ilegíveis, falha de
+   sync) continuam sem ✕ e sempre visíveis. Cores apenas por tokens. */
+.notice{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;margin-bottom:8px;background:color-mix(in srgb,var(--ac) 10%,var(--s1));border:1px solid var(--ac);border-style:var(--panel-border-style,solid);border-radius:var(--radius-sm,8px);font-size:12px;color:var(--tx)}
+.notice--warn{border-color:var(--wr);background:color-mix(in srgb,var(--wr) 12%,var(--s1))}
+.notice-text{flex:1;min-width:180px}
+.notice-text b{color:var(--ac)}
+.notice-actions{display:flex;gap:6px;flex:none}
+.notice a{color:var(--ac);font-weight:700}
+
+/* ✕ desenhado em CSS (currentColor, traço de 1,5px) — vale para todos os
+   temas, sem depender do glifo. ::before é o ícone; ::after é a área de toque
+   (44px no mobile, bloco V83 de responsivo.css). */
+.icon-x{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;background:transparent;border:0;border-radius:var(--radius-sm,8px);color:var(--mu);cursor:pointer;font-size:0;line-height:0}
+.icon-x::before{
+  content:'';width:8px;height:8px;pointer-events:none;
+  background-repeat:no-repeat;background-position:center;background-size:8px 8px,8px 8px;
+  background-image:
+    linear-gradient(45deg,transparent calc(50% - .75px),currentColor calc(50% - .75px),currentColor calc(50% + .75px),transparent calc(50% + .75px)),
+    linear-gradient(-45deg,transparent calc(50% - .75px),currentColor calc(50% - .75px),currentColor calc(50% + .75px),transparent calc(50% + .75px));
+}
+.icon-x:hover{color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+
 /* --- SELETOR DE ENERGIA --- */
 .energy-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;font-size:12px}
 .energy-row .energy-label{color:var(--mu)}
@@ -581,6 +605,11 @@
 [data-look="brutal"] .ob-close,
 [data-look="brutal"] [data-a="dismissRecovery"],
 [data-look="brutal"] [data-a="dismissBackup"],
+/* V83: avisos dispensáveis e fechar busca. O ✕ já é desenhado em CSS em
+   todos os temas (.icon-x::before, 8×8, currentColor, 1,5px); a entrada
+   aqui mantém a convenção do look brutal e coincide pixel a pixel. */
+[data-look="brutal"] [data-a="dismissNotice"],
+[data-look="brutal"] [data-a="closeSearch"],
 [data-look="brutal"] [data-a="closeMore"],
 [data-look="brutal"] .focus-close,
 [data-look="brutal"] [data-a="trashDelete"],
