@@ -265,9 +265,9 @@ function viewWeek() {
     </div>
     <div class="tasks-header">
       <h3 style="margin:0">Tarefas <span class="count" id="taskCount"></span></h3>
-      <div class="tasks-header-actions" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <button data-a="expandAll" style="padding:4px 8px;font-size:12px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;" title="Expandir todos">⊞ Expandir</button>
-        <button data-a="collapseAll" style="padding:4px 8px;font-size:12px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;" title="Recolher todos">⊟ Recolher</button>
+      <div class="tasks-header-actions" data-all="${getTaskCompactMode() ? 'collapsed' : 'expanded'}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button data-a="expandAll" style="padding:4px 8px;font-size:12px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;" title="Expandir todos" aria-label="Expandir todos">⊞ Expandir</button>
+        <button data-a="collapseAll" style="padding:4px 8px;font-size:12px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:6px;" title="Recolher todos" aria-label="Recolher todos">⊟ Recolher</button>
       </div>
     </div>
     <div id="taskList">${renderFilteredTasks()}</div>`;

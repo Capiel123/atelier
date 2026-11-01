@@ -683,3 +683,68 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(max-width:640px){
   .sync-pill[data-remote]::after{top:-2px;right:-2px}
 }
+
+/* =========================================================
+   V81 — TOGGLE ÚNICO DE EXPANDIR/RECOLHER (mobile)
+   O template emite data-all no .tasks-header-actions
+   (collapsed|expanded) a partir de getTaskCompactMode();
+   o CSS mostra só o botão pertinente, icon-only, com chevron
+   desenhado em currentColor (traço 1.5px). Desktop (≥641px)
+   não lê o atributo e continua com os dois botões como antes.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  /* Um único controle visível: some o botão que repetiria a ação.
+     (O gap inline do container fica sem efeito com um só filho visível.) */
+  .tasks-header-actions[data-all="collapsed"] [data-a="collapseAll"],
+  .tasks-header-actions[data-all="expanded"] [data-a="expandAll"]{display:none}
+
+  /* Icon-only: 30×28 (mesma faixa de altura de antes), texto só acessível. */
+  .tasks-header-actions button{
+    width:30px;
+    height:28px;
+    padding:0!important;
+    font-size:0!important;
+    line-height:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:var(--radius-sm)!important;
+  }
+
+  /* Chevron desenhado: quadrado 8×8 com dois lados em currentColor.
+     Na V23 o ::before era o alvo de toque; aqui ele vira o ícone e o
+     alvo de 44px migra para o ::after (só estes botões, só no mobile). */
+  .tasks-header-actions button::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    margin:auto;
+    width:8px;
+    height:8px;
+    box-sizing:border-box;
+    border:1.5px solid currentColor;
+    border-width:0 1.5px 1.5px 0;
+    pointer-events:none;
+  }
+  /* Expandir → chevron para baixo; recolher → para cima. */
+  .tasks-header-actions [data-a="expandAll"]::before{transform:translateY(-2.8px) rotate(45deg)}
+  .tasks-header-actions [data-a="collapseAll"]::before{transform:translateY(2.8px) rotate(-135deg)}
+
+  /* Alvo de toque: 28px + 9px em cima/embaixo = 46px de altura. */
+  .tasks-header-actions button::after{
+    content:"";
+    position:absolute;
+    inset:-9px -4px;
+  }
+
+  .tasks-header-actions button:hover{border-color:var(--ac)!important}
+
+  /* Look brutal: chanfro nos controles, como os vizinhos do cabeçalho. */
+  @supports (corner-shape:bevel){
+    [data-look="brutal"] .tasks-header-actions button{
+      border-radius:var(--bevel-sm,4px)!important;
+      corner-shape:bevel;
+    }
+  }
+}

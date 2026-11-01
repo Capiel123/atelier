@@ -105,6 +105,7 @@ Ao criar seletor visual ou componente, usar os tokens quando a cor deve acompanh
 - A lupa de `.search-btn` é universal (não depende de `data-look`): círculo em `::before` e haste em `::after`, ambos em `currentColor`, com traço de 1.5px. O `::after` também fornece o alvo de toque de 44px de altura.
 - No look brutal, `componentes.css` redesenha `✕` e `+` com `background-image` em gradiente e `font-size:0`. A regra vale apenas para botões inequivocamente icon-only, listados por `data-a`; não usar em ações que também aparecem com texto.
 - Ao desenhar um ícone novo por CSS: usar `currentColor`, manter traço de 1.5px, não ocupar o `::before` de botões que já o usam como hitbox e confirmar que o glifo não muda por estado/template. Caso mude, apenas reportar — a correção exige template ou JavaScript.
+- Exceção controlada: o toggle de expandir/recolher dos cards (mobile, bloco V81 de `responsivo.css`) desenha um chevron em `::before` (quadrado 8×8 com `border-width:0 1.5px 1.5px 0` em `currentColor`, girado 45°/−135°) e move o alvo de toque de 44px para `::after`. Vale só para os dois botões de `.tasks-header-actions` em ≤640px; os glifos `⊞/⊟` continuam no DOM, mas o `aria-label` ("Expandir todos"/"Recolher todos") é o nome acessível.
 
 ## Como decidir onde colocar uma regra
 
