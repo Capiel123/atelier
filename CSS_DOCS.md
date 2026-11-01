@@ -1,4 +1,4 @@
-# Guia de CSS — Ateliê (estrutura atual)
+﻿# Guia de CSS — Ateliê (estrutura atual)
 
 Este arquivo substitui o mapa antigo que tratava os estilos como um conjunto menos fragmentado. No snapshot analisado, há **cinco folhas de estilo**, carregadas nesta ordem em `index.html`:
 
@@ -83,7 +83,7 @@ Tokens opcionais por tema, aplicados inline por `applyTheme()` e com fallback no
 | `--ac-glow` | `button:focus-visible` e hover de botões primários | `none` |
 | `--panel-border-style` | dropdowns, busca, atalhos, folha “Mais” e onboarding | `solid` |
 
-- **Wordmark separada:** `.logo-text` usa `--font-wordmark` (DM Sans nos temas legados; subset `Grenze Gotisch Wordmark` no look brutal), não `--font-display`. O subset gótico difícil de ler fica só na logo; títulos usam a Grenze completa quando o tema define.
+- **Wordmark e fontes góticas:** A fonte gótica (Grenze Gotisch e seu subset embutido Grenze Gotisch Wordmark) é de uso **estritamente exclusivo da logomarca** (.logo-text via --font-wordmark ou logoEffect: serif). **Regra inegociável de UX:** textos góticos NUNCA devem ser usados na interface (nem em títulos h1..h3, nem em cards, inputs ou seções), pois degradam severamente a legibilidade. A interface inteira usa tipografia limpa de leitura (--font-body: DM Sans / system-ui, ou --font-mono no tema Tóxico).
 - **Resets:** `.tasks-header .count`, `.tasks-header-actions` e `.week-summary-top .th-stats` voltam para `--font-body`, `letter-spacing:normal`, `text-transform:none` e `font-style:normal`; sem isso, botões e números herdariam caixa alta/espaçamento.
 - **Tema card:** `themeArtVars(t)` gera o inline com `--bg`, `--ac`, `--font-display`, `--title-transform`, `--title-spacing`, `--font-display-style`, `--card-shadow`, `--ac-glow` e `--panel-border-style`; o `.theme-swatch` ganhou `.ts-aa` para prévia de fonte.
 - **Cuidado de cascata:** as regras de direção de arte ficam em `base.css` (títulos/foco) e são sobrescritas pelos estados locais de `.card` (`.selected`, `.highlight`, `.next-card-in`) e `.theme-card.on`; não usar `!important` para forçar sombra.

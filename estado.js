@@ -72,19 +72,19 @@ const THEME_IDENTITY = {
    o merge abaixo garante que as chaves existam em THEMES. */
 const THEME_ART = {
   obsidian: {cardShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)'},
-  vampire: {fontDisplay: "'Grenze Gotisch', serif", titleTransform: 'capitalize', titleSpacing: '1px', cardShadow: '0 4px 12px rgba(0,0,0,0.6)', borderStyle: 'double'},
-  occult: {fontDisplay: "'Grenze Gotisch', serif", titleTransform: 'uppercase', titleSpacing: '2px', borderStyle: 'dashed'},
+  vampire: {titleTransform: 'uppercase', titleSpacing: '1.5px', cardShadow: '0 4px 12px rgba(0,0,0,0.6)', borderStyle: 'double'},
+  occult: {titleTransform: 'uppercase', titleSpacing: '2px', borderStyle: 'dashed'},
   noir: {titleTransform: 'uppercase', titleSpacing: '2px', cardShadow: '0 2px 0 rgba(255,255,255,0.1)'},
   cyanotic: {titleTransform: 'uppercase', titleSpacing: '1.5px', accentGlow: '0 0 8px color-mix(in srgb, var(--ac) 50%, transparent)'},
   toxic: {titleTransform: 'uppercase', fontDisplay: 'var(--font-mono)'},
   ember: {accentGlow: '0 0 10px color-mix(in srgb, var(--ac) 40%, transparent)', cardShadow: 'inset 0 -2px 5px rgba(0,0,0,0.5)'},
   moonlight: {cardShadow: '0 4px 20px rgba(0,0,0,0.15)', fontStyle: 'italic'},
-  rose: {fontDisplay: "'Grenze Gotisch', serif", fontStyle: 'italic'},
+  rose: {fontStyle: 'italic'},
   abyss: {cardShadow: 'inset 0 0 20px rgba(0,0,0,0.4)'},
-  bone: {fontDisplay: "'Grenze Gotisch', serif", titleSpacing: '1px', cardShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)'},
-  deepbone: {fontDisplay: "'Grenze Gotisch', serif"},
-  chrome: {fontDisplay: "'Grenze Gotisch', serif"},
-  'deepbone-light': {fontDisplay: "'Grenze Gotisch', serif"}
+  bone: {titleSpacing: '1px', cardShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)'},
+  deepbone: {},
+  chrome: {},
+  'deepbone-light': {}
 };
 Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
 Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });

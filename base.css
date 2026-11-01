@@ -159,7 +159,7 @@ h4{margin:10px 0 6px;font-size:13px;color:var(--mu);font-weight:500}
   --dot-radius:0;
   --bevel:6px;
   --bevel-sm:clamp(3px,calc(var(--bevel,6px) - 2px),4px);
-  --font-display:'Grenze Gotisch','UnifrakturCook','DM Sans',serif;
+  --font-display:inherit;
   --font-wordmark:'Grenze Gotisch Wordmark','Grenze Gotisch','UnifrakturCook','DM Sans',serif;
 }
 

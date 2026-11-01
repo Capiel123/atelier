@@ -169,7 +169,10 @@ function applyLogo() {
 }
 
 /* --- BARRA DE PROGRESSO (helper visual) --- */
-function bar(p, label, msg) {return `<div class="bar"><div class="fill" style="width:${Math.min(100,p)}%"></div>${[25,50,75].map(x => `<i class="${p>=x?'lit':''}" style="left:${x}%"></i>`).join('')}<span>${p}% · ${label}</span></div>${msg ? `<div class="msg">${msg}</div>` : ''}`;}
+function bar(p, label, msg) {
+  const lbl = label ? `<span>${label.includes('%') ? label : `${p}% · ${label}`}</span>` : '';
+  return `<div class="bar"><div class="fill" style="width:${Math.min(100,p)}%"></div>${[25,50,75].map(x => `<i class="${p>=x?'lit':''}" style="left:${x}%"></i>`).join('')}${lbl}</div>${msg ? `<div class="msg">${msg}</div>` : ''}`;
+}
 
 /* =========================================================
    VIEWS — cada aba tem uma função que devolve HTML
@@ -221,7 +224,7 @@ function viewWeek() {
         <span class="pr-group" title="Prioridade (alta · média · baixa)">${prInds}</span>
       </div>
     </div>
-    ${bar(workProg.pct, total ? `${workTasks.filter(t=>isDoneThisWeek(t)).length}/${workTasks.length} trab · ${fmtMin(workProg.doneWeight + workProg.inProgressWeight)}/${fmtMin(workProg.totalWeight)}` : 'sem tarefas', '')}
+    ${bar(workProg.pct, '', '')}
     ${sectionStatsHtml}
   </div>`;
 

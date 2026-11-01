@@ -101,7 +101,7 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 
 /* --- BARRA DE TÍTULO DE TAREFAS (sticky) ---
    💡 Sticky aqui mantém o título "fixo" enquanto rola a lista. */
-.tasks-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0 6px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5}
+.tasks-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0 6px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);padding:6px 4px;z-index:5}
 .tasks-header-actions{display:flex;gap:6px;align-items:center}
 
 /* --- MENU INFERIOR (MOBILE) — padrão é oculto --- */
@@ -164,13 +164,13 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 /* 2.5 ORNAMENTO DO TOPO (.tasks-header::before)
    Exibe --top-ornament em cor de accent, sutil.
    Não polui o meio da tela — fica à esquerda do título. */
-.tasks-header::before{
+.tasks-header h3::before{
   content:var(--top-ornament,"");
   color:var(--ac);
   opacity:0.65;
   font-size:14px;
   flex:none;
-  margin-right:2px;
+  margin-right:6px;
   line-height:1;
   font-family:inherit;
   pointer-events:none;
