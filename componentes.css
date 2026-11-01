@@ -288,6 +288,14 @@
 .act-play .act-icon{color:var(--mu);padding:4px 7px}
 .act-play .act-icon:hover{color:var(--ac)}
 
+/* V82 — barra de tempo segmentada (contrato desktop-neutro)
+   O template de interface.js agrupa play/foco, stepper ±5m e "adiar" num
+   único contêiner. No desktop ele é dissolvido por display:contents: os três
+   controles continuam sendo itens diretos de .acts, com os mesmos gaps,
+   ordem (incluindo .act-del{order:99}) e alvos de antes. O visual segmentado
+   só é montado em ≤640px (responsivo.css, bloco V82). */
+.timer-segmented-bar{display:contents}
+
 .time-stepper{display:inline-flex;align-items:center;flex:none;background:var(--surface-panel,var(--s1));border:1px solid var(--bd);border-radius:var(--radius-sm,8px);overflow:hidden}
 .time-stepper button{padding:4px 7px;font-size:12px;background:transparent;border:0;border-radius:0;color:var(--mu)}
 .time-stepper button:hover{background:var(--s2);color:var(--ac)}

@@ -526,7 +526,7 @@ function cardTask(t, score) {
   const flagsHtml = `${stuck ? `<span class="postpone-badge ${urgentStuck?'urgent':'stuck'}">⟳ ${t.postponedCount}x</span>` : ''}${over ? '<span class="parkinson-badge">⏱ 2×</span>' : ''}${score != null ? `<span class="score-badge ${scoreClass(score)}" title="${esc(scoreTip)}">${score}</span>` : ''}`;
 
   return `<div class="card ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}">
-    <div class="row" style="align-items:flex-start;">
+    <div class="row task-header" data-a="expandTask" data-id="${t.id}">
       <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
         <div class="tt">${type ? `<span class="type-icon ${type.id}">${type.icon}</span>` : ''}<span class="tt-title-text">${esc(t.t)}</span><button type="button" class="tt-edit" data-a="editInline" data-kind="title" data-id="${t.id}" title="Editar título" aria-label="Editar título">✎</button>${isQuick ? '<span class="quick-ind">⚡</span>' : ''}${t.time ? `<span class="tag" style="color:var(--wr)">⏰ ${esc(t.time)}</span>` : ''}</div>
@@ -542,16 +542,18 @@ function cardTask(t, score) {
     <div class="card-toolbar">
       ${flagsHtml ? `<div class="task-flags">${flagsHtml}</div>` : ''}
       <div class="acts">
-      <div class="act-group act-play">
-        ${runningThis ? `<button data-a="stopTimer" class="act-main" style="background:var(--bu)" title="Pausar timer">⏸</button>` : `<button data-a="startTimer" data-id="${t.id}" class="act-main" ${S.timer?'disabled':''} title="Iniciar timer">▶</button>`}
-        <button data-a="focusMode" data-id="${t.id}" class="act-icon" title="Modo foco" aria-label="Modo foco">⛶</button>
+      <div class="timer-segmented-bar">
+        <div class="act-group act-play">
+          ${runningThis ? `<button data-a="stopTimer" class="act-main" style="background:var(--bu)" title="Pausar timer">⏸</button>` : `<button data-a="startTimer" data-id="${t.id}" class="act-main" ${S.timer?'disabled':''} title="Iniciar timer">▶</button>`}
+          <button data-a="focusMode" data-id="${t.id}" class="act-icon" title="Modo foco" aria-label="Modo foco">⛶</button>
+        </div>
+        <div class="time-stepper" role="group" aria-label="Ajustar tempo">
+          <button data-a="log" data-id="${t.id}" data-m="-5" title="Menos 5 minutos">−5m</button>
+          <span class="time-stepper-value" title="Gasto / estimado">${fmtMin(spent)}${t.est?'/'+fmtMin(t.est):''}</span>
+          <button data-a="log" data-id="${t.id}" data-m="5" title="Mais 5 minutos">+5m</button>
+        </div>
+        <select class="postpone-sel" data-a="postpone" data-id="${t.id}" aria-label="Adiar tarefa"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
       </div>
-      <div class="time-stepper" role="group" aria-label="Ajustar tempo">
-        <button data-a="log" data-id="${t.id}" data-m="-5" title="Menos 5 minutos">−5m</button>
-        <span class="time-stepper-value" title="Gasto / estimado">${fmtMin(spent)}${t.est?'/'+fmtMin(t.est):''}</span>
-        <button data-a="log" data-id="${t.id}" data-m="5" title="Mais 5 minutos">+5m</button>
-      </div>
-      <select class="postpone-sel" data-a="postpone" data-id="${t.id}" aria-label="Adiar tarefa"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
       <details class="act-menu copy-menu">
         <summary title="Copiar para dia" aria-label="Copiar para dia">⧉</summary>
         <div class="act-menu-panel">

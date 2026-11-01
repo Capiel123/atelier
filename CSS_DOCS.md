@@ -1,4 +1,4 @@
-﻿# Guia de CSS — Ateliê (estrutura atual)
+# Guia de CSS — Ateliê (estrutura atual)
 
 Este arquivo substitui o mapa antigo que tratava os estilos como um conjunto menos fragmentado. No snapshot analisado, há **cinco folhas de estilo**, carregadas nesta ordem em `index.html`:
 
@@ -106,6 +106,13 @@ Ao criar seletor visual ou componente, usar os tokens quando a cor deve acompanh
 - No look brutal, `componentes.css` redesenha `✕` e `+` com `background-image` em gradiente e `font-size:0`. A regra vale apenas para botões inequivocamente icon-only, listados por `data-a`; não usar em ações que também aparecem com texto.
 - Ao desenhar um ícone novo por CSS: usar `currentColor`, manter traço de 1.5px, não ocupar o `::before` de botões que já o usam como hitbox e confirmar que o glifo não muda por estado/template. Caso mude, apenas reportar — a correção exige template ou JavaScript.
 - Exceção controlada: o toggle de expandir/recolher dos cards (mobile, bloco V81 de `responsivo.css`) desenha um chevron em `::before` (quadrado 8×8 com `border-width:0 1.5px 1.5px 0` em `currentColor`, girado 45°/−135°) e move o alvo de toque de 44px para `::after`. Vale só para os dois botões de `.tasks-header-actions` em ≤640px; os glifos `⊞/⊟` continuam no DOM, mas o `aria-label` ("Expandir todos"/"Recolher todos") é o nome acessível.
+
+### Barra de tempo segmentada (v82)
+
+- `componentes.css` contém **apenas** a ponte `.timer-segmented-bar{display:contents}`. O template de `interface.js` (`cardTask`) agrupa `.act-group.act-play`, `.time-stepper` e `select.postpone-sel` nesse contêiner; `display:contents` dissolve a caixa, então no desktop os três continuam sendo itens diretos de `.acts` (mesmos gaps, ordem e alvos). Se essa ponte for removida, o desktop passa a mostrar os três controles empilhados dentro de um bloco — não remover sem substituir o agrupamento.
+- O visual segmentado (fundo `--s2`, divisórias internas em `color-mix(--bd 60%)`, 44px de altura, `appearance:none` no “adiar”) existe só no bloco **V82** no fim de `responsivo.css` (`≤640px`). Nenhum seletor de `.task-header` ou `.timer-segmented-bar` fica fora dele.
+- No look brutal o chanfro fica no contêiner (`--bevel-sm` + `corner-shape:bevel`); os segmentos internos recebem `border-radius:0`, porque `base.css` aplica bevel em todo `button`/`select`.
+- O header do card usa `.task-header` (`≤640px`) para `min-height:48px`, `user-select:none` e a hitbox de 44px do `.chk`; a `.meta` vira linha única com `overflow-x:auto`. O card da Fila (`cardQueue`) **não** recebe `task-header` e mantém a barra antiga.
 
 ## Como decidir onde colocar uma regra
 

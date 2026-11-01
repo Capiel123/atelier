@@ -748,3 +748,166 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     }
   }
 }
+
+/* =========================================================
+   V82 — REFORMA VISUAL E TOUCH TARGETS DOS CARDS (mobile)
+   Etapa 1: o header inteiro (.task-header) vira o gatilho de
+   expansão; o checkbox fica isolado com hitbox de 44×44.
+   Etapa 2: .timer-segmented-bar une play/foco, stepper ±5m e
+   "adiar" numa barra única com divisórias internas.
+   Etapa 3: ações secundárias (copiar, próxima, mais, excluir)
+   perdem a moldura e mantêm alvo transparente de 44×44.
+   Etapa 4: metadados numa linha só, com rolagem horizontal
+   sutil (sem rolagem vertical interna).
+   O contêiner da barra é display:contents no desktop
+   (componentes.css), então ≥641px continua idêntico.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  /* --- Etapa 1 — header como accordion único --------------- */
+  .card > .task-header{
+    align-items:center;
+    gap:8px;
+    min-height:48px;
+    cursor:pointer;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  /* Inputs de edição inline continuam editáveis/selecionáveis. */
+  .card > .task-header .inline-edit{
+    -webkit-user-select:text;
+    user-select:text;
+  }
+  /* Checkbox isolado: 26px visuais, 44×44 de hitbox (26+9+9). */
+  .card > .task-header > .chk::after{inset:-9px}
+
+  /* --- Etapa 2 — barra de tempo segmentada ----------------- */
+  .timer-segmented-bar{
+    display:flex;
+    align-items:stretch;
+    flex:1 1 100%;
+    min-width:0;
+    margin:0;
+    background:var(--s2);
+    border:1px solid var(--bd);
+    border-radius:var(--radius-sm,8px);
+    overflow:hidden;
+  }
+  .timer-segmented-bar > *{min-width:0;border-radius:0}
+  .timer-segmented-bar .act-group{align-items:stretch;gap:0;flex:none}
+
+  /* Segmentos: fundo transparente e divisória interna sutil. */
+  .timer-segmented-bar button,
+  .timer-segmented-bar > .time-stepper,
+  .timer-segmented-bar select.postpone-sel{
+    min-height:44px;
+    margin:0;
+    padding:0 7px;
+    background:transparent;
+    border:0;
+    border-right:1px solid color-mix(in srgb,var(--bd) 60%,transparent);
+    border-radius:0;
+    color:var(--mu);
+    font-size:12.5px;
+  }
+  .timer-segmented-bar > :last-child{border-right:0}
+  /* Play é o único destaque de cor; pausar mantém o fundo --bu do template. */
+  .timer-segmented-bar .act-play .act-main{
+    min-width:44px;
+    padding:0;
+    font-size:16px;
+    font-weight:700;
+    color:var(--tx);
+  }
+  .timer-segmented-bar .act-play .act-main[data-a="startTimer"]{color:var(--ac)}
+  .timer-segmented-bar .act-play .act-icon{min-width:44px;padding:0;font-size:15px}
+  .timer-segmented-bar button:hover{background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac)}
+  .timer-segmented-bar .time-stepper{flex:1 1 auto;justify-content:center;overflow:hidden}
+  .timer-segmented-bar .time-stepper button{
+    flex:none;
+    min-width:44px;
+    padding:0 6px;
+    border:0;
+    font-size:12px;
+  }
+  .timer-segmented-bar .time-stepper-value{
+    flex:1 1 auto;
+    min-width:0;
+    padding:0 4px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    border-left:1px solid color-mix(in srgb,var(--bd) 60%,transparent);
+    border-right:1px solid color-mix(in srgb,var(--bd) 60%,transparent);
+    font-size:11.5px;
+  }
+  /* O rótulo já traz "→"; sem a seta nativa o segmento ganha largura
+     para o valor do stepper em telas de 360px e 320px. */
+  .timer-segmented-bar select.postpone-sel{
+    flex:0 1 auto;
+    padding:0 6px;
+    border-right:0;
+    font-size:11.5px;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  /* Foco de teclado desenhado para dentro (a barra recorta o exterior). */
+  .timer-segmented-bar :is(button,select):focus-visible{outline:2px solid var(--ac);outline-offset:-2px}
+
+  /* --- Etapa 3 — ações secundárias sem moldura -------------- */
+  .card-toolbar .acts > button,
+  .card-toolbar .acts > .act-menu > summary{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:44px;
+    min-height:44px;
+    padding:0 8px;
+    font-size:14px;
+    background:transparent;
+    border:0;
+    border-radius:var(--radius-sm,8px);
+    color:var(--mu);
+  }
+  .card-toolbar .acts > button:hover,
+  .card-toolbar .acts > button:active,
+  .card-toolbar .acts > .act-menu > summary:hover,
+  .card-toolbar .acts > .act-menu[open] > summary{
+    background:var(--s2);
+    color:var(--ac);
+  }
+  .card-toolbar .acts > .act-del:hover,
+  .card-toolbar .acts > .act-del:active{
+    background:color-mix(in srgb,var(--er) 12%,transparent);
+    color:var(--er);
+  }
+
+  /* --- Etapa 4 — metadados em linha única ------------------- */
+  .card > .task-header .meta{
+    flex-wrap:nowrap;
+    gap:8px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  .card > .task-header .meta::-webkit-scrollbar{display:none}
+  .card > .task-header .meta > *{flex:none}
+
+  /* Look brutal: um chanfro só na barra, sem bevel por segmento
+     (base.css aplica raio/bevel em todo button e select). */
+  [data-look="brutal"] .card .timer-segmented-bar{
+    border-radius:var(--radius-sm,1px);
+    corner-shape:round;
+  }
+  [data-look="brutal"] .card .timer-segmented-bar button,
+  [data-look="brutal"] .card .timer-segmented-bar select{
+    border-radius:0;
+    corner-shape:round;
+  }
+  @supports (corner-shape:bevel){
+    [data-look="brutal"] .card .timer-segmented-bar{
+      border-radius:var(--bevel-sm,4px);
+      corner-shape:bevel;
+    }
+  }
+}
