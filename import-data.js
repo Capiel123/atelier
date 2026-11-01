@@ -229,7 +229,7 @@
     var syncBlock = (typeof window !== 'undefined' && window.__sync && window.__sync.statusHTML) ? window.__sync.statusHTML() : '';
     return '<div class="section-group"><h3 style="margin-top:0">Sincronização</h3>' +
       '<div class="msg">Alterações locais são enviadas automaticamente (somente local → Supabase).</div>' +
-      (syncBlock || '<div class="msg">Sincronização automática indisponível.</div>') +
+      '<div id="syncStatusPanel" role="status" aria-live="polite">' + (syncBlock || '<div class="msg">Sincronização automática indisponível.</div>') + '</div>' +
       '<div class="msg" style="margin-top:6px">Importação inicial (uma vez): ' + summary + '.</div>' +
       '<div class="acts" style="margin-top:6px"><button data-a="dataImport">Importar dados para a conta</button></div></div>';
   }

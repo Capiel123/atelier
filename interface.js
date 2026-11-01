@@ -174,20 +174,33 @@ function bar(p, label, msg) {
   return `<div class="bar"><div class="fill" style="width:${Math.min(100,p)}%"></div>${[25,50,75].map(x => `<i class="${p>=x?'lit':''}" style="left:${x}%"></i>`).join('')}${lbl}</div>${msg ? `<div class="msg">${msg}</div>` : ''}`;
 }
 
+/* --- DATA REAL DO DIA SELECIONADO (0=Seg … 6=Dom) --- */
+function weekDateForDay(dayIndex, refDate = new Date()) {
+  const monday = weekStart(refDate);
+  const target = new Date(monday);
+  target.setDate(target.getDate() + (Number(dayIndex) || 0));
+  return target;
+}
+
 /* =========================================================
    VIEWS — cada aba tem uma função que devolve HTML
    ========================================================= */
 
 function viewWeek() {
-  const ts = dayTasks(day); const today = iso(new Date());
-  const total = ts.length; const done = ts.filter(t => isDoneThisWeek(t)).length;
-  const workTasks = ts.filter(t => taskSection(t) === 'work');
-  const personalTasks = ts.filter(t => taskSection(t) === 'personal');
-  const commitmentTasks = ts.filter(t => taskSection(t) === 'commitment');
+  const ts = dayTasks(day);
+  // A bancada do dia ignora o que o usuário já limpou de "Concluídas":
+  // as tarefas continuam em S.tasks/Histórico, mas saem das metas ativas.
+  const activeDayTasks = ts.filter(t => !isClearedFromDone(t));
+  const total = activeDayTasks.length;
+  const done = activeDayTasks.filter(t => isDoneThisWeek(t)).length;
+  const workTasks = activeDayTasks.filter(t => taskSection(t) === 'work');
+  const personalTasks = activeDayTasks.filter(t => taskSection(t) === 'personal');
+  const commitmentTasks = activeDayTasks.filter(t => taskSection(t) === 'commitment');
   const workProg = sectionProgress(workTasks);
   const personalProg = sectionProgress(personalTasks);
   const commitmentProg = sectionProgress(commitmentTasks);
-  const workSpent = workTasks.reduce((a,t) => a + taskMinutes(t), 0);
+  const workSpent = workTasks.reduce((a,t) => a + taskMinutesThisWeek(t), 0);
+  const dayDate = iso(weekDateForDay(day)).split('-').reverse().join('/');
   const cap = S.cfg.cap || 360;
   const full = workProg.totalWeight > cap;
   const nextTask = S.tasks.find(t => t.next && !isDoneThisWeek(t));
@@ -216,7 +229,7 @@ function viewWeek() {
 
   const summaryCard = `<div class="week-summary-card">
     <div class="week-summary-top">
-      <div class="week-summary-day"><span class="th-day">${DAYS_FULL[day]}</span><span class="th-date">${today.split('-').reverse().join('/')}</span></div>
+      <div class="week-summary-day"><span class="th-day">${DAYS_FULL[day]}</span><span class="th-date">${dayDate}</span></div>
       <div class="th-stats">
         <span>Feitas <b>${done}</b>/${total}</span>
         <span>Est. <b class="${full?'wr':''}">${fmtMin(workProg.totalWeight)}</b></span>

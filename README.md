@@ -51,8 +51,10 @@ Este repositório adota **gerenciamento de contexto modular**. Consulte os docum
 ### Componentes e Especificações de Interface (UI/UX)
 | Documento | Descrição / Finalidade |
 |---|---|
-| [docs/header_menu_superior_docs.md](docs/header_menu_superior_docs.md) | Especificações do Header, Navegação (`#nav`), busca CSS, Timer e Nível/XP. |
-| [docs/dashboard_superior_docs.md](docs/dashboard_superior_docs.md) | Especificações do Card Resumo Semanal (`.week-summary-card`), estatísticas e hairline mobile. |
+| [docs/HEADER-TOP-MENU.md](docs/HEADER-TOP-MENU.md) | Especificações do Header, Navegação (`#nav`), busca CSS, Timer e Nível/XP. |
+| [docs/DASHBOARD-WEEK-TAB.md](docs/DASHBOARD-WEEK-TAB.md) | Especificações do Card Resumo Semanal (`.week-summary-card`), estatísticas e hairline mobile. |
+| [docs/FONTES.md](docs/FONTES.md) | **Governança tipográfica oficial:** uso exclusivo de fontes góticas no logo, fontes de leitura da interface e tokens. |
+| [docs/TEMAS.md](docs/TEMAS.md) | Catálogo e receita dos 14 temas, tokens CSS, direção de arte e identidade visual avançada. |
 | [docs/AUDITORIA-UX-UI.md](docs/AUDITORIA-UX-UI.md) | Fricções de UX priorizadas, sistema de tokens de cor e melhorias de usabilidade. |
 | [JS_DOCS.md](JS_DOCS.md) · [CSS_DOCS.md](CSS_DOCS.md) | Mapeamento técnico detalhado dos seletores CSS e funções JS. |
 

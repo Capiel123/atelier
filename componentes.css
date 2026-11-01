@@ -5,34 +5,27 @@
    afeta várias telas ao mesmo tempo.
    ========================================================= */
 
-/* --- SYNC PILL (indicador de sincronização) ---
-   syncPill: saved / saving / error / blocked / offline.
-   cloudPill: synced / sending / pending / paused / error / offline.
+/* --- SYNC PILL (gravação local) ---
+   Header: #syncPill — saved / saving / error / blocked / offline.
+   O estado remoto (Supabase) aparece na seção Sincronização da aba Config.
    Formas (distinguíveis em escala de cinza):
-   - cheio ............. saved / synced
-   - meio preenchido ... saving / sending (+ pulso)
-   - vazado ............ pending (borda cheia) / paused (borda tracejada)
+   - cheio ............. saved
+   - meio preenchido ... saving (+ pulso)
    - losango ........... error (cheio) / blocked (vazado), com pílula tracejada
    - vazado + tracejado  offline
-   O texto nunca é ocultado aqui; o colapso mobile só atinge saved/synced/saving/sending. */
-.sync-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--radius-pill,16px);font-size:10.5px;color:var(--mu);height: 34px; transition:opacity .3s,background .2s,border-color .2s,color .2s; cursor: pointer;}
+   O texto nunca é ocultado aqui; o colapso mobile só atinge saved/saving. */
+.sync-pill{position:relative;display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--radius-pill,16px);font-size:10.5px;color:var(--mu);height: 34px; transition:opacity .3s,background .2s,border-color .2s,color .2s;}
 .sync-pill .sp-dot{width:8px;height:8px;box-sizing:border-box;border-radius:var(--dot-radius,50%);background:var(--mu);border:1px solid transparent;flex:none;transition:background .2s,border-color .2s,border-radius .2s,transform .2s;}
 
-/* Cheio: gravado / sincronizado */
-.sync-pill[data-state="saved"] .sp-dot,
-.sync-pill[data-state="synced"] .sp-dot{background:var(--ok);border-color:var(--ok)}
+/* Cheio: gravado */
+.sync-pill[data-state="saved"] .sp-dot{background:var(--ok);border-color:var(--ok)}
 
-/* Meio preenchido (estático) + pulso: gravando / enviando */
-.sync-pill[data-state="saving"] .sp-dot,
-.sync-pill[data-state="sending"] .sp-dot{
+/* Meio preenchido (estático) + pulso: gravando */
+.sync-pill[data-state="saving"] .sp-dot{
   background:linear-gradient(90deg,var(--wr) 50%,transparent 50%);
   border-color:var(--wr);
   animation:pwaPulse 1s infinite;
 }
-
-/* Vazado: pendente (borda cheia) e pausada (borda tracejada) */
-.sync-pill[data-state="pending"] .sp-dot{background:transparent;border:1.5px solid var(--wr)}
-.sync-pill[data-state="paused"] .sp-dot{background:transparent;border:1.5px dashed var(--mu)}
 
 /* Losango: erro (cheio) e bloqueado (vazado) */
 .sync-pill[data-state="error"] .sp-dot,
@@ -47,21 +40,71 @@
 .sync-pill[data-state="offline"] .sp-dot{background:transparent;border:1.5px solid var(--mu)}
 
 /* Pílula: estados de problema mantêm texto e ganham borda tracejada */
-.sync-pill[data-state="saved"],
-.sync-pill[data-state="synced"]{opacity:.65}
-.sync-pill[data-state="saving"],.sync-pill[data-state="error"],.sync-pill[data-state="offline"],.sync-pill[data-state="blocked"],.sync-pill[data-state="pending"],.sync-pill[data-state="paused"]{opacity:1}
+.sync-pill[data-state="saved"]{opacity:.65}
+.sync-pill[data-state="saving"],.sync-pill[data-state="error"],.sync-pill[data-state="offline"],.sync-pill[data-state="blocked"]{opacity:1}
 .sync-pill[data-state="error"]{color:var(--er);border-color:var(--er);border-style:dashed}
 .sync-pill[data-state="blocked"]{color:var(--wr);border-color:var(--wr);border-style:dashed}
 .sync-pill[data-state="offline"]{color:var(--mu);border-color:var(--mu);border-style:dashed}
-.sync-pill[data-state="pending"]{color:var(--mu);border-color:var(--wr)}
-.sync-pill[data-state="paused"]{color:var(--mu);border-color:var(--mu)}
 
-/* --- CLOUD PILL (sync local → Supabase, Fase 4) --- */
-.sync-pill[hidden]{display:none}
-.cloud-pill{opacity:1;margin-left:6px}
-/* O cloudPill também é .sync-pill; estas regras explícitas garantem cor nos problemas. */
-.cloud-pill[data-state="error"]{color:var(--er);border-color:var(--er);border-style:dashed}
-.cloud-pill[data-state="offline"]{color:var(--mu);border-color:var(--mu);border-style:dashed}
+/* Marcador remoto adicional no #syncPill (error/paused-account).
+   O estado local continua mandando no ponto/texto/borda; este losango é
+   separado do círculo/quadrado de saved. Forma + cor, nunca só cor. */
+.sync-pill[data-remote]::after{
+  content:"";
+  position:absolute;
+  top:-3px;
+  right:-3px;
+  width:9px;
+  height:9px;
+  box-sizing:border-box;
+  transform:rotate(45deg);
+  background:var(--er);
+  border:1.5px solid var(--s1);
+  pointer-events:none;
+  z-index:1;
+}
+.sync-pill[data-remote="paused"]::after{
+  background:var(--s1);
+  border-color:var(--wr);
+}
+
+/* Painel da Config: ponto + texto. Formas distintas por estado. */
+.sync-status{display:flex;align-items:flex-start;gap:8px;margin:4px 2px 8px;color:var(--mu);font-size:12px;line-height:1.45}
+.sync-status-dot{
+  width:8px;height:8px;margin-top:3px;box-sizing:border-box;flex:none;
+  border-radius:var(--dot-radius,50%);
+  border:1.5px solid var(--mu);
+  border-style:var(--panel-border-style,solid);
+  background:transparent;
+  transition:background .2s,border-color .2s,border-radius .2s,transform .2s;
+}
+.sync-status-text{min-width:0;overflow-wrap:anywhere}
+.sync-status[data-state="synced"] .sync-status-dot{background:var(--ok);border-color:var(--ok)}
+.sync-status[data-state="pending"] .sync-status-dot{background:linear-gradient(90deg,var(--wr) 50%,transparent 50%);border-color:var(--wr)}
+.sync-status[data-state="sending"] .sync-status-dot{
+  background:linear-gradient(90deg,var(--wr) 50%,transparent 50%);
+  border-color:var(--wr);
+  animation:pwaPulse 1s infinite;
+}
+.sync-status[data-state="error"] .sync-status-dot,
+.sync-status[data-state="paused-account"] .sync-status-dot{border-radius:0;transform:rotate(45deg)}
+.sync-status[data-state="error"] .sync-status-dot{background:var(--er);border-color:var(--er)}
+.sync-status[data-state="paused-account"] .sync-status-dot{background:transparent;border:1.5px solid var(--wr)}
+.sync-status[data-state="paused"] .sync-status-dot{background:transparent;border:1.5px solid var(--wr)}
+.sync-status[data-state="offline"] .sync-status-dot{background:transparent;border:1.5px dashed var(--mu)}
+.sync-status[data-state="error"],
+.sync-status[data-state="paused-account"]{
+  padding:6px 8px;
+  border:1px solid var(--er);
+  border-style:var(--panel-border-style,solid);
+  border-radius:var(--radius-sm,8px);
+  background:var(--s2);
+  color:var(--tx);
+  font-weight:600;
+}
+.sync-status[data-state="paused-account"]{border-color:var(--wr)}
+.sync-last-row{display:flex;flex-wrap:wrap;gap:2px 14px;margin:0 2px 8px;color:var(--mu);font-size:11px;font-variant-numeric:tabular-nums}
+
 @keyframes pwaPulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* --- BANNERS DE AVISO (backup e atualização) --- */

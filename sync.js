@@ -25,7 +25,7 @@
   var S_KEYS = { user_settings: null, active_timer: null, labels: 'labels', areas: 'areas', skills: 'skills', clients: 'clients', projects: 'projects', tasks: 'tasks', contacts: 'contacts', applications: 'applications', goals: 'goals', work_logs: 'workLogs' };
   var HAS_DELETED = { user_settings: false, active_timer: false, labels: false, areas: false, skills: true, clients: true, projects: true, tasks: true, contacts: true, applications: true, goals: true, work_logs: false };
 
-  var state = { status: 'idle', pending: 0, lastError: null, lastFlushAt: null, owner: null, deviceId: null, inFlight: false, enqTimer: null, flushTimer: null, flushAt: null };
+  var state = { status: 'idle', pending: 0, lastError: null, lastFlushAt: null, lastPullAt: null, owner: null, deviceId: null, inFlight: false, enqTimer: null, flushTimer: null, flushAt: null };
 
   /* ---------------- storage ---------------- */
   function readJSON(key, dflt) { try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : dflt; } catch (e) { return dflt; } }
@@ -496,6 +496,7 @@
       if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
       if (typeof applyTheme === 'function') applyTheme();
       if (typeof render === 'function') render();
+      state.lastPullAt = Date.now();
       renderSync();
       return;
     }
@@ -551,6 +552,7 @@
     writeCursors(cursors);
     state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
     if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
+    state.lastPullAt = Date.now();
     renderSync();
   }
 
@@ -606,20 +608,76 @@
     state.lastError = error || null;
     renderSync();
   }
+
+  function pad2(n) { return ('0' + n).slice(-2); }
+
+  // Data/hora absoluta. Não usa timer: é recalculada quando o painel renderiza
+  // (abertura da Config, mudança de estado ou evento de rede).
+  function formatStamp(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return '';
+    var now = new Date();
+    var hm = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()) {
+      return 'hoje às ' + hm;
+    }
+    var yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    if (d.getFullYear() === yesterday.getFullYear() && d.getMonth() === yesterday.getMonth() && d.getDate() === yesterday.getDate()) {
+      return 'ontem às ' + hm;
+    }
+    var date = pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
+    if (d.getFullYear() !== now.getFullYear()) date += '/' + d.getFullYear();
+    return date + ' às ' + hm;
+  }
+
+  var VISUAL_STATES = { synced: 1, pending: 1, sending: 1, error: 1, paused: 1, 'paused-account': 1, offline: 1 };
+  function statusVisual(status, pending) {
+    if (VISUAL_STATES[status]) return status;
+    return pending > 0 ? 'pending' : 'synced';
+  }
+
+  function statusSnapshot() {
+    return {
+      status: state.status,
+      pending: state.pending,
+      lastError: state.lastError,
+      lastFlushAt: state.lastFlushAt,
+      lastPullAt: state.lastPullAt,
+      owner: state.owner,
+      deviceId: state.deviceId,
+      inFlight: state.inFlight,
+      hasUser: !!authUser()
+    };
+  }
+
+  // Evento apenas de leitura para o header; não altera outbox/pull/flush.
+  function emitStatus() {
+    if (typeof window === 'undefined' || !window.dispatchEvent) return;
+    var detail = statusSnapshot();
+    try {
+      var ev;
+      if (typeof CustomEvent === 'function') {
+        ev = new CustomEvent('atelier:sync-status', { detail: detail });
+      } else if (typeof Event === 'function') {
+        ev = new Event('atelier:sync-status');
+        ev.detail = detail;
+      } else {
+        return;
+      }
+      window.dispatchEvent(ev);
+    } catch (e) {}
+  }
+
+  // O header mantém apenas o #syncPill (gravação local). O estado detalhado
+  // da sincronização remota vive na seção "Sincronização" da aba Config.
   function renderSync() {
-    var el = document.getElementById('cloudPill');
+    // Emite antes do return: o painel pode não existir, mas o header precisa
+    // limpar/atualizar o marcador remoto mesmo fora da aba Config.
+    emitStatus();
+    var el = document.getElementById('syncStatusPanel');
     if (!el) return;
-    var user = authUser();
-    var p = state.pending;
-    var st = state.status;
-    if (st === 'sending') { el.dataset.state = 'sending'; el.querySelector('.sp-text').textContent = 'Sincronizando…'; el.hidden = false; }
-    else if (st === 'error') { el.dataset.state = 'error'; el.querySelector('.sp-text').textContent = 'Erro de sync'; el.hidden = false; }
-    else if (st === 'paused-account') { el.dataset.state = 'paused'; el.querySelector('.sp-text').textContent = 'Pausada: outra conta'; el.hidden = false; }
-    else if (st === 'paused') { el.dataset.state = 'paused'; el.querySelector('.sp-text').textContent = 'Sync pausada'; el.hidden = false; }
-    else if (navigator && navigator.onLine === false) { el.dataset.state = 'offline'; el.querySelector('.sp-text').textContent = 'Offline'; el.hidden = false; }
-    else if (p > 0) { el.dataset.state = 'pending'; el.querySelector('.sp-text').textContent = p + ' pendente' + (p === 1 ? '' : 's'); el.hidden = false; }
-    else if (user) { el.dataset.state = 'synced'; el.querySelector('.sp-text').textContent = 'Sincronizado'; el.hidden = false; }
-    else { el.hidden = true; }
+    el.innerHTML = statusHTML();
   }
 
   function statusHTML() {
@@ -627,13 +685,35 @@
     var p = state.pending;
     if (!user) return '<div class="msg">Entre na Conta para sincronizar as alterações locais.</div>';
     var st = state.status;
-    if (navigator && navigator.onLine === false) st = 'offline';
-    var label = { synced: 'Tudo sincronizado.', pending: p + ' alteração(ões) pendente(s).', sending: 'Enviando…', paused: 'Sincronização pausada (sem conta).', 'paused-account': 'Sincronização pausada: há operações pendentes de outra conta.', error: 'Erro ao sincronizar: ' + (state.lastError || ''), offline: 'Sem conexão. As alterações ficam na fila.' }[st] || '';
+    // Erros/pausas continuam visíveis mesmo offline; o offline vence apenas
+    // estados neutros (idle/synced/pending).
+    var priority = { sending: 1, error: 2, 'paused-account': 3, paused: 4 };
+    if (!priority[st] && navigator && navigator.onLine === false) st = 'offline';
+    var visual = statusVisual(st, p);
+    var label = {
+      synced: 'Tudo sincronizado.',
+      pending: p + ' alteração(ões) pendente(s).',
+      sending: 'Enviando…',
+      paused: 'Sincronização pausada (sem conta).',
+      'paused-account': 'Sincronização pausada: há operações pendentes de outra conta.',
+      error: 'Erro ao sincronizar' + (state.lastError ? ': ' + state.lastError : '.'),
+      offline: 'Sem conexão. As alterações ficam na fila.'
+    }[st] || (p > 0 ? p + ' alteração(ões) pendente(s).' : 'Nenhuma alteração pendente.');
     var unlock = (st === 'paused-account')
       ? '<div class="acts" style="margin-top:6px"><button data-a="syncClearQueue">Descartar fila pendente e usar esta conta</button></div>' +
         '<div class="msg">Apaga apenas a fila pendente da conta anterior; seus dados locais e os dados do Supabase não são alterados.</div>'
       : '';
-    return '<div class="msg">' + label + '</div>' + unlock +
+    var stampFlush = formatStamp(state.lastFlushAt);
+    var stampPull = formatStamp(state.lastPullAt);
+    var stamps = '';
+    if (stampFlush) stamps += '<span class="sync-last">Último envio: ' + stampFlush + '</span>';
+    if (stampPull) stamps += '<span class="sync-last">Último pull: ' + stampPull + '</span>';
+    return '<div class="sync-status" data-state="' + visual + '">' +
+        '<span class="sync-status-dot" aria-hidden="true"></span>' +
+        '<span class="sync-status-text">' + label + '</span>' +
+      '</div>' +
+      (stamps ? '<div class="sync-last-row">' + stamps + '</div>' : '') +
+      unlock +
       '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button><button data-a="syncResetLocal">Restaurar dados da conta</button></div>';
   }
 
@@ -649,6 +729,7 @@
     // adota baseline e enfileira o que for necessário (sem rede)
     withLock(enqueueAll);
     scheduleFlush(800);
+    emitStatus();
   }
 
   window.__sync = {
@@ -659,7 +740,7 @@
     clearSyncQueue: clearSyncQueue,
     resetLocalData: resetLocalData,
     forceFullSync: forceFullSync,
-    getState: function () { return { status: state.status, pending: state.pending, lastError: state.lastError, lastFlushAt: state.lastFlushAt, owner: state.owner, deviceId: state.deviceId, inFlight: state.inFlight }; },
+    getState: statusSnapshot,
     statusHTML: statusHTML,
     _test: {
       enqueueAll: enqueueAll, doFlush: doFlush, hashStr: hashStr, isoMs: isoMs,

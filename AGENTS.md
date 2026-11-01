@@ -8,8 +8,8 @@ Para evitar degradação de performance por estouro ou poluição de contexto, s
 
 ```text
 SUA TAREFA ENVOLVE...                    CARREGUE E CONSULTE...
-├─ Header, Timer, Logo ou Nav Topo   ──> docs/header_menu_superior_docs.md + layout.css
-├─ Card Resumo / Dashboard Semanal   ──> docs/dashboard_superior_docs.md + responsivo.css
+├─ Header, Timer, Logo ou Nav Topo   ──> docs/HEADER-TOP-MENU.md + layout.css
+├─ Card Resumo / Dashboard Semanal   ──> docs/DASHBOARD-WEEK-TAB.md + responsivo.css
 ├─ CSS Mobile (≤640px) ou Breakpoints ─> responsivo.css (final do arquivo) + CSS_DOCS.md
 ├─ Estado Local, Sync ou Supabase    ──> estado.js + sync.js + docs/DATA-MODEL.md
 ├─ Estrutura do App / Módulos JS     ──> docs/ARCHITECTURE.md + JS_DOCS.md

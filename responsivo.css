@@ -319,7 +319,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     align-items:center;
   }
 
-  /* ---- Pílulas de status: 34px → 28px, mais sutis ---- */
+  /* ---- Pílula de status: 34px → 28px, mais sutil ---- */
   .sync-pill{
     position:relative;
     height:28px;
@@ -329,22 +329,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     border-color:color-mix(in srgb,var(--bd) 70%,transparent);
     background:color-mix(in srgb,var(--s1) 85%,transparent);
   }
-  .header-right .cloud-pill{margin-left:0}
-
   /* Estados "tudo certo" e transitórios: só o ponto.
      O texto continua no DOM, acessível (visually-hidden, não display:none). */
   .sync-pill[data-state="saved"],
-  .sync-pill[data-state="synced"],
-  .sync-pill[data-state="saving"],
-  .sync-pill[data-state="sending"]{
+  .sync-pill[data-state="saving"]{
     width:28px;
     padding:0;
     justify-content:center;
   }
   .sync-pill[data-state="saved"] .sp-text,
-  .sync-pill[data-state="synced"] .sp-text,
-  .sync-pill[data-state="saving"] .sp-text,
-  .sync-pill[data-state="sending"] .sp-text{
+  .sync-pill[data-state="saving"] .sp-text{
     position:absolute;
     width:1px;
     height:1px;
@@ -682,4 +676,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .task-flags--inline{display:inline-flex}
   .task-flags--inline .score-badge{font-size:11px}
   .tm-chev{font-size:12px}
+}
+
+/* V80 — marcador remoto no pill colapsado (28px).
+   Mantém 9px de forma e só 2px de avanço no canto para não encostar na busca. */
+@media(max-width:640px){
+  .sync-pill[data-remote]::after{top:-2px;right:-2px}
 }

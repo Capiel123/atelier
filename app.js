@@ -591,7 +591,7 @@ document.addEventListener('click', ev => {
       fallbackDownload();
       return;
     }
-    case 'clrDone': if (confirm('Ocultar as tarefas concluídas deste dia da seção "Concluídas"? Elas continuam no Histórico.')) { S.clearedDone = S.clearedDone || {}; dayTasks(day).filter(t => isDoneThisWeek(t) && !S.clearedDone[t.id]).forEach(t => { S.clearedDone[t.id] = Date.now(); }); } break;
+    case 'clrDone': if (confirm('Ocultar as tarefas concluídas deste dia da seção "Concluídas"? Elas continuam no Histórico.')) { S.clearedDone = S.clearedDone || {}; dayTasks(day).filter(t => isDoneThisWeek(t) && !isClearedFromDone(t)).forEach(t => { S.clearedDone[t.id] = Date.now(); }); } break;
     case 'imp': doImport(V('imp')); return;
     default: return;
   }
@@ -1045,18 +1045,77 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
 /* --- PWA: SERVICE WORKER + INDICADOR DE SYNC --- */
 (function initPWA() {
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
+  const SAVE_LABELS = { saving: 'Salvando…', saved: 'Salvo', error: 'Falha ao salvar', blocked: 'Bloqueado', offline: 'Offline' };
+  let remoteStatus = null;
+  let remoteHasUser = true;
+
+  function setAttrIfChanged(el, name, value) {
+    if (value === null || value === undefined) {
+      if (el.hasAttribute(name)) el.removeAttribute(name);
+      return;
+    }
+    if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  }
+
+  function remoteMarker(status, hasUser) {
+    if (hasUser === false) return null;
+    if (status === 'error') return 'error';
+    if (status === 'paused-account') return 'paused';
+    return null;
+  }
+
+  function applySyncPillRemote() {
+    const p = document.getElementById('syncPill');
+    if (!p) return;
+    const marker = remoteMarker(remoteStatus, remoteHasUser);
+    setAttrIfChanged(p, 'data-remote', marker);
+    const localLabel = SAVE_LABELS[p.dataset.state] || p.dataset.state || '';
+    const warning = marker === 'error'
+      ? 'Erro de sincronização, veja Config'
+      : marker === 'paused'
+        ? 'Sincronização pausada, veja Config'
+        : '';
+    const text = warning ? (localLabel ? localLabel + ' — ' + warning : warning) : null;
+    setAttrIfChanged(p, 'title', text);
+    setAttrIfChanged(p, 'aria-label', text);
+  }
+
+  function handleRemoteStatus(status, hasUser) {
+    remoteStatus = status || null;
+    remoteHasUser = hasUser !== false;
+    applySyncPillRemote();
+  }
+
+  function readRemoteStatus() {
+    try {
+      if (!window.__sync || typeof window.__sync.getState !== 'function') return;
+      const s = window.__sync.getState();
+      handleRemoteStatus(s.status, s.hasUser);
+    } catch (e) {}
+  }
 
   function setSyncState(state) {
     const p = document.getElementById('syncPill');
     if (!p) return;
-    p.dataset.state = state;
-    const labels = { saving: 'Salvando…', saved: 'Salvo', error: 'Falha ao salvar', blocked: 'Bloqueado', offline: 'Offline' };
-    p.querySelector('.sp-text').textContent = labels[state] || state;
+    if (p.dataset.state !== state) p.dataset.state = state;
+    const label = SAVE_LABELS[state] || state;
+    const text = p.querySelector('.sp-text');
+    if (text && text.textContent !== label) text.textContent = label;
+    applySyncPillRemote();
   }
 
   // Indicador reflete o resultado real de save() (ver estado.js)
   if (typeof onSaveState === 'function') onSaveState(setSyncState);
   setSyncState(saveState);
+
+  // O estado remoto chega por evento do sync.js; o getState() no load é reforço.
+  window.addEventListener('atelier:sync-status', (event) => {
+    const detail = (event && event.detail) || {};
+    handleRemoteStatus(detail.status, detail.hasUser);
+  });
+  readRemoteStatus();
+  window.addEventListener('load', readRemoteStatus, { once: true });
+
   window.addEventListener('online', () => refreshSaveState());
   window.addEventListener('offline', () => {if (saveState === 'saved') setSyncState('offline');});
   setTimeout(() => {if (navigator.onLine) refreshSaveState(); else if (saveState === 'saved') setSyncState('offline');}, 400);
