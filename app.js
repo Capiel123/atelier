@@ -394,7 +394,7 @@ document.addEventListener('click', ev => {
     case 'sdel': {if (!t) break; const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break; sb.deletedAt = Date.now(); touch(t); break;}
     case 'subUp': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) - 1); break;}
     case 'subDown': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) + 1); break;}
-    case 'qa': {const el = $('#qa'); if (el && el.value.trim()) {addQuick(dv(el.dataset.d), el.value); el.value = '';} break;}
+    case 'qa': {const el = $('#qa'); if (el && el.value.trim()) {const t = addQuick(dv(el.dataset.d), el.value); if (t) el.value = '';} break;}
     case 'bulk': {const el = $('#bulk'); if (el && el.value.trim()) {addBulk(dv(btn.dataset.d), el.value); el.value = '';} break;}
     case 'setEnergy': setEnergy(currentEnergySlot(), btn.dataset.e); break;
     case 'toggleLabelsFilter': filterState.showLabels = !filterState.showLabels; render(); return;
@@ -732,6 +732,7 @@ document.addEventListener('toggle', ev => {
 /* --- ENTER (adicionar rápido) --- */
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Enter') return;
+  if (ev.isComposing || ev.keyCode === 229) return; // composição/IME (teclado do celular)
   const el = ev.target;
   if (el.id === 'searchInput') {
     const first = document.querySelector('.search-result[data-first="1"]');
@@ -739,8 +740,22 @@ document.addEventListener('keydown', ev => {
     ev.preventDefault();
     return;
   }
-  if (el.id === 'qa') {if (el.value.trim()) {addQuick(dv(el.dataset.d), el.value); el.value = ''; save(); render();} ev.preventDefault();}
-  else if (el.id === 'qaJob') {if (el.value.trim()) {const job = parseJobLine(el.value); if (job) S.applications.push(job); el.value = ''; save(); render();} ev.preventDefault();}
+  if (el.id === 'qa') {
+    const t = el.value.trim() ? addQuick(dv(el.dataset.d), el.value) : null;
+    ev.preventDefault();
+    if (!t) return;                       // nada criado (ex.: só tokens) — mantém o texto
+    el.value = ''; save(); render();
+    const next = document.getElementById('qa');
+    if (next) next.focus();                // continua no campo (e mantém o teclado no mobile)
+  }
+  else if (el.id === 'qaJob') {
+    const job = el.value.trim() ? parseJobLine(el.value) : null;
+    ev.preventDefault();
+    if (!job) return;
+    S.applications.push(job); el.value = ''; save(); render();
+    const next = document.getElementById('qaJob');
+    if (next) next.focus();
+  }
   else if (el.id === 'clientN') {if (el.value.trim()) {snapshot(); S.clients.push(mkClient({n: el.value.trim()})); el.value=''; save(); render();} ev.preventDefault();}
   else if (el.dataset.a === 'sadd' && el.value.trim()) {
     const t = T(el.dataset.id);
