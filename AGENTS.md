@@ -8,12 +8,15 @@ Para evitar degradação de performance por estouro ou poluição de contexto, s
 
 ```text
 SUA TAREFA ENVOLVE...                    CARREGUE E CONSULTE...
-├─ Header, Timer, Logo ou Nav Topo   ──> docs/HEADER-TOP-MENU.md + layout.css
-├─ Card Resumo / Dashboard Semanal   ──> docs/DASHBOARD-WEEK-TAB.md + responsivo.css
-├─ CSS Mobile (≤640px) ou Breakpoints ─> responsivo.css (final do arquivo) + CSS_DOCS.md
-├─ Estado Local, Sync ou Supabase    ──> estado.js + sync.js + docs/DATA-MODEL.md
-├─ Estrutura do App / Módulos JS     ──> docs/ARCHITECTURE.md + JS_DOCS.md
-└─ Regras de Negócio e XP            ──> logica.js + docs/BUSINESS-RULES.md
+├─ Header, Timer, Logo ou Nav Topo   ──> docs/design/HEADER-TOP-MENU.md + layout.css
+├─ Card Resumo / Dashboard Semanal   ──> docs/ui/DASHBOARD-WEEK-TAB.md + responsivo.css
+├─ Semana, cards e conclusão         ──> docs/ui/WEEK-AND-TASK-CARDS.md + logica.js (isDone/inWeekScope)
+├─ Avisos e busca global             ──> docs/ui/AVISOS-E-BUSCA.md + interface.js
+├─ CSS Mobile (≤640px) ou Breakpoints ─> responsivo.css (final do arquivo) + docs/design/CSS_DOCS.md
+├─ Design System, temas, fontes      ──> docs/design/DESIGN-SYSTEM.md + TEMAS.md + FONTES.md
+├─ Estado Local, Sync ou Supabase    ──> estado.js + sync.js + docs/data/DATA-MODEL.md
+├─ Estrutura do App / Módulos JS     ──> docs/ARCHITECTURE.md + docs/guides/JS_DOCS.md
+└─ Regras de Negócio e XP            ──> logica.js + docs/data/BUSINESS-RULES.md
 ```
 
 ---
@@ -23,9 +26,11 @@ SUA TAREFA ENVOLVE...                    CARREGUE E CONSULTE...
 Antes de efetuar qualquer alteração no repositório, execute sequencialmente:
 
 1. **Leitura de Contexto:** Consulte `docs/PROJECT_CONTEXT.md` e verifique o painel em `docs/HANDOFF.md`.
-2. **Inspeção Direta do Código:** Confirme no código real o estado de assinaturas de funções, seletores CSS e eventos (não confie apenas em memórias de conversas anteriores).
-3. **Análise de Impacto de Dados:** Se a alteração envolver a camada de armazenamento (`estado.js`, `localStorage`, `Supabase`), mapeie dependências em `docs/DEPENDENCIES.md`.
-4. **Confirmação de Backup:** Certifique-se com o desenvolvedor de que há backup recente antes de alterações com refatoração profunda ou mutações de estrutura de banco.
+2. **Dívidas conhecidas:** Consulte `docs/KNOWN-ISSUES.md` — o problema pode já estar mapeado (ID `Kxx`/`Fxx`) com sintoma e próximo passo.
+3. **Histórico de versões:** Consulte `docs/CHANGELOG.md` para saber quando a área mudou e qual `CACHE_VERSION` a acompanha.
+4. **Inspeção Direta do Código:** Confirme no código real o estado de assinaturas de funções, seletores CSS e eventos (não confie apenas em memórias de conversas anteriores).
+5. **Análise de Impacto de Dados:** Se a alteração envolver a camada de armazenamento (`estado.js`, `localStorage`, `Supabase`), mapeie dependências em `docs/data/DEPENDENCIES.md`.
+6. **Confirmação de Backup:** Certifique-se com o desenvolvedor de que há backup recente antes de alterações com refatoração profunda ou mutações de estrutura de banco.
 
 ---
 
@@ -64,8 +69,10 @@ Antes de efetuar qualquer alteração no repositório, execute sequencialmente:
 
 ## 5. Passagem de Trabalho entre Agentes (Handoff Protocol)
 
-1. **Ao Iniciar:** Leia o estado em `docs/HANDOFF.md` e revise as entradas mais recentes de `docs/archive/HANDOFF-HISTORICO.md`.
-2. **Ao Concluir:** 
+1. **Ao Iniciar:** Leia o estado em `docs/HANDOFF.md`, as 3 entradas mais recentes de `docs/archive/HANDOFF-HISTORICO.md` e as pendências em `docs/KNOWN-ISSUES.md`.
+2. **Ao Concluir:**
    - Resuma os arquivos alterados e a justificativa técnica de cada mudança.
+   - Registre a versão no topo de `docs/CHANGELOG.md` (o que mudou / o que foi corrigido / arquivos / validação) sempre que o shell mudar.
+   - Atualize `docs/KNOWN-ISSUES.md`: fechou uma dívida (mova para “Resolvidos”, citando a versão)? Abriu uma nova? Tomou uma decisão que não será corrigida?
    - Atualize o arquivo `docs/HANDOFF.md`.
    - Adicione o registro histórico no topo de `docs/archive/HANDOFF-HISTORICO.md` contendo: data, agente responsável, arquivos alterados, cenários validados e pendências conhecidas.

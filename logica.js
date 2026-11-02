@@ -104,7 +104,13 @@ function isDone(t) { return !!(t && t.done); }
 // Nunca use para decidir o visual do card nem para esconder a tarefa de pendentes.
 function isDoneThisWeek(t) { return !!(t && t.done && t.doneAt && t.doneAt >= weekStart().getTime()); }
 // Tarefa oculta da seção "Concluídas" por "Limpar concluídas" (sem tocar em done/doneAt).
-function isClearedFromDone(t) { return !!(t && S.clearedDone && S.clearedDone[t.id] && S.clearedDone[t.id] >= (t.doneAt || 0)); }
+// Só vale para tarefa CONCLUÍDA: pendente nunca é "limpa" (reabrir não deixa resíduo).
+function isClearedFromDone(t) { return !!(t && t.done && t.doneAt && S.clearedDone && S.clearedDone[t.id] && S.clearedDone[t.id] >= t.doneAt); }
+// Escopo da semana (planejamento): pendentes + concluídas NESTA semana, menos as
+// ocultas por "Limpar concluídas". Concluídas de semanas anteriores ficam fora
+// dos números (o card continua marcado em "Concluídas" e no Histórico).
+// Usado por faixa dos dias, seções, contador da lista e resumo do dia.
+function inWeekScope(t) { return !!(t && !isClearedFromDone(t) && (!isDone(t) || isDoneThisWeek(t))); }
 // Minutos registrados nesta semana (logs com `end` dentro da semana atual).
 function taskMinutesThisWeek(t) { const ws = weekStart().getTime(); return ((t && t.logs) || []).filter(l => l.end != null && l.end >= ws).reduce((a,l) => a + (+l.minutes || 0), 0); }
 

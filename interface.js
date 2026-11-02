@@ -225,9 +225,9 @@ function weekDateForDay(dayIndex, refDate = new Date()) {
 
 function viewWeek() {
   const ts = dayTasks(day);
-  // A bancada do dia ignora o que o usuário já limpou de "Concluídas":
-  // as tarefas continuam em S.tasks/Histórico, mas saem das metas ativas.
-  const activeDayTasks = ts.filter(t => !isClearedFromDone(t));
+  // Escopo da semana: pendentes + concluídas nesta semana, sem as "limpas".
+  // Concluídas de semanas anteriores saem dos números (card segue em "Concluídas").
+  const activeDayTasks = ts.filter(t => inWeekScope(t));
   const total = activeDayTasks.length;
   const done = activeDayTasks.filter(t => isDoneThisWeek(t)).length;
   const workTasks = activeDayTasks.filter(t => taskSection(t) === 'work');
@@ -245,7 +245,7 @@ function viewWeek() {
   const slotLabel = {morning:'Manhã', afternoon:'Tarde', evening:'Noite'}[slot];
   const nextCard = nextTask ? `<div class="next-card"><div><div class="nc-label">⭐ Próxima</div><div class="nc-title">${esc(nextTask.t)}</div><div class="nc-meta">${PR[nextTask.pr]} · ${esc(areaLabel(nextTask.area))}${nextTask.est?' · '+fmtMin(nextTask.est):''}</div></div><div class="nc-actions"><button class="go" data-a="focusMode" data-id="${nextTask.id}">⛶ Focar</button><button data-a="setnext" data-id="${nextTask.id}">✕</button></div></div>` : '';
   const compact = getTaskCompactMode();
-  const prCounts = [0,1,2].map(pr => ts.filter(t => !isDone(t) && t.pr === pr).length);
+  const prCounts = [0,1,2].map(pr => activeDayTasks.filter(t => !isDone(t) && t.pr === pr).length);
   const gxp = globalXp(); const lvlInfo = levelInfo(gxp);
 
   const quickAddHtml = showQuickAdd ? adder(day) : '';
@@ -287,7 +287,7 @@ function viewWeek() {
 
   return `${summaryCard}
     ${reviewHintHTML()}
-    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDone(t)).length}/${a.length}</small></button>`;}).join('')}</div>
+    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i).filter(t => inWeekScope(t)); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDoneThisWeek(t)).length}/${a.length}</small></button>`;}).join('')}</div>
     ${toggleBtn}
     <div class="week-collapsible${collapsed?' week-collapsible--hidden':''}" id="weekCollapsible">
       <div class="energy-row"><span class="energy-label">${slotLabel}:</span><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${e.icon} ${e.n}</button>`).join('')}</div></div>
@@ -351,29 +351,36 @@ function getTaskCompactMode() {
 
 function renderFilteredTasks() {
   const ctx = buildCtx();
-  let list = dayTasks(day);
+  const dayList = dayTasks(day);
+  let list = dayList;
   if (filterState.text) {const q = filterState.text.toLowerCase(); list = list.filter(t => t.t.toLowerCase().includes(q) || (t.desc||'').toLowerCase().includes(q));}
   if (filterState.type) list = list.filter(t => t.type === filterState.type);
   if (filterState.area) list = list.filter(t => t.area === filterState.area);
   if (filterState.proj) list = list.filter(t => t.proj === filterState.proj);
   if (filterState.labels.length) list = list.filter(t => filterState.labels.every(lid => (t.labels||[]).includes(lid)));
 
+  // Escopo da semana: pendentes + concluídas nesta semana, sem as "limpas".
+  // Concluídas de semanas anteriores não entram nos números (ficam em "Concluídas").
+  const plan = list.filter(t => inWeekScope(t));
+  const hasFilter = !!(filterState.text || filterState.type || filterState.area || filterState.proj || (filterState.labels || []).length);
+
   // setTimeout(0) garante que a contagem (#taskCount) atualize após o HTML entrar no DOM
   setTimeout(() => {
     const el = document.getElementById('taskCount');
-    if (el) el.textContent = `(${list.filter(t=>!isDone(t)).length} pend · ${list.filter(t=>isDone(t)).length} feitas)`;
+    if (el) el.textContent = `(${plan.filter(t=>!isDone(t)).length} pend · ${plan.filter(t=>isDone(t)).length} feitas)`;
   }, 0);
 
-  if (!list.length) return list.length ? '<div class="msg">Nada com esses filtros.</div>' : '<div class="msg">Nada ainda.</div>';
+  if (!dayList.length) return '<div class="msg">Nada ainda.</div>';
+  if (!list.length) return '<div class="msg">Nada com esses filtros.</div>';
 
-  const pendingTasks = list.filter(t => !isDone(t));
-  // "Limpar concluídas" só oculta; se a tarefa for re-concluída depois, reaparece (doneAt mais novo).
+  // "Concluídas" lista o que está concluído e não foi limpo — inclusive semanas
+  // anteriores (é o histórico do board). Os números usam `plan`/inWeekScope.
   const doneTasks = list.filter(t => isDone(t) && !isClearedFromDone(t));
   const compact = getTaskCompactMode();
   const sectionsCollapsed = S.cfg.sectionsCollapsed || {};
 
   const sectionsHtml = SECTION_ORDER.map(section => {
-    const allItems = list.filter(t => taskSection(t) === section);
+    const allItems = plan.filter(t => taskSection(t) === section);
     if (!allItems.length) return '';
     const pendingItems = allItems.filter(t => !isDone(t));
     const meta = sectionMeta(section);
@@ -433,7 +440,9 @@ function renderFilteredTasks() {
       ${doneCardsHtml}`;
   }
 
-  return (sectionsHtml + doneSectionHtml) || '<div class="msg">Nada com esses filtros.</div>';
+  return (sectionsHtml + doneSectionHtml) || (hasFilter
+    ? '<div class="msg">Nada com esses filtros.</div>'
+    : '<div class="msg">Nada planejado para esta semana.</div>');
 }
 
 function refreshTaskList() {const el = document.getElementById('taskList'); if (el) el.innerHTML = renderFilteredTasks();}
