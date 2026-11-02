@@ -360,6 +360,9 @@
 .sub .sub-time{color:var(--mu);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sub .btn-sm{padding:0 6px;font-size:11px;background:none;border:none;color:var(--mu);cursor:pointer}
 .sub .btn-sm:hover{color:var(--ac)}
+/* v94: excluir subtarefa com affordance clara (antes era só um ✕ perdido entre os controles) */
+.sub .sub-del{color:var(--mu)}
+.sub .sub-del:hover{color:var(--er)}
 .sub .btn-sm.run{color:var(--bu)}
 .sub .sub-drag{cursor:grab;color:var(--mu);font-size:14px;line-height:1;padding:4px 6px;margin:-2px 0;user-select:none;flex:none;opacity:.75;touch-action:none;border-radius:4px}
 .sub .sub-drag:hover{color:var(--ac);background:var(--s2)}

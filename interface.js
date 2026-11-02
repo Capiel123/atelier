@@ -349,6 +349,26 @@ function getTaskCompactMode() {
   return window.innerWidth <= 640;
 }
 
+// v94: primeira tarefa PENDENTE da lista visível (mesma ordem e filtros do render).
+// O atalho `f` usava `t.next`/`S.tasks` e abria uma tarefa "sem critério".
+function firstPendingTaskInList() {
+  const ctx = buildCtx();
+  let list = dayTasks(day).filter(t => inWeekScope(t) && !isDone(t));
+  if (filterState.text) { const q = filterState.text.toLowerCase(); list = list.filter(t => t.t.toLowerCase().includes(q) || (t.desc||'').toLowerCase().includes(q)); }
+  if (filterState.type) list = list.filter(t => t.type === filterState.type);
+  if (filterState.area) list = list.filter(t => t.area === filterState.area);
+  if (filterState.proj) list = list.filter(t => t.proj === filterState.proj);
+  if (filterState.labels.length) list = list.filter(t => filterState.labels.every(lid => (t.labels||[]).includes(lid)));
+  const cmp = S.cfg.autoPriority
+    ? (a, b) => computeTaskScore(b, ctx) - computeTaskScore(a, ctx) || (a.order||0) - (b.order||0)
+    : (a, b) => (a.order||0) - (b.order||0);
+  for (const sec of SECTION_ORDER) {
+    const items = list.filter(t => taskSection(t) === sec).sort(cmp);
+    if (items.length) return items[0];
+  }
+  return null;
+}
+
 function renderFilteredTasks() {
   const ctx = buildCtx();
   const dayList = dayTasks(day);
@@ -656,7 +676,7 @@ function renderSubs(t) {
   const canHide = !collapsed && subsTotal > SUBS_VISIBLE_LIMIT && showAll;
   const rowsHtml = visibleSubs.map((s) => {
     const mins = subMinutes(t, s.id); const isRunning = runningSub === s.id;
-    return `<div class="sub ${isRunning?'run':''}" data-subrow="${t.id}:${s.id}"><span class="sub-drag" draggable="true" data-dragsub="${t.id}:${s.id}" title="Arrastar para reordenar">⋮⋮</span><button class="chk s" data-a="stog" data-id="${t.id}" data-sub="${s.id}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?'▶ ':''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="stopTimer">⏸</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" ${S.timer?'disabled':''}>▶</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-sub="${s.id}" title="Subir">↑</button><button class="btn-sm" data-a="subDown" data-id="${t.id}" data-sub="${s.id}" title="Descer">↓</button><button class="btn-sm" data-a="sdel" data-id="${t.id}" data-sub="${s.id}">✕</button></div>`;
+    return `<div class="sub ${isRunning?'run':''}" data-subrow="${t.id}:${s.id}"><span class="sub-drag" draggable="true" data-dragsub="${t.id}:${s.id}" title="Arrastar para reordenar">⋮⋮</span><button class="chk s" data-a="stog" data-id="${t.id}" data-sub="${s.id}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?'▶ ':''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="stopTimer">⏸</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" ${S.timer?'disabled':''}>▶</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-sub="${s.id}" title="Subir">↑</button><button class="btn-sm" data-a="subDown" data-id="${t.id}" data-sub="${s.id}" title="Descer">↓</button><button class="btn-sm sub-del" data-a="sdel" data-id="${t.id}" data-sub="${s.id}" title="Excluir subtarefa" aria-label="Excluir subtarefa">✕</button></div>`;
   }).join('');
   const addHtml = collapsed ? '' : `<div class="sub-add">
       <input data-a="sadd" data-id="${t.id}" placeholder="+ Adicionar subtarefa" aria-label="Adicionar subtarefa">
@@ -1422,7 +1442,7 @@ function renderFocus() {
         return `<div class="focus-sub${isRun ? ' run' : ''}">
           <input type="checkbox" data-a="focusSub" data-sub="${s.id}" data-i="${origIdx}" ${s.d ? 'checked' : ''} title="${s.d ? 'Marcar como pendente' : 'Concluir subtarefa'}">
           <span class="${s.d ? 'x' : ''}" style="flex:1" contenteditable="true" data-subedit="${t.id}:${s.id}" role="textbox" aria-label="Renomear subtarefa" title="Clique para renomear">${esc(s.t)}</span>
-          <button class="focus-play" data-a="focusSelectSub" data-sub="${s.id}" title="${isRun ? 'Etapa atual em andamento' : 'Focar nesta subtarefa'}" aria-label="Focar nesta subtarefa" ${(isRun || s.d) ? 'disabled' : ''}>▶</button>
+          <button class="focus-del" data-a="sdel" data-id="${t.id}" data-sub="${s.id}" title="Excluir subtarefa" aria-label="Excluir subtarefa">&#10005;</button><button class="focus-play" data-a="focusSelectSub" data-sub="${s.id}" title="${isRun ? 'Etapa atual em andamento' : 'Focar nesta subtarefa'}" aria-label="Focar nesta subtarefa" ${(isRun || s.d) ? 'disabled' : ''}>▶</button>
         </div>`;
       }).join('')}
       <input data-a="sadd" data-id="${t.id}" placeholder="Nova subtarefa (Enter)" style="margin-top:8px;width:100%">

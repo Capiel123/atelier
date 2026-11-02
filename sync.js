@@ -211,6 +211,27 @@
 
       if (!items.length) { markDone(store, seen, ops); continue; }
 
+      // v95: LWW no PUSH. Um aparelho com estado velho não pode sobrescrever um
+      // remoto mais novo (ex.: tarefa concluída no PC e reaberta por um upsert
+      // pendente do celular). Só vale para tarefas; tombstone mantém prioridade.
+      if (table === 'tasks') {
+        var remoteCu = await fetchRemoteVersions(client, user, table, items);
+        if (remoteCu) {
+          var kept = [];
+          items.forEach(function (it) {
+            if (!it.row || it.row.deleted_at) { kept.push(it); return; }
+            var rcu = remoteCu[it.row.id];
+            if (rcu != null && Number(rcu) > Number(it.row.client_updated_at || 0)) {
+              markDone(store, seen, [it.op]); // remoto vence: o pull já/logo traz o estado
+              return;
+            }
+            kept.push(it);
+          });
+          items = kept;
+          if (!items.length) continue;
+        }
+      }
+
       var onConflict = (table === 'user_settings' || table === 'active_timer') ? 'user_id' : 'user_id,id';
       var batch = await tryUpsert(client, table, items.map(function (i) { return i.row; }), onConflict);
 
@@ -239,8 +260,29 @@
     scheduleRetry();
   }
 
-  function tryUpsert(client, table, rows, onConflict) {
-    var deadline = Date.now() + 20000;
+  // v95: busca `client_updated_at` remoto das linhas do lote (feature-detect: se o
+  // cliente não tiver `select` — harnesses antigos — devolve null e o push segue).
+  function fetchRemoteVersions(client, user, table, items) {
+    var ids = [];
+    items.forEach(function (it) { if (it.row && it.row.id) ids.push(it.row.id); });
+    if (!ids.length) return Promise.resolve(null);
+    try { var probe = client.from(table); if (!probe || typeof probe.select !== 'function') return Promise.resolve(null); } catch (e) { return Promise.resolve(null); }
+    return new Promise(function (resolve) {
+      var timer = setTimeout(function () { resolve(null); }, 8000);
+      try {
+        Promise.resolve(client.from(table).select('id,client_updated_at').eq('user_id', user.id).in('id', ids))
+          .then(function (r) {
+            clearTimeout(timer);
+            if (r.error) { resolve(null); return; }
+            var map = {};
+            (r.data || []).forEach(function (x) { map[x.id] = x.client_updated_at; });
+            resolve(map);
+          }).catch(function () { clearTimeout(timer); resolve(null); });
+      } catch (e) { clearTimeout(timer); resolve(null); }
+    });
+  }
+
+  function tryUpsert(client, table, rows, onConflict) {    var deadline = Date.now() + 20000;
     return new Promise(function (resolve) {
       var timer = setTimeout(function () { resolve({ error: { code: null, message: 'timeout' } }); }, 20000);
       Promise.resolve(client.from(table).upsert(rows, { onConflict: onConflict, ignoreDuplicates: false }))

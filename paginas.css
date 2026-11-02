@@ -64,6 +64,8 @@
 .focus-sub [data-subedit]{cursor:text;outline:none;border-radius:4px;padding:2px 4px;transition:background .15s,box-shadow .15s}
 .focus-sub [data-subedit]:focus{background:color-mix(in srgb,var(--ac) 8%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 35%,transparent)}
 .focus-sub .focus-play{flex:none;width:32px;height:32px;padding:0;font-size:11px;line-height:1;background:transparent;border:1px solid var(--bd);border-radius:8px;color:var(--mu);cursor:pointer}
+.focus-sub .focus-del{flex:none;width:32px;height:32px;padding:0;font-size:13px;line-height:1;background:transparent;border:1px solid transparent;border-radius:8px;color:var(--mu);cursor:pointer}
+.focus-sub .focus-del:hover{color:var(--er);border-color:var(--er)}
 .focus-sub .focus-play:hover{color:var(--tx);border-color:var(--mu)}
 .focus-sub.run .focus-play{color:var(--ac);border-color:var(--ac)}
 .focus-sub .focus-play:disabled{opacity:.35;cursor:default}

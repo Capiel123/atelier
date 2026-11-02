@@ -392,7 +392,14 @@ document.addEventListener('click', ev => {
     case 'setTaskColor': if (!t) break; t.color = btn.dataset.color || ''; touch(t); break;
     case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: t.subs.map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
     case 'del': if (!t) break; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.trash = S.trash || []; S.trash.unshift({id: uid(), task: t, deletedAt: Date.now()}); S.tasks = S.tasks.filter(x => x.id !== id); break;
-    case 'sdel': {if (!t) break; const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break; sb.deletedAt = Date.now(); touch(t); break;}
+    case 'sdel': {
+      if (!t) break;
+      const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break;
+      sb.deletedAt = Date.now(); touch(t);
+      // v94: excluir de dentro do modo foco atualiza o overlay na hora
+      if (typeof renderFocus === 'function' && document.getElementById('focusOverlay')) { save(); renderFocus(); return; }
+      break;
+    }
     case 'subUp': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) - 1); break;}
     case 'subDown': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) + 1); break;}
     case 'qa': {const el = $('#qa'); if (el && el.value.trim()) {const t = addQuick(dv(el.dataset.d), el.value); if (t) el.value = '';} break;}
@@ -797,7 +804,15 @@ document.addEventListener('keydown', ev => {
     return;
   }
   if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); if (tab === 'week' && (!showQuickAdd || weekSummaryCollapsed)) { showQuickAdd = true; weekSummaryCollapsed = false; render(); } focusQuickAdd(); return;}
-  if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const nt = S.tasks.find(t => t.next && !isDone(t)) || S.tasks.find(t => !isDone(t) && t.day === day); if (nt) openFocus(nt.id); else toast('Sem tarefa pendente'); return;}
+  if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+    ev.preventDefault();
+    // v94: não roubar o foco enquanto o usuário edita subtarefa/detalhes
+    const ae = document.activeElement;
+    if (ae && ae.closest && ae.closest('.sub, .subs, [data-eid], [contenteditable="true"]')) return;
+    const nt = firstPendingTaskInList();
+    if (nt) openFocus(nt.id); else toast('Sem tarefa pendente');
+    return;
+  }
   if (ev.key === 'Escape') {
     // Aviso informativo focado: Esc dispensa (mesma regra do botão ✕).
     const noticeEl = tgt && tgt.closest && tgt.closest('.notice');
