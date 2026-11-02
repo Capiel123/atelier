@@ -1087,6 +1087,8 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   const SAVE_LABELS = { saving: 'Salvando…', saved: 'Salvo', error: 'Falha ao salvar', blocked: 'Bloqueado', offline: 'Offline' };
   let remoteStatus = null;
   let remoteHasUser = true;
+  let remoteErrorSince = null;
+  let remoteTimer = null;
 
   function setAttrIfChanged(el, name, value) {
     if (value === null || value === undefined) {
@@ -1096,17 +1098,30 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     if (el.getAttribute(name) !== value) el.setAttribute(name, value);
   }
 
-  function remoteMarker(status, hasUser) {
+  // v91: política do marcador. Erro só depois de persistir (falha transitória de
+  // pull não acende); conta pausada acende na hora; o resto (pending/sending/
+  // synced/offline) nunca acende.
+  function remoteMarker(status, hasUser, errorSince) {
+    if (window.__sync && typeof window.__sync.pillMarker === 'function') {
+      return window.__sync.pillMarker(status, hasUser, errorSince);
+    }
     if (hasUser === false) return null;
-    if (status === 'error') return 'error';
     if (status === 'paused-account') return 'paused';
     return null;
+  }
+
+  function scheduleRemoteRecheck(marker) {
+    if (remoteTimer) { clearTimeout(remoteTimer); remoteTimer = null; }
+    if (marker === 'error' || remoteStatus !== 'error' || !remoteErrorSince) return;
+    const delay = (window.__sync && window.__sync.ERROR_MARKER_DELAY_MS) || 30000;
+    const wait = Math.max(0, delay - (Date.now() - remoteErrorSince)) + 250;
+    remoteTimer = setTimeout(() => { remoteTimer = null; applySyncPillRemote(); }, wait);
   }
 
   function applySyncPillRemote() {
     const p = document.getElementById('syncPill');
     if (!p) return;
-    const marker = remoteMarker(remoteStatus, remoteHasUser);
+    const marker = remoteMarker(remoteStatus, remoteHasUser, remoteErrorSince);
     setAttrIfChanged(p, 'data-remote', marker);
     const localLabel = SAVE_LABELS[p.dataset.state] || p.dataset.state || '';
     const warning = marker === 'error'
@@ -1117,11 +1132,13 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     const text = warning ? (localLabel ? localLabel + ' — ' + warning : warning) : null;
     setAttrIfChanged(p, 'title', text);
     setAttrIfChanged(p, 'aria-label', text);
+    scheduleRemoteRecheck(marker);
   }
 
-  function handleRemoteStatus(status, hasUser) {
+  function handleRemoteStatus(status, hasUser, errorSince) {
     remoteStatus = status || null;
     remoteHasUser = hasUser !== false;
+    remoteErrorSince = (typeof errorSince === 'number' && isFinite(errorSince)) ? errorSince : null;
     applySyncPillRemote();
   }
 
@@ -1129,7 +1146,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     try {
       if (!window.__sync || typeof window.__sync.getState !== 'function') return;
       const s = window.__sync.getState();
-      handleRemoteStatus(s.status, s.hasUser);
+      handleRemoteStatus(s.status, s.hasUser, s.errorSince);
     } catch (e) {}
   }
 
@@ -1150,7 +1167,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   // O estado remoto chega por evento do sync.js; o getState() no load é reforço.
   window.addEventListener('atelier:sync-status', (event) => {
     const detail = (event && event.detail) || {};
-    handleRemoteStatus(detail.status, detail.hasUser);
+    handleRemoteStatus(detail.status, detail.hasUser, detail.errorSince);
   });
   readRemoteStatus();
   window.addEventListener('load', readRemoteStatus, { once: true });

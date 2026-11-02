@@ -632,7 +632,23 @@
   function setStatus(status, error) {
     state.status = status;
     state.lastError = error || null;
+    // v91: marcador do header só aparece para erro PERSISTENTE (ver pillMarker).
+    if (status === 'error') { if (state.errorSince == null) state.errorSince = Date.now(); }
+    else state.errorSince = null;
     renderSync();
+  }
+
+  // v91: política do marcador remoto do #syncPill. Devolve 'error' | 'paused' | null.
+  // - erro só depois de persistir ~30s (falha transitória de pull não acende nada);
+  // - conta pausada (ação necessária) aparece na hora;
+  // - pending/sending/synced/offline e pulls normais NUNCA acendem.
+  var ERROR_MARKER_DELAY_MS = 30000;
+  function pillMarker(status, hasUser, errorSince, now) {
+    if (hasUser === false) return null;
+    if (status === 'paused-account') return 'paused';
+    var t = (now == null) ? Date.now() : now;
+    if (status === 'error' && errorSince && (t - errorSince) >= ERROR_MARKER_DELAY_MS) return 'error';
+    return null;
   }
 
   function pad2(n) { return ('0' + n).slice(-2); }
@@ -668,6 +684,7 @@
       status: state.status,
       pending: state.pending,
       lastError: state.lastError,
+      errorSince: state.errorSince,
       lastFlushAt: state.lastFlushAt,
       lastPullAt: state.lastPullAt,
       owner: state.owner,
@@ -769,12 +786,14 @@
     forceFullSync: forceFullSync,
     getState: statusSnapshot,
     statusHTML: statusHTML,
+    pillMarker: pillMarker,
     _test: {
       enqueueAll: enqueueAll, doFlush: doFlush, hashStr: hashStr, isoMs: isoMs,
       buildBaseline: buildBaseline, readJSON: readJSON, writeJSON: writeJSON,
       OUTBOX_KEY: OUTBOX_KEY, SEEN_KEY: SEEN_KEY, DEVICE_KEY: DEVICE_KEY, OWNER_KEY: OWNER_KEY,
       CURSORS_KEY: CURSORS_KEY, SEEDID_KEY: SEEDID_KEY, SETTINGS_CU_KEY: SETTINGS_CU_KEY,
       ORDER: ORDER, HAS_DELETED: HAS_DELETED, S_KEYS: S_KEYS,
+      setStatus: setStatus, pillMarker: pillMarker, ERROR_MARKER_DELAY_MS: ERROR_MARKER_DELAY_MS,
       scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry,
       pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, applyTimerRow: applyTimerRow, isPristineSeed: isPristineSeed,
       versionOf: versionOf, rowFor: rowFor, markDeleted: markDeleted, fetchRows: fetchRows,
