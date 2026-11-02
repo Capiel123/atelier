@@ -114,12 +114,20 @@ Ao criar seletor visual ou componente, usar os tokens quando a cor deve acompanh
 - No look brutal o chanfro fica no contêiner (`--bevel-sm` + `corner-shape:bevel`); os segmentos internos recebem `border-radius:0`, porque `base.css` aplica bevel em todo `button`/`select`.
 - O header do card usa `.task-header` (`≤640px`) para `min-height:48px`, `user-select:none` e a hitbox de 44px do `.chk`; a `.meta` vira linha única com `overflow-x:auto`. O card da Fila (`cardQueue`) **não** recebe `task-header` e mantém a barra antiga.
 
+### Correção de layout dos cards (v84)
+
+- **Por que o título não é flex no mobile:** `.tt` (`display:flex` + `flex-wrap:wrap`) quebra a linha flex pelo *max-content* do texto do título — o ícone de tipo fica na 1ª linha, o texto na 2ª e o lápis na 3ª (ícone “acima” do título). O bloco **V84** troca `.tt` por `display:block` + `line-height:1.35` no mobile e deixa `.type-icon`/`.tt-edit` como `inline-flex` + `vertical-align:middle`. No desktop `.tt` continua flex (não mexer).
+- **Regra de produto:** o título é o elemento mais importante do card; nada é renderizado acima dele (ver `AGENTS.md` §4 → “Hierarquia do card de tarefa”).
+- **Sem corte:** a V84 desfaz o `nowrap`/`overflow-x` da `.meta` (V82) e o `text-overflow:ellipsis` do `.time-stepper-value`, usando `min-width:max-content` e quebra de linha nas tags.
+- **Divisória:** `.card > details[data-eid]` recebe `border-top:1px solid var(--bd)` + `margin-top:12px` no mobile, separando subtarefas de “Editar detalhes”. O seletor é preso a `.card >` para não afetar o card da Fila (que tem `<details>` dentro de `.queue-body`).
+
 ### Avisos dispensáveis e fechar busca (v83)
 
 - **`.notice`** (`componentes.css`, junto dos banners): componente único para avisos **informativos**, com `.notice-text`, `.notice-actions` opcional e ✕. Cores só por tokens (`--ac` a 10% sobre `--s1`, `--panel-border-style`); a variante `.notice--warn` usa `--wr`. Avisos críticos (`.backup-banner` de save bloqueado, `.warn` de Config, painel de sync) **não** usam `.notice` e não têm ✕.
 - **`.icon-x`** (`componentes.css`): ✕ desenhado em CSS — `::before` de 8×8 com dois `linear-gradient` em `currentColor` e traço de 1,5px, glifo oculto por `font-size:0`. `::after` é a área de toque (44×44 no mobile). É usado pelo `.notice-dismiss` e pelo `.search-close`. No look brutal a lista de `data-a` (bloco “ÍCONES GEOMÉTRICOS NO LOOK BRUTAL”) inclui `dismissNotice` e `closeSearch`; o desenho coincide com o `::before`.
 - **Busca:** `.search-head` + `#searchInput{flex:1;min-width:0}` + `.search-close` ficam em `paginas.css` (dono dos estilos `.search-*`), com `.search-hint` sem `style` inline.
 - **Mobile:** o bloco **V83** no fim de `responsivo.css` (`≤640px`) só cresce o alvo dos dois ✕ (`36px` + `::after{inset:-4px}`) e devolve o `.notice` à primeira posição da Semana (`#app:has(.week-summary-card) > .notice{order:0}`), replicando o que o antigo `.warn` inline fazia.
+- **Comportamento:** inventário dos avisos, classificação informativo/crítico e o fluxo da busca estão em [`docs/AVISOS-E-BUSCA.md`](docs/AVISOS-E-BUSCA.md).
 
 ## Como decidir onde colocar uma regra
 

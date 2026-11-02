@@ -48,6 +48,13 @@ Antes de efetuar qualquer alteração no repositório, execute sequencialmente:
 - **Rolagem da Página:** Mantenha a rolagem no contêiner raiz da página. Evite aplicar `overflow-y: scroll` interno em listas no mobile.
 - **Espaçamento do FAB:** Garanta margem inferior suficiente no final das listas de tarefas para que o último item não seja coberto pelo botão flutuante (FAB).
 
+### Hierarquia do card de tarefa (regra de produto)
+- **O título da tarefa é o elemento mais importante do card.** Nada — ícone de tipo/status, badge, lápis de edição, contador, avatar — pode ser renderizado **acima** dele. Micro-ícones entram **inline à esquerda** do texto, na mesma linha; se não couberem, vão para a linha de metadados, nunca para cima do título.
+- **Alinhamento:** o texto do título e a `.chk` alinham pelo **topo** (primeira linha), não pelo centro do bloco. Título de 1 ou 3 linhas mantém a checkbox na mesma altura da primeira linha.
+- **Sem corte de informação por espaço:** títulos, tags, labels e o valor do timer quebram linha ou ocupam a largura necessária. Não usar `white-space:nowrap` + `text-overflow:ellipsis` para esconder conteúdo no mobile; `nowrap` fica restrito a números/contadores curtos.
+- **Fluxo do título no mobile:** o bloco do título (`.tt`) usa fluxo inline/block no mobile — `display:flex` + `flex-wrap` faz cada filho (ícone, texto, lápis) quebrar em uma linha própria e empurra o ícone para cima do título.
+- **Separadores:** blocos distintos dentro do card (subtarefas × “Editar detalhes”) precisam de divisor hairline (`1px solid var(--bd)`) e respiro vertical; controles com no mínimo 36px de altura útil.
+
 ### Sistema de Temas e Tokens Coloridos
 - Utilize exclusivamente tokens CSS de tema (`var(--bg)`, `var(--s1..3)`, `var(--bd)`, `var(--tx)`, `var(--mu)`, `var(--ac)`, `var(--bu)`, `var(--ok)`, `var(--wr)`, `var(--er)`). Evite cores hexadecimais fixas inline.
 - **Preservação de Escopo de Efeitos:** Efeitos visuais avançados como `background-clip: text`, gradientes metálicos e `text-shadow` intensos são **estritamente restritos** ao elemento `.logo-text`. Nunca aplique essas propriedades a títulos de leitura (`.tt`, `h2`, `inputs`).

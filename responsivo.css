@@ -934,3 +934,107 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .notice .icon-x::after,
   .search-close::after{content:'';position:absolute;inset:-4px}
 }
+
+/* =========================================================
+   V84 — CORREÇÃO DE LAYOUT DOS CARDS (mobile)
+   Regressões da V82/V83 nesta faixa:
+   1) ícone de tipo e lápis caíam em linhas próprias e ficavam
+      ACIMA do título. O título é o elemento mais importante do
+      card: nada pode ser renderizado acima dele. O bloco do
+      título volta a ser fluxo inline (ícone + texto + lápis) e
+      o header alinha pelo topo, com a checkbox na 1ª linha.
+   2) a `.meta` da V82 usava nowrap + rolagem horizontal e
+      cortava tags ("Prospecç…"); volta a quebrar linha. O valor
+      do timer deixa de usar reticências (min-width:max-content).
+   3) divisor hairline entre as subtarefas e "Editar detalhes",
+      com altura de toque confortável nos dois controles.
+   Só mobile (≤640px). Nada acima foi alterado.
+   ========================================================= */
+@media(max-width:640px){
+  /* --- 1. Nada acima do título ---------------------------- */
+  .card > .task-header{align-items:flex-start}
+  .card > .task-header > .chk{margin-top:2px}
+
+  /* Título como fluxo de texto: o ícone fica inline à esquerda e o
+     texto quebra normalmente. Com flex + wrap, o título largo forçava
+     cada filho (ícone, texto, lápis) para uma linha própria — era isso
+     que jogava o ícone "para cima" do título. */
+  .card > .task-header .tt{
+    display:block;
+    line-height:1.35;
+    white-space:normal;
+    word-break:break-word;
+  }
+  .card > .task-header .tt > .type-icon{
+    display:inline-flex;
+    vertical-align:middle;
+    margin:0 6px 0 0;
+  }
+  .card > .task-header .tt > .tt-edit{
+    display:inline-flex;
+    vertical-align:middle;
+    margin:0 0 0 4px;
+  }
+  .card > .task-header .tt > .quick-ind,
+  .card > .task-header .tt > .tag{
+    vertical-align:middle;
+    margin-left:4px;
+  }
+  .card > .task-header .tt .inline-edit{
+    display:inline-block;
+    max-width:100%;
+    vertical-align:middle;
+  }
+
+  /* --- 2. Tags e timer sem corte -------------------------- */
+  .card > .task-header .meta{
+    flex-wrap:wrap;
+    gap:6px;
+    overflow:visible;
+    scrollbar-width:auto;
+  }
+  .card > .task-header .meta > *{flex:0 1 auto;max-width:100%}
+  .card > .task-header .meta .tag,
+  .card > .task-header .meta .label-pill{
+    max-width:100%;
+    white-space:normal;
+    overflow-wrap:break-word;
+  }
+
+  .timer-segmented-bar button,
+  .timer-segmented-bar select.postpone-sel{
+    font-size:11px;
+    font-variant-numeric:tabular-nums;
+  }
+  .timer-segmented-bar .time-stepper button{
+    padding:0 6px;
+    font-size:11px;
+    font-variant-numeric:tabular-nums;
+  }
+  /* O stepper não encolhe abaixo do próprio conteúdo (quem cede é o
+     "adiar"); o select mantém 44px de alvo. */
+  .timer-segmented-bar > .time-stepper{min-width:auto}
+  .timer-segmented-bar select.postpone-sel{min-width:44px;padding:4px 6px}
+  /* Nunca menor que o próprio texto: "0min/45min" aparece inteiro. */
+  .timer-segmented-bar .time-stepper-value{
+    min-width:max-content;
+    padding:0 4px;
+    font-size:11px;
+    overflow:visible;
+    text-overflow:clip;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* --- 3. Divisória: subtarefas × Editar detalhes --------- */
+  .card > details[data-eid]{
+    margin:12px 0 0;
+    padding-top:8px;
+    border-top:1px solid var(--bd);
+  }
+  .card > details[data-eid] > summary{
+    min-height:36px;
+    padding:6px 0;
+    font-size:12.5px;
+  }
+  .card > .subs .sub-add{margin-top:10px}
+}
