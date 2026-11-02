@@ -345,7 +345,9 @@ document.addEventListener('click', ev => {
     case 'reportWeekToday': {reportWeekOffset = 0; render(); return;}
     case 'tog': {
       if (!t) break;
-      if (!isDoneThisWeek(t)) {
+      // `t.done` é o estado persistente: concluída de semanas anteriores continua
+      // concluída e o toque REABRE (não "conclui de novo"). Métricas usam isDoneThisWeek.
+      if (!isDone(t)) {
         const card = btn.closest('.card');
         const isReduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const completeTask = () => {
@@ -603,7 +605,7 @@ document.addEventListener('click', ev => {
       fallbackDownload();
       return;
     }
-    case 'clrDone': if (confirm('Ocultar as tarefas concluídas deste dia da seção "Concluídas"? Elas continuam no Histórico.')) { S.clearedDone = S.clearedDone || {}; dayTasks(day).filter(t => isDoneThisWeek(t) && !isClearedFromDone(t)).forEach(t => { S.clearedDone[t.id] = Date.now(); }); } break;
+    case 'clrDone': if (confirm('Ocultar as tarefas concluídas deste dia da seção "Concluídas"? Elas continuam no Histórico.')) { S.clearedDone = S.clearedDone || {}; dayTasks(day).filter(t => isDone(t) && !isClearedFromDone(t)).forEach(t => { S.clearedDone[t.id] = Date.now(); }); } break;
     case 'imp': doImport(V('imp')); return;
     default: return;
   }
@@ -779,7 +781,7 @@ document.addEventListener('keydown', ev => {
     return;
   }
   if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const qa = document.getElementById('qa') || document.getElementById('qaJob'); if (qa) qa.focus(); return;}
-  if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const nt = S.tasks.find(t => t.next && !isDoneThisWeek(t)) || S.tasks.find(t => !isDoneThisWeek(t) && t.day === day); if (nt) openFocus(nt.id); else toast('Sem tarefa pendente'); return;}
+  if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const nt = S.tasks.find(t => t.next && !isDone(t)) || S.tasks.find(t => !isDone(t) && t.day === day); if (nt) openFocus(nt.id); else toast('Sem tarefa pendente'); return;}
   if (ev.key === 'Escape') {
     // Aviso informativo focado: Esc dispensa (mesma regra do botão ✕).
     const noticeEl = tgt && tgt.closest && tgt.closest('.notice');

@@ -86,14 +86,22 @@ function taskWeight(t) {
   if ((t.subs||[]).length) return t.subs.length * 15;
   return 15;
 }
-function sectionProgress(tasks) {
+// `doneFn` escolhe a régua de "feita":
+// - padrão `isDoneThisWeek` → métricas (barra do resumo, dashboard, relatório);
+// - `isDone` → progresso visual de uma seção na lista (coerente com os cards).
+function sectionProgress(tasks, doneFn = isDoneThisWeek) {
+  const done = typeof doneFn === 'function' ? doneFn : isDoneThisWeek;
   const totalWeight = tasks.reduce((a,t) => a + taskWeight(t), 0);
-  const doneWeight = tasks.filter(t => isDoneThisWeek(t)).reduce((a,t) => a + taskWeight(t), 0);
-  const inProgressWeight = tasks.filter(t => !isDoneThisWeek(t)).reduce((a,t) => { const w = taskWeight(t); const spent = taskMinutesThisWeek(t); return a + Math.min(w, spent); }, 0);
+  const doneWeight = tasks.filter(t => done(t)).reduce((a,t) => a + taskWeight(t), 0);
+  const inProgressWeight = tasks.filter(t => !done(t)).reduce((a,t) => { const w = taskWeight(t); const spent = taskMinutesThisWeek(t); return a + Math.min(w, spent); }, 0);
   const pct = totalWeight > 0 ? Math.round(((doneWeight + inProgressWeight) / totalWeight) * 100) : 0;
   return {pct, totalWeight, doneWeight, inProgressWeight};
 }
-// Conclusão "desta semana": evita herdar conclusões de semanas anteriores no planejamento.
+// Estado de conclusão PERSISTENTE: é o que o card/seções exibem (checkbox, riscado,
+// "Concluídas"). Uma tarefa feita continua feita na semana seguinte.
+function isDone(t) { return !!(t && t.done); }
+// Conclusão "desta semana": usada SÓ em métricas (dashboard, progresso, relatório, XP).
+// Nunca use para decidir o visual do card nem para esconder a tarefa de pendentes.
 function isDoneThisWeek(t) { return !!(t && t.done && t.doneAt && t.doneAt >= weekStart().getTime()); }
 // Tarefa oculta da seção "Concluídas" por "Limpar concluídas" (sem tocar em done/doneAt).
 function isClearedFromDone(t) { return !!(t && S.clearedDone && S.clearedDone[t.id] && S.clearedDone[t.id] >= (t.doneAt || 0)); }

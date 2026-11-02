@@ -240,12 +240,12 @@ function viewWeek() {
   const dayDate = iso(weekDateForDay(day)).split('-').reverse().join('/');
   const cap = S.cfg.cap || 360;
   const full = workProg.totalWeight > cap;
-  const nextTask = S.tasks.find(t => t.next && !isDoneThisWeek(t));
+  const nextTask = S.tasks.find(t => t.next && !isDone(t));
   const slot = currentEnergySlot(); const currentE = getTodayEnergy()[slot];
   const slotLabel = {morning:'Manhã', afternoon:'Tarde', evening:'Noite'}[slot];
   const nextCard = nextTask ? `<div class="next-card"><div><div class="nc-label">⭐ Próxima</div><div class="nc-title">${esc(nextTask.t)}</div><div class="nc-meta">${PR[nextTask.pr]} · ${esc(areaLabel(nextTask.area))}${nextTask.est?' · '+fmtMin(nextTask.est):''}</div></div><div class="nc-actions"><button class="go" data-a="focusMode" data-id="${nextTask.id}">⛶ Focar</button><button data-a="setnext" data-id="${nextTask.id}">✕</button></div></div>` : '';
   const compact = getTaskCompactMode();
-  const prCounts = [0,1,2].map(pr => ts.filter(t => !isDoneThisWeek(t) && t.pr === pr).length);
+  const prCounts = [0,1,2].map(pr => ts.filter(t => !isDone(t) && t.pr === pr).length);
   const gxp = globalXp(); const lvlInfo = levelInfo(gxp);
 
   const quickAddHtml = showQuickAdd ? adder(day) : '';
@@ -287,7 +287,7 @@ function viewWeek() {
 
   return `${summaryCard}
     ${reviewHintHTML()}
-    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDoneThisWeek(t)).length}/${a.length}</small></button>`;}).join('')}</div>
+    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDone(t)).length}/${a.length}</small></button>`;}).join('')}</div>
     ${toggleBtn}
     <div class="week-collapsible${collapsed?' week-collapsible--hidden':''}" id="weekCollapsible">
       <div class="energy-row"><span class="energy-label">${slotLabel}:</span><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${e.icon} ${e.n}</button>`).join('')}</div></div>
@@ -361,25 +361,27 @@ function renderFilteredTasks() {
   // setTimeout(0) garante que a contagem (#taskCount) atualize após o HTML entrar no DOM
   setTimeout(() => {
     const el = document.getElementById('taskCount');
-    if (el) el.textContent = `(${list.filter(t=>!isDoneThisWeek(t)).length} pend · ${list.filter(t=>isDoneThisWeek(t)).length} feitas)`;
+    if (el) el.textContent = `(${list.filter(t=>!isDone(t)).length} pend · ${list.filter(t=>isDone(t)).length} feitas)`;
   }, 0);
 
   if (!list.length) return list.length ? '<div class="msg">Nada com esses filtros.</div>' : '<div class="msg">Nada ainda.</div>';
 
-  const pendingTasks = list.filter(t => !isDoneThisWeek(t));
+  const pendingTasks = list.filter(t => !isDone(t));
   // "Limpar concluídas" só oculta; se a tarefa for re-concluída depois, reaparece (doneAt mais novo).
-  const doneTasks = list.filter(t => isDoneThisWeek(t) && !isClearedFromDone(t));
+  const doneTasks = list.filter(t => isDone(t) && !isClearedFromDone(t));
   const compact = getTaskCompactMode();
   const sectionsCollapsed = S.cfg.sectionsCollapsed || {};
 
   const sectionsHtml = SECTION_ORDER.map(section => {
     const allItems = list.filter(t => taskSection(t) === section);
     if (!allItems.length) return '';
-    const pendingItems = allItems.filter(t => !isDoneThisWeek(t));
+    const pendingItems = allItems.filter(t => !isDone(t));
     const meta = sectionMeta(section);
     const collapsed = !!sectionsCollapsed[section];
     const pend = pendingItems.length;
-    const prog = sectionProgress(allItems);
+    // Barra da seção na lista reflete o estado persistente (`isDone`); as métricas
+    // da semana continuam com `isDoneThisWeek` no summary/dashboard.
+    const prog = sectionProgress(allItems, isDone);
 
     let ordered;
     if (S.cfg.autoPriority) {
@@ -474,7 +476,7 @@ function refreshTaskCard(taskId) {
   const t = T(taskId);
   const el = document.querySelector(`[data-card="${taskId}"]`);
   if (!t || !el) return false;
-  const score = isDoneThisWeek(t) ? null : (S.cfg.autoPriority ? computeTaskScore(t, buildCtx()) : null);
+  const score = isDone(t) ? null : (S.cfg.autoPriority ? computeTaskScore(t, buildCtx()) : null);
   el.outerHTML = tab === 'q'
     ? cardQueue(t)
     : (getTaskCompactMode() && !expandedTasks.has(t.id) ? cardTaskCompact(t, score) : cardTask(t, score));
@@ -517,7 +519,7 @@ function cardTaskCompact(t, score) {
   const runningThis = S.timer && S.timer.taskId === t.id;
   const _as = activeSubs(t); const subsTotal = _as.length; const subsDone = _as.filter(s => s.d).length;
   const isSelected = selectedTaskId === t.id;
-  const doneNow = isDoneThisWeek(t);
+  const doneNow = isDone(t);
   return `<div class="card compact ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}" data-a="expandTask" data-id="${t.id}">
     <div class="row" style="align-items:center; width:100%;">
       <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
@@ -549,7 +551,7 @@ function cardTask(t, score) {
   const stuck = isStuck(t); const urgentStuck = isUrgentStuck(t); const over = isOverEstimate(t);
   const k = f => `tasks:${t.id}:${f}`;
   const isSelected = selectedTaskId === t.id;
-  const doneNow = isDoneThisWeek(t);
+  const doneNow = isDone(t);
   // Estado 2 (comprimido): subs recolhidas pelo cabeçalho "Fases"; o card
   // continua expandido (barra de ações visível), mas sem a lista e sem detalhes.
   const subsCollapsedNow = subsTotal > 0 && subsCollapsed.has(t.id);
@@ -1281,7 +1283,7 @@ function renderTimer() {
 }
 
 /* --- MODO FOCO (overlay fullscreen) --- */
-function openFocus(taskId) {const t = S.tasks.find(x => x.id === taskId); if (!t || isDoneThisWeek(t)) return toast('Escolha uma tarefa pendente', true); focusTaskId = taskId; renderFocus();}
+function openFocus(taskId) {const t = S.tasks.find(x => x.id === taskId); if (!t || isDone(t)) return toast('Escolha uma tarefa pendente', true); focusTaskId = taskId; renderFocus();}
 function closeFocus() {
   if (S.timer && S.timer.taskId === focusTaskId) {
     // Se configurado "nunca parar", mantém o timer rodando e só fecha o overlay
@@ -1340,7 +1342,7 @@ function updateFocusTimer() {if (!focusTaskId || !S.timer || S.timer.taskId !== 
 function renderFocus() {
   if (!focusTaskId) return;
   const t = S.tasks.find(x => x.id === focusTaskId);
-  if (!t || isDoneThisWeek(t)) return closeFocus();
+  if (!t || isDone(t)) return closeFocus();
   let el = document.getElementById('focusOverlay');
   if (!el) {el = document.createElement('div'); el.id = 'focusOverlay'; el.className = 'focus-overlay'; document.body.appendChild(el);}
 

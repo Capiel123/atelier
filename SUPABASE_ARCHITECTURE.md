@@ -4,7 +4,7 @@
 >
 > **Status:** Fases 1–6 concluídas. **Fase 6 (timer)** implementada e **validada manualmente em PC + celular**: `active_timer` sincroniza como linha única por usuário (LWW por `client_updated_at`). Tema e accent são locais por dispositivo.
 > **Base:** decisões do usuário (Magic Link, local-first, timer, lixeira, IDs, modelagem híbrida, logo, segurança, migração) + código atual.
-> **Documentos relacionados:** `SUPABASE_DATA_MAPPING.md` (dados), `SUPABASE_IMPLEMENTATION_PLAN.md` (etapas).
+> **Documentos relacionados:** `SUPABASE_DATA_MAPPING.md` (dados), `SUPABASE_IMPLEMENTATION_PLAN.md` (etapas) e **`docs/INVESTIGACAO-RESSURREICAO-SEMANA.md` §8** (auditoria do estado atual: políticas por tabela, campos local-only, riscos de LWW/relógio e lacunas doc×código).
 > **Estado atual:** schema/RLS validados; autenticação validada; onboarding validado; importação inicial validada em conta de teste; outbox/push validada manualmente (encerrada); pull/merge (`merge.js` + `sync.js`) implementados e testados em simulação (validação real pendente).
 
 ## 1. Decisões de arquitetura
