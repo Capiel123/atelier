@@ -806,15 +806,15 @@
   box-sizing:border-box;
 }
 
-/* v88 — gramática de prioridade por FORMA nos temas não-brutal (v87 começou no Cianótico):
-   alta = disco cheio + anel externo fino; média = meio disco (metade esquerda);
+/* v88/v89 — gramática de prioridade por FORMA nos temas não-brutal (v87 começou no Cianótico):
+   alta = disco cheio + anel externo fino; média = disco MENOR (peso intermediário);
    baixa = anel vazado. Serve para circle, diamond e square; a cor continua vindo do
    background inline, então não há hex novo aqui. Os temas brutal já têm a própria
    gramática (borda + gradiente em componentes.css ~272). */
 :root:not([data-look="brutal"]) .dot{ position:relative; }
 :root:not([data-look="brutal"]) .dot[data-pr="1"]{
-  -webkit-mask:linear-gradient(to right, black 50%, transparent 50%);
-          mask:linear-gradient(to right, black 50%, transparent 50%);
+  /* média: disco menor — a meia-lua (metade do círculo) ficava ilegível a 7px */
+  transform:scale(.66);
 }
 :root:not([data-look="brutal"]) .dot[data-pr="2"]{
   -webkit-mask:radial-gradient(circle closest-side, transparent 45%, black 46%);
@@ -823,12 +823,12 @@
 :root:not([data-look="brutal"]) .dot[data-pr="0"]::after{
   content:"";
   position:absolute;
-  inset:-3px;
+  inset:-2px;
   border-radius:inherit;
   clip-path:inherit;
   background-color:inherit;
-  -webkit-mask:radial-gradient(circle closest-side, transparent 70%, black 71%);
-          mask:radial-gradient(circle closest-side, transparent 70%, black 71%);
+  -webkit-mask:radial-gradient(circle closest-side, transparent 74%, black 75%);
+          mask:radial-gradient(circle closest-side, transparent 74%, black 75%);
   pointer-events:none;
 }
 

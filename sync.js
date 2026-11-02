@@ -475,10 +475,13 @@
   }
 
   function fetchRows(client, user, table, cursor) {
-    // v88: desempate por id e cursor inclusivo (gte). O `gt` pulava para sempre
-    // linhas empatadas no mesmo updated_at (lote de upsert) e na borda do limite.
-    var q = client.from(table).select('*').eq('user_id', user.id)
-      .order('updated_at', { ascending: true }).order('id', { ascending: true }).limit(500);
+    // v89: só ordena por `id` nas tabelas que têm essa coluna — user_settings e
+    // active_timer são singleton por user_id e o PostgREST rejeitava a ordenação
+    // ("column user_settings.id does not exist"), derrubando o pull inteiro.
+    var hasId = (table !== 'user_settings' && table !== 'active_timer');
+    var q = client.from(table).select('*').eq('user_id', user.id).order('updated_at', { ascending: true });
+    if (hasId) q = q.order('id', { ascending: true });
+    q = q.limit(500);
     if (cursor) q = q.gte('updated_at', cursor);
     return new Promise(function (resolve, reject) {
       var timer = setTimeout(function () { reject({ message: 'timeout no pull de ' + table }); }, 20000);
