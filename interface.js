@@ -276,7 +276,7 @@ function viewWeek() {
 
   // Controles: Adicionar (primário) + Filtros + Auto (secundários), na mesma linha
   const controlsRow = `<div class="week-controls-row">
-    <button data-a="toggleQuickAdd" class="week-add-btn">+ Adicionar Tarefa</button>
+    <button data-a="openQuickAdd" class="week-add-btn">+ Adicionar Tarefa</button>
     <button data-a="toggleFilters" class="week-ctrl-btn${showFilters?' on':''}">🔍 Filtros</button>
     <label class="auto-prio-label week-ctrl-btn"><input type="checkbox" id="autoPriorityToggle" ${S.cfg.autoPriority?'checked':''}><span>⭐ Auto</span></label>
   </div>`;

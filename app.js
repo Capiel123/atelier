@@ -45,7 +45,8 @@ document.addEventListener('click', ev => {
     case 'closeShortcuts': document.getElementById('shortcutsModal')?.remove(); return;
     case 'moreOpen': showMoreSheet(); return;
     case 'closeMore': hideMoreSheet(); return;
-    case 'toggleQuickAdd': showQuickAdd = !showQuickAdd; render(); return;
+    case 'toggleQuickAdd': showQuickAdd = !showQuickAdd; render(); if (showQuickAdd) focusQuickAdd(); return;
+    case 'openQuickAdd': showQuickAdd = true; weekSummaryCollapsed = false; render(); focusQuickAdd(); return;
     case 'toggleFilters': showFilters = !showFilters; render(); return;
     case 'toggleWeekSummary': weekSummaryCollapsed = !weekSummaryCollapsed; render(); return;
     case 'setTheme': S.cfg.theme = id; applyTheme(); save(); render(); toast('Tema: ' + THEMES[id].n); return;
@@ -795,7 +796,7 @@ document.addEventListener('keydown', ev => {
     ev.target.click();
     return;
   }
-  if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const qa = document.getElementById('qa') || document.getElementById('qaJob'); if (qa) qa.focus(); return;}
+  if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); if (tab === 'week' && (!showQuickAdd || weekSummaryCollapsed)) { showQuickAdd = true; weekSummaryCollapsed = false; render(); } focusQuickAdd(); return;}
   if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); const nt = S.tasks.find(t => t.next && !isDone(t)) || S.tasks.find(t => !isDone(t) && t.day === day); if (nt) openFocus(nt.id); else toast('Sem tarefa pendente'); return;}
   if (ev.key === 'Escape') {
     // Aviso informativo focado: Esc dispensa (mesma regra do botão ✕).
@@ -1070,8 +1071,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     }
     const q = find();
     if (!q) return;
-    q.scrollIntoView({block: 'center', behavior: 'smooth'});
-    setTimeout(() => q.focus(), 150);
+    focusQuickAdd();
   });
   // Esconde o FAB enquanto o usuário digita em qualquer input (evita cobrir o teclado)
   document.addEventListener('focusin', e => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) f.style.display = 'none'; });
@@ -1088,6 +1088,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   let remoteStatus = null;
   let remoteHasUser = true;
   let remoteErrorSince = null;
+  let remotePending = 0;
   let remoteTimer = null;
 
   function setAttrIfChanged(el, name, value) {
@@ -1101,9 +1102,9 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   // v91: política do marcador. Erro só depois de persistir (falha transitória de
   // pull não acende); conta pausada acende na hora; o resto (pending/sending/
   // synced/offline) nunca acende.
-  function remoteMarker(status, hasUser, errorSince) {
+  function remoteMarker(status, hasUser, errorSince, pending) {
     if (window.__sync && typeof window.__sync.pillMarker === 'function') {
-      return window.__sync.pillMarker(status, hasUser, errorSince);
+      return window.__sync.pillMarker(status, hasUser, errorSince, pending);
     }
     if (hasUser === false) return null;
     if (status === 'paused-account') return 'paused';
@@ -1121,7 +1122,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   function applySyncPillRemote() {
     const p = document.getElementById('syncPill');
     if (!p) return;
-    const marker = remoteMarker(remoteStatus, remoteHasUser, remoteErrorSince);
+    const marker = remoteMarker(remoteStatus, remoteHasUser, remoteErrorSince, remotePending);
     setAttrIfChanged(p, 'data-remote', marker);
     const localLabel = SAVE_LABELS[p.dataset.state] || p.dataset.state || '';
     const warning = marker === 'error'
@@ -1135,10 +1136,11 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     scheduleRemoteRecheck(marker);
   }
 
-  function handleRemoteStatus(status, hasUser, errorSince) {
+  function handleRemoteStatus(status, hasUser, errorSince, pending) {
     remoteStatus = status || null;
     remoteHasUser = hasUser !== false;
     remoteErrorSince = (typeof errorSince === 'number' && isFinite(errorSince)) ? errorSince : null;
+    remotePending = (typeof pending === 'number' && isFinite(pending)) ? pending : 0;
     applySyncPillRemote();
   }
 
@@ -1146,7 +1148,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     try {
       if (!window.__sync || typeof window.__sync.getState !== 'function') return;
       const s = window.__sync.getState();
-      handleRemoteStatus(s.status, s.hasUser, s.errorSince);
+      handleRemoteStatus(s.status, s.hasUser, s.errorSince, s.pending);
     } catch (e) {}
   }
 
@@ -1167,7 +1169,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   // O estado remoto chega por evento do sync.js; o getState() no load é reforço.
   window.addEventListener('atelier:sync-status', (event) => {
     const detail = (event && event.detail) || {};
-    handleRemoteStatus(detail.status, detail.hasUser, detail.errorSince);
+    handleRemoteStatus(detail.status, detail.hasUser, detail.errorSince, detail.pending);
   });
   readRemoteStatus();
   window.addEventListener('load', readRemoteStatus, { once: true });
@@ -1230,6 +1232,15 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
 })();
 
 /* --- TICKS DE FUNDO (atualizações periódicas) --- */
+// v93: abre e FOCA o campo "Nova tarefa rápida" (Semana/Fila). Antes, o clique em
+// "+ Adicionar Tarefa" só renderizava o campo, sem foco — digitar não ia a lugar algum.
+function focusQuickAdd() {
+  const qa = document.getElementById('qa') || document.getElementById('qaJob');
+  if (!qa) return;
+  try { qa.focus({ preventScroll: true }); } catch (e) { qa.focus(); }
+  if (qa.scrollIntoView) qa.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 setInterval(() => {if (S.timer) renderTimer();}, 500);                             // relógio do timer no topo
 setInterval(() => {const slot = currentEnergySlot(); if (slot !== lastSlot) {lastSlot = slot; if (S && S.cfg.autoPriority && tab === 'week') refreshTaskList();}}, 60000); // reordena quando muda o período do dia
 setInterval(() => {if (!S.timer || S.timer.paused || !S.timer.targetMin) return; if (S.timer.phase === 'focus' && timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase(true); else if (S.timer.phase === 'rest' && timerElapsedSec() / 60 >= S.timer.targetMin) completeRest();}, 800); // foco conclui sozinho; descanso só sugere retorno

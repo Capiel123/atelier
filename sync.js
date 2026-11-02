@@ -451,16 +451,17 @@
       local = list.find(function (l) { return l.id === row.id; }) || null;
     }
     var winner = window.__merge.mergeWorkLog(local, row);
+    var changed = !local || JSON.stringify(local) !== JSON.stringify(winner);
     S.workLogs = list.filter(function (l) { return !(row.task_id && l.taskId === row.task_id && l.date === (row.date || '')) && l.id !== winner.id; });
     S.workLogs.push(winner);
-    return winner;
+    return { winner: winner, changed: changed, id: winner.id };
   }
 
   // Retorna { changed: bool, id: string|null } — id da entidade afetada (ou 'settings').
   function applyRemoteRow(table, row) {
     if (table === 'user_settings') { return { changed: applyUserSettings(row), id: 'settings' }; }
     if (table === 'active_timer') { return { changed: applyTimerRow(row), id: 'timer' }; }
-    if (table === 'work_logs') { return { changed: true, id: applyWorkLogRow(row).id }; }
+    if (table === 'work_logs') { var wl = applyWorkLogRow(row); return { changed: wl.changed, id: wl.id }; }
     var key = S_KEYS[table];
     if (!key) return { changed: false, id: null };
     var list = S[key];
@@ -469,8 +470,15 @@
     for (var i = 0; i < list.length; i++) { if (list[i].id === row.id) { idx = i; break; } }
     var local = idx >= 0 ? list[idx] : null;
     var res = window.__merge.mergeEntity(table, local, row);
-    if (res.action === 'delete') { if (idx >= 0) list.splice(idx, 1); return { changed: true, id: row.id }; }
-    if (res.action === 'set') { if (idx >= 0) list[idx] = res.entity; else list.push(res.entity); return { changed: true, id: row.id }; }
+    if (res.action === 'delete') { if (idx >= 0) { list.splice(idx, 1); return { changed: true, id: row.id }; } return { changed: false, id: row.id }; }
+    if (res.action === 'set') {
+      // v92: só conta como mudança se o conteúdo realmente mudou. Sem isso, o pull
+      // re-aplicava a linha de borda (cursor gte) e disparava save()+render() em loop
+      // — o contador "N pend" piscava sem parar.
+      var changed = !local || JSON.stringify(local) !== JSON.stringify(res.entity);
+      if (idx >= 0) list[idx] = res.entity; else list.push(res.entity);
+      return { changed: changed, id: row.id };
+    }
     return { changed: false, id: row.id };
   }
 
@@ -536,6 +544,9 @@
         if (!page.length) break;
         for (var pi = 0; pi < page.length; pi++) {
           var r = page[pi];
+          // v92: tombstone local pendente não pode ser "ressuscitado" por um pull que
+          // rodou antes do flush (o servidor ainda tem a linha viva).
+          if (seen && seen[tb] && seen[tb][r.id] && seen[tb][r.id].h === 'DELETED') continue;
           var x = applyRemoteRow(tb, r);
           if (x.changed) changedList.push({ table: tb, id: x.id });
         }
@@ -638,16 +649,18 @@
     renderSync();
   }
 
-  // v91: política do marcador remoto do #syncPill. Devolve 'error' | 'paused' | null.
-  // - erro só depois de persistir ~30s (falha transitória de pull não acende nada);
+  // v91/v92: política do marcador remoto do #syncPill. Devolve 'error' | 'paused' | null.
+  // - erro só com ALTERAÇÃO PENDENTE e depois de persistir ~30s (falha transitória de
+  //   pull sem fila não acende nada);
   // - conta pausada (ação necessária) aparece na hora;
   // - pending/sending/synced/offline e pulls normais NUNCA acendem.
   var ERROR_MARKER_DELAY_MS = 30000;
-  function pillMarker(status, hasUser, errorSince, now) {
+  function pillMarker(status, hasUser, errorSince, pending, now) {
     if (hasUser === false) return null;
     if (status === 'paused-account') return 'paused';
+    var p = (typeof pending === 'number' && isFinite(pending)) ? pending : 0;
     var t = (now == null) ? Date.now() : now;
-    if (status === 'error' && errorSince && (t - errorSince) >= ERROR_MARKER_DELAY_MS) return 'error';
+    if (status === 'error' && p > 0 && errorSince && (t - errorSince) >= ERROR_MARKER_DELAY_MS) return 'error';
     return null;
   }
 
