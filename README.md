@@ -43,29 +43,34 @@ Este repositório adota **gerenciamento de contexto modular**. Consulte os docum
 ### Visão Geral e Arquitetura Central
 | Documento | Descrição / Finalidade |
 |---|---|
+| [docs/README.md](./docs/README.md) | **Índice completo da documentação**, por assunto (design, UI, dados, guias, archive). |
 | [docs/PROJECT_CONTEXT.md](./docs/PROJECT_CONTEXT.md) | **Ponto de entrada principal.** Resumo executivo, decisões arquiteturais e estado atual. |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Módulos JavaScript, ordem de execução e contratos entre arquivos. |
+| [docs/CHANGELOG.md](./docs/CHANGELOG.md) | Histórico por versão (`CACHE_VERSION`), com arquivos e validação. |
+| [docs/KNOWN-ISSUES.md](./docs/KNOWN-ISSUES.md) | Dívidas técnicas, bugs conhecidos e limites aceitos. |
 | [AGENTS.md](./AGENTS.md) | **Instruções estritas e guia de decisão para Agentes de IA/LLMs.** |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Planejamento de fases, backlog e marcos futuros. |
 
 ### Componentes e Especificações de Interface (UI/UX)
 | Documento | Descrição / Finalidade |
 |---|---|
-| [docs/HEADER-TOP-MENU.md](./docs/design/HEADER-TOP-MENU.md) | Especificações do Header, Navegação (`#nav`), busca CSS, Timer e Nível/XP. |
-| [docs/DASHBOARD-WEEK-TAB.md](./docs/ui/DASHBOARD-WEEK-TAB.md) | Especificações do Card Resumo Semanal (`.week-summary-card`), estatísticas e hairline mobile. |
-| [docs/FONTES.md](./docs/design/FONTES.md) | **Governança tipográfica oficial:** uso exclusivo de fontes góticas no logo, fontes de leitura da interface e tokens. |
-| [docs/TEMAS.md](./docs/design/TEMAS.md) | Catálogo e receita dos 14 temas, tokens CSS, direção de arte e identidade visual avançada. |
+| [docs/design/DESIGN-SYSTEM.md](./docs/design/DESIGN-SYSTEM.md) | **Índice de decisões de design:** princípios, paleta por tema, prioridade, ícones e checklist. |
+| [docs/design/HEADER-TOP-MENU.md](./docs/design/HEADER-TOP-MENU.md) | Especificações do Header, Navegação (`#nav`), busca CSS, Timer e Nível/XP. |
+| [docs/ui/DASHBOARD-WEEK-TAB.md](./docs/ui/DASHBOARD-WEEK-TAB.md) | Especificações do Card Resumo Semanal (`.week-summary-card`), estatísticas e faixa dos dias. |
+| [docs/ui/WEEK-AND-TASK-CARDS.md](./docs/ui/WEEK-AND-TASK-CARDS.md) | Aba Semana, cards, fases, conclusão persistente e escopo da semana. |
+| [docs/design/FONTES.md](./docs/design/FONTES.md) | **Governança tipográfica oficial:** uso exclusivo de fontes góticas no logo, fontes de leitura da interface e tokens. |
+| [docs/design/TEMAS.md](./docs/design/TEMAS.md) | Catálogo e receita dos 14 temas, tokens CSS, direção de arte e identidade visual avançada. |
 | [docs/AUDITORIA-UX-UI.md](./docs/AUDITORIA-UX-UI.md) | Fricções de UX priorizadas, sistema de tokens de cor e melhorias de usabilidade. |
-| [JS_DOCS.md](./docs/guides/JS_DOCS.md) · [CSS_DOCS.md](./docs/design/CSS_DOCS.md) | Mapeamento técnico detalhado dos seletores CSS e funções JS. |
+| [docs/guides/JS_DOCS.md](./docs/guides/JS_DOCS.md) · [docs/design/CSS_DOCS.md](./docs/design/CSS_DOCS.md) | Mapeamento técnico detalhado dos seletores CSS e funções JS. |
 
 ### Modelagem de Dados, Regras e Regra de Negócio
 | Documento | Descrição / Finalidade |
 |---|---|
-| [docs/DATA-MODEL.md](./docs/data/DATA-MODEL.md) | Esquema de dados local e remoto (Supabase). |
-| [docs/BUSINESS-RULES.md](./docs/data/BUSINESS-RULES.md) | Regras de cálculo de XP, prazos, prioridades e ordenação. |
-| [docs/FUNCTIONAL-MAP.md](./docs/guides/FUNCTIONAL-MAP.md) | Mapeamento de funcionalidades por tela e ações do usuário. |
-| [docs/DEPENDENCIES.md](./docs/data/DEPENDENCIES.md) | Matriz de dependência entre módulos e funções. |
-| `SUPABASE_*.md` | Arquitetura, esquemas RLS e mapeamento da integração Supabase. |
+| [docs/data/DATA-MODEL.md](./docs/data/DATA-MODEL.md) | Esquema de dados local e remoto (Supabase). |
+| [docs/data/BUSINESS-RULES.md](./docs/data/BUSINESS-RULES.md) | Regras de cálculo de XP, prazos, prioridades e ordenação. |
+| [docs/guides/FUNCTIONAL-MAP.md](./docs/guides/FUNCTIONAL-MAP.md) | Mapeamento de funcionalidades por tela e ações do usuário. |
+| [docs/data/DEPENDENCIES.md](./docs/data/DEPENDENCIES.md) | Matriz de dependência entre módulos e funções. |
+| [docs/data/SUPABASE_ARCHITECTURE.md](./docs/data/SUPABASE_ARCHITECTURE.md) · [Mapeamento](./docs/data/SUPABASE_DATA_MAPPING.md) · [Schema](./docs/data/SUPABASE_SCHEMA.md) · [Plano](./docs/data/SUPABASE_IMPLEMENTATION_PLAN.md) | Arquitetura de sync, esquemas RLS, mapeamento e plano faseado do Supabase. |
 
 ---
 

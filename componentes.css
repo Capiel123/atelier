@@ -797,17 +797,39 @@
   border-radius:0 !important;
   clip-path:none;
 }
-/* ring (anel): fundo transparente + borda colorida */
+/* ring (Cianótico): base — círculo, sem borda; a cor vem do inline (`PRC`). */
 [data-dot-shape="ring"] .dot{
-  background:transparent !important;
-  border:2px solid currentColor;
+  position:relative;
+  border:0;
   border-radius:50% !important;
   clip-path:none;
-  /* herda a cor inline do JS via color ou background; usamos outline */
-}
-[data-dot-shape="ring"] .dot[style]{
-  /* A cor inline Ã© aplicada como background; convertemos para borda */
   box-sizing:border-box;
+}
+
+/* v88 — gramática de prioridade por FORMA nos temas não-brutal (v87 começou no Cianótico):
+   alta = disco cheio + anel externo fino; média = meio disco (metade esquerda);
+   baixa = anel vazado. Serve para circle, diamond e square; a cor continua vindo do
+   background inline, então não há hex novo aqui. Os temas brutal já têm a própria
+   gramática (borda + gradiente em componentes.css ~272). */
+:root:not([data-look="brutal"]) .dot{ position:relative; }
+:root:not([data-look="brutal"]) .dot[data-pr="1"]{
+  -webkit-mask:linear-gradient(to right, black 50%, transparent 50%);
+          mask:linear-gradient(to right, black 50%, transparent 50%);
+}
+:root:not([data-look="brutal"]) .dot[data-pr="2"]{
+  -webkit-mask:radial-gradient(circle closest-side, transparent 45%, black 46%);
+          mask:radial-gradient(circle closest-side, transparent 45%, black 46%);
+}
+:root:not([data-look="brutal"]) .dot[data-pr="0"]::after{
+  content:"";
+  position:absolute;
+  inset:-3px;
+  border-radius:inherit;
+  clip-path:inherit;
+  background-color:inherit;
+  -webkit-mask:radial-gradient(circle closest-side, transparent 70%, black 71%);
+          mask:radial-gradient(circle closest-side, transparent 70%, black 71%);
+  pointer-events:none;
 }
 
 /* -----------------------------------------------------------

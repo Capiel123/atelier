@@ -331,7 +331,7 @@ document.addEventListener('click', ev => {
     }
     case 'histReopen': {const tt = T(id); if (tt && tt.done) {tt.done = false; tt.doneAt = null; touch(tt); toast('Tarefa reaberta');} break;}
     case 'histCopy': {const tt = T(id); if (!tt) return; const copy = {...tt, id: uid(), done: false, doneAt: null, xpClaimed: false, next: false, order: 0, spent: 0, logs: [], skills: Array.isArray(tt.skills)?[...tt.skills]:[], labels: Array.isArray(tt.labels)?[...tt.labels]:[], subs: (tt.subs||[]).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: todayI(), createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; S.tasks.push(copy); toast('Copiada para hoje'); break;}
-    case 'histDel': if (!confirm('Excluir tarefa permanentemente do histórico?')) return; S.tasks = S.tasks.filter(x => x.id !== id); break;
+    case 'histDel': if (!confirm('Excluir tarefa permanentemente do histórico?')) return; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.tasks = S.tasks.filter(x => x.id !== id); break;
     case 'earnFilter': earningsFilter = btn.dataset.v; render(); return;
     case 'histFilter': historyFilter = btn.dataset.v; render(); return;
     case 'openWorkLog': {openWorkLogSheet(id); return;}
@@ -390,7 +390,7 @@ document.addEventListener('click', ev => {
     case 'moveUp': case 'moveDown': if (!t) break; reorderTask(t, a === 'moveUp' ? -1 : 1); return;
     case 'setTaskColor': if (!t) break; t.color = btn.dataset.color || ''; touch(t); break;
     case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: t.subs.map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
-    case 'del': if (!t) break; S.tasks = S.tasks.filter(x => x.id !== id); break;
+    case 'del': if (!t) break; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.trash = S.trash || []; S.trash.unshift({id: uid(), task: t, deletedAt: Date.now()}); S.tasks = S.tasks.filter(x => x.id !== id); break;
     case 'sdel': {if (!t) break; const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break; sb.deletedAt = Date.now(); touch(t); break;}
     case 'subUp': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) - 1); break;}
     case 'subDown': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) + 1); break;}
