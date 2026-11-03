@@ -677,6 +677,8 @@ function restoreCopy(kind, confirmed) {
   undoStack = [];
   dirty = true;
   try {autoSnapshotWrite();} catch(e) {}
+  // v97 (K20): estado trocado por restauração → re-baseline do sync (sem tombstones).
+  try {if (window.__sync && window.__sync.resetStateBaseline) window.__sync.resetStateBaseline();} catch(e) {}
   refreshSaveState();
   return {ok: true, restoredAt: copy.ts};
 }

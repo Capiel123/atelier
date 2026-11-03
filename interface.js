@@ -1161,7 +1161,7 @@ function renderAreasSection() {
 function renderTrashSection() {
   const items = listAllDeleted();
   return `<div class="section-group"><h3 style="margin-top:0">Lixo (${items.length})</h3>
-    <div class="msg">Itens deletados ficam aqui. Recupere ou exclua permanentemente. Mantém até 200 itens.</div>
+    <div class="msg">Itens deletados ficam aqui. Recupere ou exclua permanentemente. Mantém até 200 itens. <b>Tarefas no lixo são deste dispositivo</b> (não sincronizam).</div>
     ${items.length ? items.map(it => `<div class="trash-row">
       <span class="trash-info"><div class="trash-title">${esc(it.title)}</div><div class="trash-meta">${it.icon} ${it.label} · ${new Date(it.at).toLocaleDateString('pt-BR')}</div></span>
       <button data-a="trashRestore" data-type="${it.type}" data-id="${it.obj.id}">↩ Restaurar</button>
@@ -1377,7 +1377,8 @@ function renderFocus() {
 
   const timerOnThisTask = S.timer && S.timer.taskId === t.id;
   const timerRunning = S.timer && !S.timer.paused;
-  const isPomodoro = timerRunning && S.timer.phase === 'focus' && S.timer.targetMin;
+  // v97: "Pular" também aparece com o timer PAUSADO (só exige fase de foco com alvo).
+  const isPomodoro = !!(S.timer && S.timer.phase === 'focus' && S.timer.targetMin);
   const cycleCount = (timerRunning && S.timer.cycleCount) || 0;
   const phase = (timerOnThisTask && S.timer.phase) ? S.timer.phase : 'focus';
   const isPaused = timerOnThisTask && S.timer.paused;

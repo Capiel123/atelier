@@ -35,7 +35,7 @@
       subs: arr(t.subs), logs: logs, xp_claimed: !!t.xpClaimed,
       type: text(t.type), color: text(t.color), labels: arr(t.labels),
       postponed_count: int(t.postponedCount, 0), last_postponed_at: iso(t.lastPostponedAt),
-      deleted_at: null, client_updated_at: int(t.updatedAt, 0)
+      deleted_at: iso(t.deletedAt), client_updated_at: int(t.updatedAt, 0)
     };
   }
 

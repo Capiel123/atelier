@@ -262,23 +262,35 @@
 
   // v95: busca `client_updated_at` remoto das linhas do lote (feature-detect: se o
   // cliente não tiver `select` — harnesses antigos — devolve null e o push segue).
+  // v98 (K26): divide os ids em lotes curtos para não estourar a URL do PostgREST
+  // (ex.: "Reenviar tudo"). Cada lote consulta e agrega no mesmo mapa.
+  var REMOTE_VERSION_CHUNK = 100;
   function fetchRemoteVersions(client, user, table, items) {
     var ids = [];
-    items.forEach(function (it) { if (it.row && it.row.id) ids.push(it.row.id); });
+    var seenIds = {};
+    items.forEach(function (it) {
+      var id = it.row && it.row.id;
+      if (!id || seenIds[id]) return;
+      seenIds[id] = true;
+      ids.push(id);
+    });
     if (!ids.length) return Promise.resolve(null);
     try { var probe = client.from(table); if (!probe || typeof probe.select !== 'function') return Promise.resolve(null); } catch (e) { return Promise.resolve(null); }
     return new Promise(function (resolve) {
-      var timer = setTimeout(function () { resolve(null); }, 8000);
-      try {
-        Promise.resolve(client.from(table).select('id,client_updated_at').eq('user_id', user.id).in('id', ids))
-          .then(function (r) {
-            clearTimeout(timer);
-            if (r.error) { resolve(null); return; }
-            var map = {};
-            (r.data || []).forEach(function (x) { map[x.id] = x.client_updated_at; });
-            resolve(map);
-          }).catch(function () { clearTimeout(timer); resolve(null); });
-      } catch (e) { clearTimeout(timer); resolve(null); }
+      var done = false;
+      var finish = function (v) { if (done) return; done = true; clearTimeout(timer); resolve(v); };
+      var timer = setTimeout(function () { finish(null); }, 8000);
+      (async function () {
+        var map = {};
+        for (var i = 0; i < ids.length; i += REMOTE_VERSION_CHUNK) {
+          if (done) return;
+          var chunk = ids.slice(i, i + REMOTE_VERSION_CHUNK);
+          var r = await client.from(table).select('id,client_updated_at').eq('user_id', user.id).in('id', chunk);
+          if (!r || r.error) { finish(null); return; }
+          (r.data || []).forEach(function (x) { map[x.id] = x.client_updated_at; });
+        }
+        finish(map);
+      })().catch(function () { finish(null); });
     });
   }
 
@@ -390,11 +402,17 @@
     return withLock(async function () {
       var user = authUser();
       if (!user) { setStatus('paused'); return; }
-      localStorage.removeItem(OUTBOX_KEY);
-      localStorage.removeItem(SEEN_KEY);
-      localStorage.removeItem(SETTINGS_CU_KEY);
-      localStorage.removeItem(SEEDID_KEY);
-      localStorage.removeItem(CURSORS_KEY);
+      // v97 (K22): exige cliente/online ANTES de tocar no local. Se o pull falhar,
+      // desfaz tudo (S + fila + metadados) — nada de perder alteração não enviada.
+      var client = await getClient();
+      if (!client) { setStatus(navigator && navigator.onLine === false ? 'offline' : 'paused'); return; }
+      var own = resolveOwner(user);
+      if (own.blocked) { setStatus('paused-account'); return; }
+      var prevS = (typeof S !== 'undefined') ? S : null;
+      var KEYS = [OUTBOX_KEY, SEEN_KEY, SETTINGS_CU_KEY, SEEDID_KEY, CURSORS_KEY];
+      var prev = {};
+      KEYS.forEach(function (k) { prev[k] = localStorage.getItem(k); });
+      KEYS.forEach(function (k) { localStorage.removeItem(k); });
       state.pending = 0;
       var keepTheme = (typeof S !== 'undefined' && S && S.cfg && S.cfg.theme) || 'obsidian';
       var keepAccent = (typeof S !== 'undefined' && S && S.cfg) ? S.cfg.accentColor : null;
@@ -403,15 +421,34 @@
       if (typeof applyTheme === 'function') applyTheme();
       if (typeof save === 'function') save();
       if (typeof render === 'function') render();
-      var client = await getClient();
-      if (!client) { setStatus(navigator && navigator.onLine === false ? 'offline' : 'paused'); scheduleFlush(30000); return; }
-      var own = resolveOwner(user);
-      if (own.blocked) { setStatus('paused-account'); return; }
       state.inFlight = true;
       try { await doPull(client, user); }
-      catch (e) { setStatus('error', String(e && e.message || e)); scheduleFlush(30000); }
+      catch (e) {
+        if (prevS) S = prevS;
+        KEYS.forEach(function (k) {
+          if (prev[k] == null) localStorage.removeItem(k); else localStorage.setItem(k, prev[k]);
+        });
+        state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
+        if (typeof applyTheme === 'function') applyTheme();
+        if (typeof save === 'function') save();
+        if (typeof render === 'function') render();
+        setStatus('error', 'Não foi possível baixar os dados; nada foi alterado');
+        scheduleFlush(30000);
+      }
       finally { state.inFlight = false; }
     });
+  }
+
+  // v97 (K20): depois de substituir S por importação/restauração de cópia, zera o
+  // rastro de sync e regrava o baseline do estado novo. Sem isso, entidades do
+  // baseline antigo que sumiram viram tombstone e apagam o remoto.
+  function resetStateBaseline() {
+    localStorage.removeItem(OUTBOX_KEY);
+    localStorage.removeItem(SEEN_KEY);
+    localStorage.removeItem(CURSORS_KEY);
+    if (typeof S !== 'undefined' && S) writeJSON(SEEN_KEY, buildBaseline(S));
+    state.pending = 0;
+    renderSync();
   }
 
   async function flushOnce() {
@@ -477,10 +514,18 @@
     var localCu = localTimer ? numVal(localTimer.updatedAt, 0) : numVal((S && S.timerStoppedAt) || 0, 0);
     if (remoteCu <= localCu) return false; // local vence ou empate → mantém
     var had = !!localTimer;
-    S.timer = window.__merge.fromTimer(row); // null = sem sessão
-    if (had && !S.timer && typeof toast === 'function') {
-      toast('Sessão encerrada em outro dispositivo'); // aviso discreto, sem sair do modo foco
+    var next = window.__merge.fromTimer(row); // null = sem sessão
+    if (!next) {
+      // v98 (K25): grava o marcador da parada remota. Sem isso, o próximo pull
+      // compara de novo com o timestamp antigo e reaplica save()+render() em loop.
+      S.timerStoppedAt = remoteCu;
+      S.timer = null;
+      if (had && typeof toast === 'function') {
+        toast('Sessão encerrada em outro dispositivo'); // aviso discreto, sem sair do modo foco
+      }
+      return true;
     }
+    S.timer = next;
     return true;
   }
 
@@ -559,7 +604,9 @@
         if (table === 'active_timer') { if (rows.length) applyTimerRow(rows[0]); continue; }
         var key = S_KEYS[table];
         if (!key) continue;
-        if (pristine) { S[key] = rows.map(function (r) { return window.__merge.fromRow(table, r); }); }
+        // v97 (K21): o caminho pristine ignora tombstones e os descarta (antes uma
+        // linha excluída virava tarefa viva e podia ser "des-excluída" ao editar).
+        if (pristine) { S[key] = rows.filter(function (r) { return r.deleted_at == null; }).map(function (r) { return window.__merge.fromRow(table, r); }); }
         else { rows.forEach(function (r) { var x = applyRemoteRow(table, r); if (x.changed) changedList.push({ table: table, id: x.id }); }); }
       }
       if (typeof save === 'function') save();
@@ -626,6 +673,11 @@
       writeJSON(SEEN_KEY, seenNow);
       if (typeof applyTheme === 'function') applyTheme();
       if (typeof render === 'function') render();
+      // v97: se o pull mudou (ou apagou) a tarefa em foco, o overlay precisa refletir.
+      // `renderFocus` já fecha quando a tarefa sumiu/foi concluída.
+      try {
+        if (typeof renderFocus === 'function' && typeof focusTaskId !== 'undefined' && focusTaskId && document.getElementById('focusOverlay')) renderFocus();
+      } catch (e) {}
     }
     writeCursors(cursors);
     state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
@@ -836,6 +888,7 @@
     flushNow: function () { return withLock(flushOnce); },
     syncNow: function () { return withLock(syncCycle); },
     markDeleted: markDeleted,
+    resetStateBaseline: resetStateBaseline,
     clearSyncQueue: clearSyncQueue,
     resetLocalData: resetLocalData,
     forceFullSync: forceFullSync,
@@ -851,7 +904,8 @@
       setStatus: setStatus, pillMarker: pillMarker, ERROR_MARKER_DELAY_MS: ERROR_MARKER_DELAY_MS,
       scheduleFlush: scheduleFlush, scheduleRetry: scheduleRetry,
       pullOnce: pullOnce, doPull: doPull, syncCycle: syncCycle, applyRemoteRow: applyRemoteRow, applyTimerRow: applyTimerRow, isPristineSeed: isPristineSeed,
-      versionOf: versionOf, rowFor: rowFor, markDeleted: markDeleted, fetchRows: fetchRows,
+      versionOf: versionOf, rowFor: rowFor, markDeleted: markDeleted, fetchRows: fetchRows, resetStateBaseline: resetStateBaseline,
+      fetchRemoteVersions: fetchRemoteVersions, REMOTE_VERSION_CHUNK: REMOTE_VERSION_CHUNK,
       resolveOwner: resolveOwner, adoptAccount: adoptAccount, clearSyncQueue: clearSyncQueue, resetLocalData: resetLocalData
     }
   };

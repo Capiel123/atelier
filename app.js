@@ -332,7 +332,7 @@ document.addEventListener('click', ev => {
     }
     case 'histReopen': {const tt = T(id); if (tt && tt.done) {tt.done = false; tt.doneAt = null; touch(tt); toast('Tarefa reaberta');} break;}
     case 'histCopy': {const tt = T(id); if (!tt) return; const copy = {...tt, id: uid(), done: false, doneAt: null, xpClaimed: false, next: false, order: 0, spent: 0, logs: [], skills: Array.isArray(tt.skills)?[...tt.skills]:[], labels: Array.isArray(tt.labels)?[...tt.labels]:[], subs: (tt.subs||[]).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: todayI(), createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; S.tasks.push(copy); toast('Copiada para hoje'); break;}
-    case 'histDel': if (!confirm('Excluir tarefa permanentemente do histórico?')) return; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.tasks = S.tasks.filter(x => x.id !== id); break;
+    case 'histDel': if (!confirm('Excluir tarefa permanentemente do histórico?')) return; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.tasks = S.tasks.filter(x => x.id !== id); if (focusTaskId === id) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); } break;
     case 'earnFilter': earningsFilter = btn.dataset.v; render(); return;
     case 'histFilter': historyFilter = btn.dataset.v; render(); return;
     case 'openWorkLog': {openWorkLogSheet(id); return;}
@@ -352,6 +352,8 @@ document.addEventListener('click', ev => {
         const card = btn.closest('.card');
         const isReduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const completeTask = () => {
+          // v98 (K24): concluir a tarefa ativa encerra o timer (registra o segmento).
+          if (S.timer && S.timer.taskId === t.id) stopTimer();
           t.done = true; t.doneAt = Date.now(); touch(t);
           if (!isPersonalSection(t)) {
             const xp = taskBaseXp(t);
@@ -382,7 +384,17 @@ document.addEventListener('click', ev => {
         break;
       }
     }
-    case 'stog': {if (!t) break; const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break; sb.d = !sb.d; if (sb.d && !isPersonalSection(t)) {const xp = subXp(sb, t); if (awardSubXp(t, sb)) toast('+' + xp + ' XP');} else if (sb.d) {awardSubXp(t, sb);} touch(t); break;}
+    case 'stog': {
+      if (!t) break;
+      const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break;
+      sb.d = !sb.d;
+      if (sb.d && !isPersonalSection(t)) {const xp = subXp(sb, t); if (awardSubXp(t, sb)) toast('+' + xp + ' XP');}
+      else if (sb.d) {awardSubXp(t, sb);}
+      // v98 (K24): concluir a subtarefa ativa move o timer para a próxima pendente.
+      if (sb.d && reconcileTimerSub(t, sb.id) && typeof renderFocus === 'function' && document.getElementById('focusOverlay')) renderFocus();
+      touch(t);
+      break;
+    }
     case 'log': if (!t) break; t.logs.push({id: uid(), minutes: +btn.dataset.m, start: Date.now(), end: Date.now(), subId: null, note: 'manual'}); t.spent = taskMinutes(t); touch(t); break;
     case 'startTimer': if (!t) break; startTimer(t.id, null); return;
     case 'startSubTimer': startTimer(t.id, btn.dataset.sub, S.cfg.defaultFocus || 25); return;
@@ -391,11 +403,13 @@ document.addEventListener('click', ev => {
     case 'moveUp': case 'moveDown': if (!t) break; reorderTask(t, a === 'moveUp' ? -1 : 1); return;
     case 'setTaskColor': if (!t) break; t.color = btn.dataset.color || ''; touch(t); break;
     case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: t.subs.map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
-    case 'del': if (!t) break; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.trash = S.trash || []; S.trash.unshift({id: uid(), task: t, deletedAt: Date.now()}); S.tasks = S.tasks.filter(x => x.id !== id); break;
+    case 'del': if (!t) break; if (S.timer && S.timer.taskId === id) stopTimer(); if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.trash = S.trash || []; S.trash.unshift({id: uid(), task: t, deletedAt: Date.now()}); S.tasks = S.tasks.filter(x => x.id !== id); if (focusTaskId === id) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); } break;
     case 'sdel': {
       if (!t) break;
       const sb = (t.subs||[]).find(x => x.id === sub); if (!sb) break;
       sb.deletedAt = Date.now(); touch(t);
+      // v98 (K24): excluir a subtarefa ativa move o timer para a próxima pendente.
+      reconcileTimerSub(t, sb.id);
       // v94: excluir de dentro do modo foco atualiza o overlay na hora
       if (typeof renderFocus === 'function' && document.getElementById('focusOverlay')) { save(); renderFocus(); return; }
       break;
@@ -562,7 +576,13 @@ document.addEventListener('click', ev => {
       const type = btn.dataset.type;
       if (type === 'trash') {
         const tr = (S.trash||[]).find(x => x.task && x.task.id === id);
-        if (tr) {S.tasks.push(tr.task); S.trash = S.trash.filter(x => x.id !== tr.id);}
+        if (tr) {
+          // v96: `touch` antes de voltar — sem isso o LWW do push descartava a
+          // restauração (o tombstone remoto era mais novo) e o pull apagava de novo.
+          touch(tr.task);
+          S.tasks.push(tr.task);
+          S.trash = S.trash.filter(x => x.id !== tr.id);
+        }
       } else restoreItem(type, id);
       toast('Restaurado');
       break;
@@ -1033,7 +1053,10 @@ function doImport(text) {
     const migrated = migrate(parsed);
     if (!migrated) throw new Error('Estrutura inválida');
     recoveryBlocked = false; recoveryNotice = null;
-    S = migrated; applyTheme(); const ok = save(); autoSnapshotWrite(); render();
+    S = migrated;
+    // v97 (K20): importar troca S — re-baseline o sync para não gerar tombstones.
+    if (window.__sync && window.__sync.resetStateBaseline) window.__sync.resetStateBaseline();
+    applyTheme(); const ok = save(); autoSnapshotWrite(); render();
     if (ok) toast(wasBlocked ? 'Importado.' : 'Importado. Snapshot anterior em ' + LS_BACKUP);
   } catch(e) {toast('JSON inválido: ' + e.message, true);}
 }

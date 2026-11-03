@@ -46,7 +46,7 @@
       subs: arr(r.subs), logs: logs, xpClaimed: !!r.xp_claimed,
       type: str(r.type), color: str(r.color), labels: arr(r.labels),
       createdAt: isoMs(r.created_at) || Date.now(), updatedAt: num(r.client_updated_at, 0),
-      postponedCount: num(r.postponed_count, 0), lastPostponedAt: isoMs(r.last_postponed_at)
+      postponedCount: num(r.postponed_count, 0), lastPostponedAt: isoMs(r.last_postponed_at), deletedAt: isoMs(r.deleted_at)
     };
   }
   function fromProject(r) {

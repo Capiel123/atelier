@@ -262,12 +262,14 @@ function subElapsedSec() {
   const st = (S.timer.subStartedAt != null) ? S.timer.subStartedAt : (S.timer.startedAt || null);
   return acc + (st ? (Date.now() - st) / 1000 : 0);
 }
-function startTimer(taskId, subId, targetMin) {if (S.timer) {if (S.timer.taskId === taskId) toast('Timer já rodando', true); else if (S.timer.paused) toast('Timer pausado em outra tarefa. Pare-o antes de iniciar esta.', true); else toast('Timer ativo em outra tarefa. Pare-o antes de iniciar esta.', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 5, cycleCount: 0, subStartedAt: Date.now(), subAccumulated: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
+function startTimer(taskId, subId, targetMin) {if (S.timer) {if (S.timer.taskId === taskId) {if (S.timer.paused) { resumeTimer(); return; } toast('Timer já rodando', true);} else if (S.timer.paused) toast('Timer pausado em outra tarefa. Pare-o antes de iniciar esta.', true); else toast('Timer ativo em outra tarefa. Pare-o antes de iniciar esta.', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 5, cycleCount: 0, subStartedAt: Date.now(), subAccumulated: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
 function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulated = timerElapsedSec(); S.timer.subAccumulated = subElapsedSec(); S.timer.startedAt = null; S.timer.subStartedAt = null; S.timer.paused = true; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('⏸ Pausado');}
 function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.subStartedAt = Date.now(); S.timer.paused = false; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
 function advancePhase(isNatural = true) {
   if (!S.timer) return;
   const t = S.tasks.find(x => x.id === S.timer.taskId);
+  // v96: tarefa excluída durante o timer não pode gerar pomodoro/descanso órfãos.
+  if (!t || isDone(t)) { stopTimer(); return; }
   if (S.timer.phase === 'focus') {
     const segSec = subElapsedSec();
     const el = Math.round(segSec / 60);
@@ -369,6 +371,16 @@ function switchTimerSub(newSubId) {
   S.timer.subStartedAt = (S.timer.phase === 'rest') ? null : Date.now();
   S.timer.updatedAt = Date.now();
   save(); renderTimer();
+}
+// v98 (K24): concluir/excluir a subtarefa ativa move o timer para a próxima
+// pendente (ou para a tarefa, sem sub), registrando o segmento atual.
+// Retorna true apenas quando o timer estava nessa subtarefa e foi movido.
+function reconcileTimerSub(t, changedSubId) {
+  if (!S.timer || !t || S.timer.taskId !== t.id) return false;
+  if (S.timer.subId !== changedSubId) return false;
+  const nextPending = activeSubs(t).filter(s => !s.d)[0] || null;
+  switchTimerSub(nextPending ? nextPending.id : null);
+  return true;
 }
 // Conclui a tarefa a partir do modo foco (todas as subtarefas feitas): registra a sessão, marca done e fecha.
 function completeTaskInFocus(t) {
