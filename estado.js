@@ -261,8 +261,7 @@ let selectedTaskId = null;
 let mobileFiltersOpen = false;
 let showQuickAdd = false;
 let showFilters = false;
-// Controla região recolhível abaixo dos dias no mobile; começa recolhida
-let weekSummaryCollapsed = typeof window !== 'undefined' && window.innerWidth <= 640;
+// v104: o recolhimento antigo foi absorvido pelos 3 modos do cabeçalho do dia.
 const openEdits = new Set();
 
 /* --- APLICAR TEMA (usa THEMES) --- */
@@ -761,6 +760,42 @@ function dismissNoticeStore(id, scope) {
   const store = readNotices();
   store[id] = {scope: String(scope ?? ''), at: Date.now()};
   try {localStorage.setItem(NOTICES_KEY, JSON.stringify(store)); return true;} catch(e) {return false;}
+}
+
+/* --- CABEÇALHO DO DIA (v104) — preferência LOCAL por dispositivo.
+   Valores: 'min' | 'compact' | 'full'. Fora de S: sem sync/backup/migrate/undo. */
+const DAY_HEAD_KEY = 'atelier_dayhead_v1';
+const DAY_HEAD_MODES = ['min', 'compact', 'full'];
+function getDayHeadMode() {
+  try {
+    const v = localStorage.getItem(DAY_HEAD_KEY);
+    if (DAY_HEAD_MODES.includes(v)) return v;
+  } catch (e) {}
+  return 'compact';
+}
+function setDayHeadMode(mode) {
+  if (!DAY_HEAD_MODES.includes(mode)) return false;
+  try {localStorage.setItem(DAY_HEAD_KEY, mode); return true;} catch (e) {return false;}
+}
+/* v105 — preferências locais do cabeçalho: energia recolhida e ferramentas. */
+const ENERGY_COLLAPSED_KEY = 'atelier_energy_collapsed_v1';
+function getEnergyCollapsed() {
+  try { return localStorage.getItem(ENERGY_COLLAPSED_KEY) === '1'; } catch (e) { return false; }
+}
+function setEnergyCollapsed(v) {
+  try { localStorage.setItem(ENERGY_COLLAPSED_KEY, v ? '1' : '0'); return true; } catch (e) { return false; }
+}
+const TOOLS_COLLAPSED_KEY = 'atelier_tools_collapsed_v1';
+function getToolsCollapsed() {
+  try {
+    const v = localStorage.getItem(TOOLS_COLLAPSED_KEY);
+    if (v === '0') return false;
+    if (v === '1') return true;
+  } catch (e) {}
+  return typeof window !== 'undefined' && window.innerWidth <= 640;
+}
+function setToolsCollapsed(v) {
+  try { localStorage.setItem(TOOLS_COLLAPSED_KEY, v ? '1' : '0'); return true; } catch (e) { return false; }
 }
 
 /* --- LIXEIRA --- */

@@ -276,14 +276,14 @@ function hideMoreSheet() {document.getElementById('moreSheet')?.classList.remove
 
 /* --- LISTAS DE ABAS --- */
 const TABS = [
-  ['week','Semana'],['q','Fila'],['jobs','Vagas'],['proj','Projetos'],
+  ['week','Hoje'],['q','Fila'],['jobs','Vagas'],['proj','Projetos'],
   ['clients','Clientes'],['earn','Rendimento'],
   ['cal','Prazos'],['goal','Metas'],['skills','Habilidades'],['stats','Stats'],
   ['review','Revisão'],['rede','Rede'],['friends','Amizades'],
   ['history','Histórico'],['cmds','Comandos'],['config','Config']
 ];
 const BOTTOM_TABS = ['week','q','jobs','stats','more'];
-const BOTTOM_LABELS = {week:'Semana',q:'Fila',jobs:'Vagas',stats:'Stats',more:'Mais'};
+const BOTTOM_LABELS = {week:'Hoje',q:'Fila',jobs:'Vagas',stats:'Stats',more:'Mais'};
 const BOTTOM_ICONS = {week:'calendar',q:'inbox',jobs:'briefcase',stats:'clock',more:'menu'};
 
 function renderBottomNav() {
@@ -346,16 +346,11 @@ function viewWeek() {
   const activeDayTasks = ts.filter(t => inWeekScope(t));
   const total = activeDayTasks.length;
   const done = activeDayTasks.filter(t => isDoneThisWeek(t)).length;
-  const workTasks = activeDayTasks.filter(t => taskSection(t) === 'work');
-  const personalTasks = activeDayTasks.filter(t => taskSection(t) === 'personal');
-  const commitmentTasks = activeDayTasks.filter(t => taskSection(t) === 'commitment');
-  const workProg = sectionProgress(workTasks);
-  const personalProg = sectionProgress(personalTasks);
-  const commitmentProg = sectionProgress(commitmentTasks);
-  const workSpent = workTasks.reduce((a,t) => a + taskMinutesThisWeek(t), 0);
+  const allProg = sectionProgress(activeDayTasks);
+  const totalSpent = activeDayTasks.reduce((a,t) => a + taskMinutesThisWeek(t), 0);
   const dayDate = iso(weekDateForDay(day)).split('-').reverse().join('/');
   const cap = S.cfg.cap || 360;
-  const full = workProg.totalWeight > cap;
+  const full = allProg.totalWeight > cap;
   const nextTask = S.tasks.find(t => t.next && !isDone(t));
   const slot = currentEnergySlot(); const currentE = getTodayEnergy()[slot];
   const slotLabel = {morning:'Manhã', afternoon:'Tarde', evening:'Noite'}[slot];
@@ -366,52 +361,55 @@ function viewWeek() {
 
   const quickAddHtml = showQuickAdd ? adder(day) : '';
   const filtersHtml = showFilters ? filterBar() : '';
-
-  // Card de resumo unificado: today-hero + stats pessoal/compromisso + barra de progresso
-  const prInds = prCounts.map((n, i) => `<span class="pr-ind" title="${PR[i]}" style="${n===0?'opacity:.35':''}"><i class="dot" data-pr="${i}" style="background:${PRC[i]}"></i>${n}</span>`).join('');
-  const sectionStatsHtml = `
-    <div class="week-summary-sections">
-      ${commitmentTasks.length ? `<span>${sectionIcon('commitment')} Compromissos: <b>${commitmentProg.pct}%</b> <span class="wss-sub">(${commitmentTasks.filter(t=>isDoneThisWeek(t)).length}/${commitmentTasks.length})</span></span>` : ''}
-      ${personalTasks.length ? `<span>${sectionIcon('personal')} Pessoal: <b>${personalProg.pct}%</b> <span class="wss-sub">(${personalTasks.filter(t=>isDoneThisWeek(t)).length}/${personalTasks.length})</span></span>` : ''}
-      <span class="lvl-ind">Nv ${lvlInfo.lv} · ${Math.round(gxp)} XP</span>
-    </div>`;
-
-  const summaryCard = `<div class="week-summary-card">
-    <div class="week-summary-top">
-      <div class="week-summary-day"><span class="th-day">${DAYS_FULL[day]}</span><span class="th-date">${dayDate}</span></div>
-      <div class="th-stats">
-        <span>Feitas <b>${done}</b>/${total}</span>
-        <span>Est. <b class="${full?'wr':''}">${fmtMin(workProg.totalWeight)}</b></span>
-        <span>Gasto <b>${fmtMin(workSpent)}</b></span>
-        <span class="pr-group" title="Prioridade (alta · média · baixa)">${prInds}</span>
-      </div>
-    </div>
-    ${bar(workProg.pct, '', '')}
-    ${sectionStatsHtml}
-  </div>`;
-
-  // Controles: Adicionar (primário) + Filtros + Auto (secundários), na mesma linha
   const controlsRow = `<div class="week-controls-row">
     <button data-a="openQuickAdd" class="week-add-btn">${ico('plus')} Adicionar Tarefa</button>
     <button data-a="toggleFilters" class="week-ctrl-btn${showFilters?' on':''}">${ico('search')} Filtros</button>
     <label class="auto-prio-label week-ctrl-btn"><input type="checkbox" id="autoPriorityToggle" ${S.cfg.autoPriority?'checked':''}><span>${ico('star')} Auto</span></label>
   </div>`;
 
-  // Toggle para recolher/expandir a região abaixo dos dias (mobile)
-  const collapsed = weekSummaryCollapsed;
-  const toggleBtn = `<button class="week-toggle-btn" data-a="toggleWeekSummary" aria-expanded="${!collapsed}" aria-controls="weekCollapsible">${collapsed ? ico('chevron-down') + ' Ver resumo e filtros' : ico('chevron-up') + ' Ocultar'}</button>`;
-
-  return `${summaryCard}
-    ${reviewHintHTML()}
-    <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i).filter(t => inWeekScope(t)); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDoneThisWeek(t)).length}/${a.length}</small></button>`;}).join('')}</div>
-    ${toggleBtn}
-    <div class="week-collapsible${collapsed?' week-collapsible--hidden':''}" id="weekCollapsible">
-      <div class="energy-row"><span class="energy-label">${slotLabel}:</span><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${ico(ENERGY_ICON[e.id] || 'bolt')} ${e.n}</button>`).join('')}</div></div>
-      ${nextCard}
-      ${quickAddHtml}
-      ${filtersHtml}
-      ${controlsRow}
+  // v104 — cabeçalho do dia: 3 modos no MESMO DOM (CSS decide o que aparece).
+  const dhMode = getDayHeadMode();
+  const energyCollapsed = getEnergyCollapsed();
+  const toolsCollapsed = getToolsCollapsed();
+  const energyName = (ENERGY_LEVELS.find(x => x.id === currentE) || {}).n || currentE;
+  const prevDay = (day + 6) % 7;
+  const nextDay = (day + 1) % 7;
+  const prInds = prCounts.map((n, i) => `<span class="pr-ind" title="${PR[i]}" style="${n===0?'opacity:.35':''}"><i class="dot" data-pr="${i}" style="background:${PRC[i]}"></i>${n}</span>`).join('');
+  const dayHead = `<section class="day-head" data-mode="${dhMode}" role="group" aria-label="Cabeçalho do dia">
+    <div class="day-head-row">
+      <button class="day-head-arrow day-head-arrow--prev" data-a="day" data-i="${prevDay}" aria-label="Dia anterior" title="Dia anterior">${ico('chevron-down','ico--prev')}</button>
+      <button class="day-head-cycle" data-a="dayHeadCycle" aria-expanded="${dhMode !== 'min'}" aria-label="Alternar resumo do dia">
+        <span class="th-day"><span class="th-day-full">${DAYS_FULL[day]}</span><span class="th-day-min">${DAYS[day]}</span></span>
+        <span class="th-date">${dayDate}</span>
+        <span class="day-head-chev" aria-hidden="true">${ico('chevron-down')}</span>
+      </button>
+      <div class="day-head-meta">
+        <span class="dh-time">Gasto <b>${fmtMin(totalSpent)}</b> / Est. <b class="${full?'wr':''}">${fmtMin(allProg.totalWeight)}</b></span>
+        <span class="pr-group" title="Prioridade (alta · média · baixa)">${prInds}</span>
+      </div>
+      <button class="day-head-arrow day-head-arrow--next" data-a="day" data-i="${nextDay}" aria-label="Próximo dia" title="Próximo dia">${ico('chevron-down','ico--next')}</button>
     </div>
+    <div class="day-head-lvl"><span class="lvl-ind">Nv ${lvlInfo.lv} · ${Math.round(gxp)} XP</span></div>
+    <div class="day-head-bar">${bar(allProg.pct, '', '')}</div>
+    <div class="day-head-extra">
+      <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i).filter(t => inWeekScope(t)); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDoneThisWeek(t)).length}/${a.length}</small></button>`;}).join('')}</div>
+      ${nextCard}
+      <div class="day-head-toggles">
+        <button class="energy-toggle" data-a="toggleEnergy" aria-expanded="${!energyCollapsed}" title="Mostrar/ocultar níveis de energia">
+          <span>Energia · ${esc(slotLabel)}</span><span class="energy-current">${esc(energyName)}</span><span class="energy-chev" aria-hidden="true">${ico('chevron-down')}</span>
+        </button>
+        <button class="tools-toggle" data-a="toggleTools" aria-expanded="${!toolsCollapsed}" title="Mostrar/ocultar ferramentas">
+          ${ico('menu')} Ferramentas <span class="tools-chev" aria-hidden="true">${ico('chevron-down')}</span>
+        </button>
+      </div>
+      ${energyCollapsed ? '' : `<div class="energy-row"><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${ico(ENERGY_ICON[e.id] || 'bolt')} ${e.n}</button>`).join('')}</div></div>`}
+      ${toolsCollapsed ? '' : `<div class="tools-body">${quickAddHtml}${filtersHtml}${controlsRow}</div>`}
+    </div>
+  </section>`;
+
+  // Controles: Adicionar (primário) + Filtros + Auto (secundários), na mesma linha
+  return `${dayHead}
+    ${reviewHintHTML()}
     <div class="tasks-header">
       <h3 style="margin:0">Tarefas <span class="count" id="taskCount"></span></h3>
       <div class="tasks-header-actions" data-all="${getTaskCompactMode() ? 'collapsed' : 'expanded'}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1156,6 +1154,18 @@ function viewStats() {
 
   const overviewBlock = `<h3>Visão geral</h3><div class="kpi-grid"><div class="kpi"><div class="kpi-label">Horas (7d)</div><div class="kpi-value">${fmtMin(weekMin)}</div><div class="kpi-sub">${weekLogs.length} sessões</div></div><div class="kpi"><div class="kpi-label">Tarefas (7d)</div><div class="kpi-value">${weekTasksDone}</div><div class="kpi-sub">concluídas</div></div><div class="kpi"><div class="kpi-label">Pomodoros hoje</div><div class="kpi-value">${pomodorosToday}</div><div class="kpi-sub">focos concluídos</div></div><div class="kpi"><div class="kpi-label">Dias seguidos</div><div class="kpi-value">${streak}</div><div class="kpi-sub">com atividade</div></div><div class="kpi"><div class="kpi-label">Conclusão</div><div class="kpi-value">${completionRate}%</div><div class="kpi-sub">${doneTasks}/${totalTasks}</div></div><div class="kpi"><div class="kpi-label">Tempo médio</div><div class="kpi-value">${avgTaskMin?fmtMin(avgTaskMin):'—'}</div><div class="kpi-sub">por tarefa</div></div><div class="kpi"><div class="kpi-label">Rendimento total</div><div class="kpi-value" style="font-size:16px">${fmtMoney(earnedPrimary, primary)}</div><div class="kpi-sub">projetos concluídos</div></div></div><h3>Consistência</h3>${renderHeatmap()}<h3>Últimos 7 dias</h3><div class="bar-chart">${weekDays.map(x => `<div class="bar-col ${x.isToday?'today':''}"><div class="bar-val">${x.mins?fmtMin(x.mins):''}</div><div class="bar-fill" style="height:${(x.mins/maxWeekMin*100)}%"></div><div class="bar-label">${x.label}</div></div>`).join('')}</div>`;
 
+  // v104: o que saiu do dashboard da Semana (Compromissos/Pessoal + energia)
+  // continua visível aqui, sem perda de informação.
+  const todayList = dayTasks(todayI()).filter(t => inWeekScope(t));
+  const energyToday = getTodayEnergy();
+  const eLabel = {high:'alta', med:'média', low:'baixa'};
+  const secToday = SECTION_ORDER.map(s => {
+    const arr = todayList.filter(t => taskSection(t) === s);
+    const p = sectionProgress(arr);
+    return `<span>${sectionIcon(s)} ${SECTION_META[s].n}: <b>${p.pct}%</b> <span class="wss-sub">(${arr.filter(t => isDoneThisWeek(t)).length}/${arr.length})</span></span>`;
+  }).join(' · ');
+  const todayBlock = `<h3>Hoje</h3><div class="card"><div class="big" style="margin-bottom:6px">${fmtDate(td)}</div><div class="msg" style="display:flex;gap:10px;flex-wrap:wrap">${secToday}</div><div class="msg" style="margin-top:6px">Energia: Manhã <b>${esc(eLabel[energyToday.morning] || energyToday.morning)}</b> · Tarde <b>${esc(eLabel[energyToday.afternoon] || energyToday.afternoon)}</b> · Noite <b>${esc(eLabel[energyToday.evening] || energyToday.evening)}</b></div></div>`;
+
   const calibBlock = calib.insufficient ? `<div class="card"><div class="calib-headline">Calibração de estimativas</div><div class="msg">Conclua ${calib.need - calib.count} tarefa${calib.need-calib.count>1?'s':''} mais com estimativa para ver a calibração.</div></div>` : `<div class="card calib-block"><div class="calib-headline">Nas últimas ${calib.count} tarefas com estimativa, você gasta <b style="color:${Math.abs(calib.pct)>30?'var(--wr)':'var(--ok)'}">${Math.abs(calib.pct)}% ${calib.pct>=0?'acima':'abaixo'}</b> do previsto.</div><div class="msg">${calib.pct > 30 ? 'Multiplique suas estimativas por ~' + ((100+calib.pct)/100).toFixed(1) + 'x.' : calib.pct < -20 ? 'Você tende a superestimar. Pode ser mais ousado.' : 'Boa calibração.'}</div></div>`;
 
   const timeInvestBlock = `<h3>Onde você investe o tempo</h3>${(sectionMin.work + sectionMin.personal + sectionMin.commitment) > 0 ? `<h4>Por seção</h4><div class="chart">${SECTION_ORDER.filter(s => sectionMin[s] > 0).map(s => {const m = SECTION_META[s]; return `<div class="chart-row"><div class="ch-label" style="color:${m.color}">${sectionIcon(s)} ${m.n}</div><div class="ch-bar"><div style="width:${(sectionMin[s]/sectionMax*100)}%;background:${m.color}"></div></div><div class="ch-val">${fmtMin(sectionMin[s])}</div></div>`;}).join('')}</div>` : ''}${Object.keys(typeMin).length ? `<h4>Por tipo de tarefa</h4><div class="chart">${Object.entries(typeMin).sort((a,b) => b[1]-a[1]).map(([id, m]) => {const tp = TASK_TYPES.find(x => x.id === id); return `<div class="chart-row"><div class="ch-label">${tp ? ico(TASK_TYPE_ICON[tp.id] || 'flag') + ' ' + esc(tp.n) : '—'}</div><div class="ch-bar"><div style="width:${(m/typeMax*100)}%;background:#c9764a"></div></div><div class="ch-val">${fmtMin(m)}</div></div>`;}).join('')}</div>` : ''}${Object.keys(areaMin).length ? `<h4>Por área</h4><div class="chart">${Object.entries(areaMin).sort((a,b) => b[1]-a[1]).map(([a, m]) => `<div class="chart-row"><div class="ch-label" style="color:${areaColor(a)}">${esc(areaLabel(a))}</div><div class="ch-bar"><div style="width:${(m/areaMax*100)}%;background:${areaColor(a)}"></div></div><div class="ch-val">${fmtMin(m)}</div></div>`).join('')}</div>` : ''}${energyTotal > 0 ? `<h4>Por horário do dia</h4><div class="chart"><div class="chart-row"><div class="ch-label">${ico('bolt')} Manhã (6-12)</div><div class="ch-bar"><div style="width:${(energyDone.high/energyTotal*100)}%;background:#c9764a"></div></div><div class="ch-val">${energyDone.high}</div></div><div class="chart-row"><div class="ch-label">${ico('timer')} Tarde (12-18)</div><div class="ch-bar"><div style="width:${(energyDone.med/energyTotal*100)}%;background:var(--wr)"></div></div><div class="ch-val">${energyDone.med}</div></div><div class="chart-row"><div class="ch-label">${ico('clock')} Noite (18-24)</div><div class="ch-bar"><div style="width:${(energyDone.low/energyTotal*100)}%;background:#6a8560"></div></div><div class="ch-val">${energyDone.low}</div></div></div>` : ''}`;
@@ -1166,7 +1176,7 @@ function viewStats() {
 
   const jobsBlock = alive(S.applications).length ? `<h3>Vagas</h3><h4>Funil</h4><div class="chart">${JOB_STAGES.filter(s => jStats.byStage[s.id] > 0).map(s => `<div class="chart-row"><div class="ch-label" style="color:${themeColor(s.color)}">${s.n}</div><div class="ch-bar"><div style="width:${(jStats.byStage[s.id]/Math.max(1,...Object.values(jStats.byStage))*100)}%;background:${themeColor(s.color)}"></div></div><div class="ch-val">${jStats.byStage[s.id]}</div></div>`).join('')}</div><div class="msg">Pipeline esperado: <b>${fmtBRL(jStats.pipelineValue)}</b> · ${jStats.applied.length} aplicadas · ${jStats.responded.length} responderam${jStats.medianTime ? ' · mediana '+jStats.medianTime.toFixed(0)+'d' : ''}</div>` : `<h3>Vagas</h3><div class="card"><div class="msg">Nenhuma vaga registrada ainda.</div></div>`;
 
-  return xpBlock + overviewBlock + calibBlock + timeInvestBlock + projBlock + netBlock('Rede profissional', proNet, true) + netBlock('Amizades e vínculos', personalNet, false) + jobsBlock + (!totalTasks ? '<div class="msg center">Sem dados ainda.</div>' : '');
+  return xpBlock + overviewBlock + todayBlock + calibBlock + timeInvestBlock + projBlock + netBlock('Rede profissional', proNet, true) + netBlock('Amizades e vínculos', personalNet, false) + jobsBlock + (!totalTasks ? '<div class="msg center">Sem dados ainda.</div>' : '');
 }
 
 function viewReview() {

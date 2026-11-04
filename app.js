@@ -46,9 +46,35 @@ document.addEventListener('click', ev => {
     case 'moreOpen': showMoreSheet(); return;
     case 'closeMore': hideMoreSheet(); return;
     case 'toggleQuickAdd': showQuickAdd = !showQuickAdd; render(); if (showQuickAdd) focusQuickAdd(); return;
-    case 'openQuickAdd': showQuickAdd = true; weekSummaryCollapsed = false; render(); focusQuickAdd(); return;
+    case 'openQuickAdd': showQuickAdd = true; setToolsCollapsed(false); setDayHeadMode('full'); render(); focusQuickAdd(); return;
     case 'toggleFilters': showFilters = !showFilters; render(); return;
-    case 'toggleWeekSummary': weekSummaryCollapsed = !weekSummaryCollapsed; render(); return;
+    case 'toggleEnergy': setEnergyCollapsed(!getEnergyCollapsed()); render(); return;
+    case 'toggleTools': setToolsCollapsed(!getToolsCollapsed()); render(); return;
+    case 'dayHeadCycle': {
+      if (Date.now() - _daySwipedAt < 400) return; // swipe não deve ciclar o modo
+      const el = document.querySelector('.day-head');
+      const cur = el ? el.dataset.mode : getDayHeadMode();
+      const order = ['min', 'compact', 'full'];
+      const next = order[(order.indexOf(cur) + 1) % order.length];
+      setDayHeadMode(next);
+      if (el) {
+        el.dataset.mode = next;
+        const b = el.querySelector('.day-head-cycle');
+        if (b) b.setAttribute('aria-expanded', String(next !== 'min'));
+      }
+      return;
+    }
+    case 'dayHeadSet': {
+      const m = btn.dataset.mode;
+      if (!setDayHeadMode(m)) return;
+      const el = document.querySelector('.day-head');
+      if (el) {
+        el.dataset.mode = m;
+        const b = el.querySelector('.day-head-cycle');
+        if (b) b.setAttribute('aria-expanded', String(m !== 'min'));
+      }
+      return;
+    }
     case 'setTheme': S.cfg.theme = id; applyTheme(); save(); render(); toast('Tema: ' + THEMES[id].n); return;
     case 'setCustomAccent': return;
     case 'clearCustomAccent': S.cfg.accentColor = null; applyTheme(); save(); render(); toast('Accent do tema restaurado'); return;
@@ -888,7 +914,7 @@ document.addEventListener('keydown', ev => {
     ev.target.click();
     return;
   }
-  if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); if (tab === 'week' && (!showQuickAdd || weekSummaryCollapsed)) { showQuickAdd = true; weekSummaryCollapsed = false; render(); } focusQuickAdd(); return;}
+  if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); if (tab === 'week' && (!showQuickAdd || getDayHeadMode() !== 'full' || getToolsCollapsed())) { showQuickAdd = true; setToolsCollapsed(false); setDayHeadMode('full'); render(); } focusQuickAdd(); return;}
   if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
     ev.preventDefault();
     // v94: não roubar o foco enquanto o usuário edita subtarefa/detalhes
@@ -931,6 +957,28 @@ document.addEventListener('keydown', ev => {
   }
   if (ev.key === '?' || (ev.shiftKey && ev.key === '/')) {ev.preventDefault(); showShortcutsHelp(); return;}
 });
+
+/* --- v105: SWIPE HORIZONTAL NO CABEÇALHO (troca de dia na mesma semana) --- */
+let _daySwipe = null;
+let _daySwipedAt = 0;
+document.addEventListener('touchstart', ev => {
+  if (tab !== 'week') return;
+  const el = ev.target.closest && ev.target.closest('.day-head');
+  if (!el) return;
+  if (ev.target.closest('.day-head-arrow, .days button, .energy-toggle, .tools-toggle, input, select, textarea, a, details, summary, .week-controls-row, .energy-pills')) return;
+  const t = ev.touches && ev.touches[0]; if (!t) return;
+  _daySwipe = {x: t.clientX, y: t.clientY};
+}, {passive: true});
+document.addEventListener('touchend', ev => {
+  if (!_daySwipe) return;
+  const s = _daySwipe; _daySwipe = null;
+  const t = ev.changedTouches && ev.changedTouches[0]; if (!t) return;
+  const dx = t.clientX - s.x, dy = t.clientY - s.y;
+  if (Math.abs(dx) < 48 || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
+  _daySwipedAt = Date.now();
+  day = (day + (dx < 0 ? 1 : 6)) % 7;
+  render();
+}, {passive: true});
 
 /* --- ARRASTAR E SOLTAR DE SUBTAREFAS (reordenação persistente) --- */
 let draggingSub = null;
@@ -1174,7 +1222,8 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     if (tab === 'week') {
       let needRender = false;
       if (!showQuickAdd) { showQuickAdd = true; needRender = true; }
-      if (weekSummaryCollapsed) { weekSummaryCollapsed = false; needRender = true; }
+      if (getToolsCollapsed()) { setToolsCollapsed(false); needRender = true; }
+      if (getDayHeadMode() !== 'full') { setDayHeadMode('full'); needRender = true; }
       if (needRender) render();
     }
     const q = find();

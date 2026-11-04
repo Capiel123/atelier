@@ -1026,4 +1026,22 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     font-size:12.5px;
   }
   .card > .subs .sub-add{margin-top:10px}
+
+  /* --- v104 — CABEÇALHO DO DIA (3 modos) --- */
+  .day-head{margin:10px 4px 12px;padding:8px 10px;border-radius:var(--radius-sm,10px)}
+  .day-head-row{flex-wrap:wrap;row-gap:2px;min-height:44px}
+  .day-head-cycle{flex:1 1 160px;justify-content:flex-start}
+  .day-head-meta{order:5;flex-basis:100%;justify-content:space-between;gap:8px;font-size:10.5px;padding:0 2px}
+  .day-head .bar{height:3px;border-radius:2px}
+  .day-head[data-mode="min"]{margin:8px 4px 10px;padding:3px 10px;gap:2px}
+  .day-head[data-mode="min"] .day-head-row{min-height:30px}
+  .day-head[data-mode="min"] .bar{height:2px}
+  .day-head[data-mode="compact"]{padding:4px 10px 6px;margin:8px 4px 12px;gap:2px}
+  .day-head[data-mode="compact"] .day-head-row{min-height:44px}
+  .day-head[data-mode="full"]{padding:8px 10px 10px}
+  .day-head-toggles .energy-toggle{display:none}
+  .tools-toggle{min-height:36px}
+  .day-head-extra .days{margin-bottom:6px}
+  .day-head-extra .week-controls-row{margin-bottom:4px}
+  .day-head-lvl{padding:0 2px}
 }
