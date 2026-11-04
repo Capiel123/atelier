@@ -246,6 +246,19 @@ function dedupePomodoros(list) {
   });
   return out;
 }
+// v103: agrupa tarefas com o mesmo título normalizado (para o verificador de
+// duplicadas da Config). Não altera nada; só devolve os grupos com 2+.
+function taskDupKey(t) { return String((t && t.t) || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+function findDuplicateGroups(tasks) {
+  var map = {}, order = [];
+  (tasks || []).forEach(function (t) {
+    if (!t || t.deletedAt) return;
+    var k = taskDupKey(t); if (!k) return;
+    if (!map[k]) { map[k] = []; order.push(k); }
+    map[k].push(t);
+  });
+  return order.filter(function (k) { return map[k].length > 1; }).map(function (k) { return map[k]; });
+}
 // Divide [startMs, endMs) nas fronteiras de meia-noite local (datas corretas).
 function splitByLocalDay(startMs, endMs) {
   var out = []; var cur = startMs;

@@ -171,6 +171,34 @@ document.addEventListener('click', ev => {
       document.getElementById('recoverModal')?.remove();
       return;
     }
+    case 'dupesOpen': {
+      if (typeof openDuplicatesSheet === 'function') openDuplicatesSheet();
+      else toast('Verificação indisponível', true);
+      return;
+    }
+    case 'closeDupes': {
+      document.getElementById('dupesModal')?.remove();
+      return;
+    }
+    case 'dupesApply': {
+      const checks = Array.from(document.querySelectorAll('#dupesModal input[data-dupe]:checked'));
+      if (!checks.length) { toast('Nada selecionado', true); return; }
+      if (!confirm('Excluir ' + checks.length + ' tarefa(s) duplicada(s)?\n\nElas vão para o lixo e podem ser restauradas.')) return;
+      snapshot();
+      checks.forEach(c => {
+        const rid = c.dataset.dupe;
+        const tt = T(rid);
+        if (!tt) return;
+        if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', rid);
+        S.trash = S.trash || [];
+        S.trash.unshift({id: uid(), task: tt, deletedAt: Date.now()});
+        S.tasks = S.tasks.filter(x => x.id !== rid);
+      });
+      save(); render();
+      document.getElementById('dupesModal')?.remove();
+      toast(checks.length + ' duplicada(s) removida(s)');
+      return;
+    }
     case 'recoverApply': {
       const checks = Array.from(document.querySelectorAll('#recoverModal input[data-recover]:checked'));
       if (!checks.length) { toast('Nada selecionado', true); return; }

@@ -112,6 +112,41 @@ function openRecoverSheet() {
   } catch (e) {fail(e);}
 }
 
+/* --- VERIFICAR DUPLICADAS (v103) — não apaga nada sem confirmação --- */
+function openDuplicatesSheet() {
+  let old = document.getElementById('dupesModal');
+  if (old) {old.remove(); return;}
+  const groups = (typeof findDuplicateGroups === 'function') ? findDuplicateGroups(S.tasks) : [];
+  const el = document.createElement('div');
+  el.id = 'dupesModal';
+  el.className = 'shortcuts-modal';
+  let body;
+  if (!groups.length) {
+    body = '<div class="msg">Nenhuma tarefa duplicada encontrada (mesmo título).</div>';
+  } else {
+    const list = groups.map(g => {
+      const sorted = g.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      return `<div style="border-bottom:1px solid var(--bd);padding:8px 0">
+        <div style="font-weight:600;margin-bottom:4px">${esc(sorted[0].t)}</div>
+        ${sorted.map((t, i) => `<label style="display:flex;gap:8px;align-items:flex-start;padding:3px 0">
+          <input type="checkbox" data-dupe="${esc(t.id)}" ${i === 0 ? '' : 'checked'} style="margin-top:2px">
+          <span style="flex:1;font-size:12.5px;color:var(--mu)">${t.day == null ? 'Fila' : esc(DAYS[t.day] || '')} · ${esc(t.area || '')} · ${t.done ? 'concluída' : 'pendente'}${i === 0 ? ' · <b style="color:var(--ok)">mais antiga (manter)</b>' : ''}</span>
+        </label>`).join('')}
+      </div>`;
+    }).join('');
+    body = `<div class="msg">Marque as cópias que deseja excluir (as mais antigas ficam desmarcadas). Elas vão para o lixo.</div>${list}`;
+  }
+  el.innerHTML = `<div class="shortcuts-content" style="max-width:560px">
+    <h3 style="margin-top:0">Verificar duplicadas</h3>
+    ${body}
+    <div class="acts" style="margin-top:12px">
+      <button data-a="dupesApply" ${groups.length ? '' : 'disabled'}>Excluir selecionadas</button>
+      <button data-a="closeDupes">Fechar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+}
+
 /* --- BUSCA GLOBAL (overlay) --- */
 function openSearch() {
   const el = document.createElement('div');

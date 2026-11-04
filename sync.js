@@ -678,6 +678,24 @@
     });
   }
 
+  // v103: resíduo do seed após o pull (cache limpo → seed + remoto mesclado).
+  // Remove a tarefa de exemplo e os objetos p1/g1 SÓ quando o estado se identifica
+  // como seed e já existe conteúdo real. Não gera tombstone (não apaga no servidor).
+  function cleanupSeedLeftovers() {
+    try {
+      if (!S || !S._seedId) return false;
+      var isSeedTask = function (t) { return t && t.t === 'Bloco A: prospecção ativa' && t.proj === 'p1' && t.est === 45 && t.pr === 0 && t.section === 'work' && t.type === 'comunicacao'; };
+      var real = (S.tasks || []).filter(function (t) { return !isSeedTask(t); });
+      if (!real.length) return false;
+      var removed = false;
+      S.tasks = (S.tasks || []).filter(function (t) { if (isSeedTask(t)) { removed = true; return false; } return true; });
+      if (S.projects) { var bp = S.projects.length; S.projects = S.projects.filter(function (p) { return !(p.id === 'p1' && p.n === 'Prospecção internacional'); }); if (S.projects.length !== bp) removed = true; }
+      if (S.goals) { var bg = S.goals.length; S.goals = S.goals.filter(function (g) { return g.id !== 'g1'; }); if (S.goals.length !== bg) removed = true; }
+      if (removed) { delete S._seedId; localStorage.removeItem(SEEDID_KEY); }
+      return removed;
+    } catch (e) { return false; }
+  }
+
   async function doPull(client, user) {
     if (typeof S === 'undefined' || !S) return;
     var seen = readJSON(SEEN_KEY, null);
@@ -700,6 +718,7 @@
         if (pristine) { S[key] = rows.filter(function (r) { return r.deleted_at == null; }).map(function (r) { return window.__merge.fromRow(table, r); }); }
         else { rows.forEach(function (r) { var x = applyRemoteRow(table, r); if (x.changed) changedList.push({ table: table, id: x.id }); }); }
       }
+      if (cleanupSeedLeftovers() && typeof toast === 'function') toast('Tarefa de exemplo removida');
       if (typeof save === 'function') save();
       writeJSON(SEEN_KEY, buildBaseline(S));
       if (S._seedId) localStorage.setItem(SEEDID_KEY, S._seedId);
@@ -776,6 +795,7 @@
     if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
     state.lastPullAt = Date.now();
     state.hydrated = true;
+    if (cleanupSeedLeftovers()) { if (typeof save === 'function') save(); if (typeof render === 'function') render(); if (typeof toast === 'function') toast('Tarefa de exemplo removida'); }
     renderSync();
   }
 
@@ -957,7 +977,7 @@
       '</div>' +
       (stamps ? '<div class="sync-last-row">' + stamps + '</div>' : '') +
       unlock +
-      '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button><button data-a="syncResetLocal">Restaurar dados da conta</button><button data-a="recoverOpen">Recuperar excluídas</button></div>';
+      '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button><button data-a="syncResetLocal">Restaurar dados da conta</button><button data-a="recoverOpen">Recuperar excluídas</button><button data-a="dupesOpen">Verificar duplicadas</button></div>';
   }
 
   function onSave() { scheduleEnqueue(); scheduleFlush(); }
@@ -995,7 +1015,7 @@
     pillMarker: pillMarker,
     _test: {
       enqueueAll: enqueueAll, doFlush: doFlush, hashStr: hashStr, isoMs: isoMs,
-      guardStateLoss: guardStateLoss, state: state, fetchDeleted: fetchDeleted, recoverDeleted: recoverDeleted,
+      guardStateLoss: guardStateLoss, state: state, fetchDeleted: fetchDeleted, recoverDeleted: recoverDeleted, cleanupSeedLeftovers: cleanupSeedLeftovers,
       buildBaseline: buildBaseline, readJSON: readJSON, writeJSON: writeJSON,
       OUTBOX_KEY: OUTBOX_KEY, SEEN_KEY: SEEN_KEY, DEVICE_KEY: DEVICE_KEY, OWNER_KEY: OWNER_KEY,
       CURSORS_KEY: CURSORS_KEY, SEEDID_KEY: SEEDID_KEY, SETTINGS_CU_KEY: SETTINGS_CU_KEY,
