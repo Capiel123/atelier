@@ -454,7 +454,7 @@ document.addEventListener('click', ev => {
       const lbl = sub ? sub.t : tt?.t || 'tarefa';
       focusTaskId = null;
       document.getElementById('focusOverlay')?.remove();
-      toast('Timer continua em ' + lbl.slice(0,30) + ' · ⏸ no topo');
+      toast('Timer continua em ' + lbl.slice(0,30) + ' · pausado no topo');
       return;
     }
     case 'focusStart': {
@@ -722,7 +722,7 @@ document.addEventListener('change', ev => {
   }
   if (el.dataset.c) {
     const key = el.dataset.c;
-    if (['autoPriority','focusNoStop'].includes(key)) S.cfg[key] = el.checked;
+    if (['autoPriority','focusNoStop','themePalette'].includes(key)) S.cfg[key] = el.checked;
     else if (key === 'defaultFocus') {S.cfg[key] = +el.value || 25; if (!S.timer) focusTargetMin = S.cfg[key];}
     else if (key === 'usdRate') S.cfg[key] = +el.value || 5.2;
     else if (key === 'eurRate') S.cfg[key] = +el.value || 5.6;
@@ -830,15 +830,26 @@ document.addEventListener('keydown', ev => {
   else if (el.dataset.pgadd && el.value.trim()) {const p = S.projects.find(x => x.id === el.dataset.pgadd); if (p) {p.goals = p.goals || []; p.goals.push({id: uid(), t: el.value.trim(), d:false, order:p.goals.length}); touch(p); el.value = ''; save(); render();} ev.preventDefault();}
 });
 
-/* --- ATALHOS GLOBAIS DE TECLADO --- */
+/* --- ATALHOS GLOBAIS DE TECLADO ---
+   v102 (BUG 4): qualquer contexto de edição bloqueia TODOS os atalhos globais.
+   A checagem olha o alvo do evento E o elemento com foco (teclado virtual/IME) e
+   sobe até um `[contenteditable]` — campos de subtarefa/tarefa/busca/inline. */
+function isEditableElement(el) {
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) return true;
+  return !!(el.closest && el.closest('[contenteditable="true"]'));
+}
+function isEditingContext(ev) {
+  if (!ev) return false;
+  return !!(ev.isComposing || isEditableElement(ev.target) || isEditableElement(document.activeElement));
+}
 document.addEventListener('keydown', ev => {
   const tgt = ev.target;
   const ae = document.activeElement;
-  // v100 (BUG 2): o campo com foco manda, mesmo que o evento chegue no body
-  // (teclado virtual/IME). Digitar subtarefa/título nunca dispara atalhos do timer.
-  const isTyping = ev.isComposing
-    || (tgt && tgt.isContentEditable) || (tgt && ['INPUT','TEXTAREA','SELECT'].includes(tgt.tagName))
-    || (ae && ae.isContentEditable) || (ae && ['INPUT','TEXTAREA','SELECT'].includes(ae.tagName));
+  // v100 (BUG 2) + v102 (BUG 4): o campo com foco manda, mesmo que o evento
+  // chegue no body (teclado virtual/IME). Digitar nunca dispara atalho global.
+  const isTyping = isEditingContext(ev);
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {ev.preventDefault(); openSearch(); return;}
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z' && !ev.shiftKey) {if (isTyping) return; ev.preventDefault(); undo(); return;}
   // Esc fecha a busca mesmo com o foco no input (o overlay abre com autofocus).
@@ -880,7 +891,7 @@ document.addEventListener('keydown', ev => {
     // texto (mesmo que o keydown chegue no body em teclados virtuais). Digitar
     // subtarefa/título no modo foco nunca mexe no timer.
     const aeSpace = document.activeElement;
-    if (aeSpace && aeSpace !== document.body && aeSpace.matches && aeSpace.matches('input, textarea, select, [contenteditable="true"]')) return;
+    if (isEditableElement(aeSpace)) return;
     ev.preventDefault();
     const task = T(focusTaskId);
     if (S.timer && S.timer.taskId === focusTaskId) {

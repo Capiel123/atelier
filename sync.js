@@ -578,6 +578,7 @@
     var cfg = Object.assign({}, data.cfg || {});
     // v100 (BUG 3): recolhimento de seções é preferência LOCAL (não vai no pull).
     var localSections = (S.cfg && S.cfg.sectionsCollapsed) || null;
+    var localPalette = (S.cfg && S.cfg.themePalette !== undefined) ? S.cfg.themePalette : true;
     cfg.lastBackupAt = (S.cfg && S.cfg.lastBackupAt) || null;
     cfg.backupReminderDismissedAt = (S.cfg && S.cfg.backupReminderDismissedAt) || 0;
     // preferências visuais são LOCAIS: não sobrescrever com o valor remoto
@@ -591,6 +592,7 @@
     S.cfg.theme = localTheme;
     S.cfg.accentColor = localAccent;
     if (localSections) S.cfg.sectionsCollapsed = localSections;
+    S.cfg.themePalette = localPalette;
     localStorage.setItem(SETTINGS_CU_KEY, String(cu));
     return true;
   }

@@ -220,6 +220,32 @@ function timerBlockId(timer, taskId, subId) {
   var segStart = Math.round(st - (acc * 1000));
   return 'tmr_' + tfnv(String(taskId || '') + '|' + String(subId || '') + '|' + segStart + '|' + ((timer && timer.cycleCount) || 0));
 }
+// v102: identidade determinística da SESSÃO de foco (para o Pomodoro não duplicar).
+// Âncora = início do segmento (subStartedAt - subAccumulated), em minutos; inclui
+// ciclo/tarefa/sub/alvo. Pausa/retomada mantém o mesmo início.
+function pomodoroSessionId(timer) {
+  if (!timer) return '';
+  var st = (timer.subStartedAt != null) ? timer.subStartedAt : timer.startedAt;
+  var acc = (timer.subAccumulated != null) ? timer.subAccumulated : (timer.accumulated || 0);
+  var start = st ? (st - acc * 1000) : 0;
+  return [timer.taskId || '', timer.subId || '', Math.round(start / 60000), timer.targetMin || '', timer.cycleCount || 0].join('|');
+}
+// v102: dedupe de leitura (não apaga histórico). Novos pomodoros têm sessionId
+// exato; antigos (sem o campo) caem na heurística: mesmo tarefa/sub/alvo e ts a
+// menos de 2 min um do outro = mesmo foco registrado em duplicidade.
+function dedupePomodoros(list) {
+  var out = [], seen = {};
+  (list || []).slice().sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); }).forEach(function (p) {
+    if (p.sessionId) { if (seen['s|' + p.sessionId]) return; seen['s|' + p.sessionId] = 1; out.push(p); return; }
+    var last = null;
+    for (var i = out.length - 1; i >= 0 && i >= out.length - 4; i--) {
+      if (out[i].taskId === p.taskId && (out[i].subId || null) === (p.subId || null) && (out[i].targetMin == null ? null : out[i].targetMin) === (p.targetMin == null ? null : p.targetMin)) { last = out[i]; break; }
+    }
+    if (last && Math.abs((p.ts || 0) - (last.ts || 0)) < 120000) return;
+    out.push(p);
+  });
+  return out;
+}
 // Divide [startMs, endMs) nas fronteiras de meia-noite local (datas corretas).
 function splitByLocalDay(startMs, endMs) {
   var out = []; var cur = startMs;
@@ -267,6 +293,10 @@ function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulat
 function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.subStartedAt = Date.now(); S.timer.paused = false; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
 function advancePhase(isNatural = true) {
   if (!S.timer) return;
+  // v102: chamada "natural" só age na fase de foco; descanso é tratado por
+  // completeRest(). Evita que uma segunda chamada no mesmo instante inicie um
+  // novo foco (e duplique Pomodoro).
+  if (isNatural && S.timer.phase !== 'focus') return;
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   // v96: tarefa excluída durante o timer não pode gerar pomodoro/descanso órfãos.
   if (!t || isDone(t)) { stopTimer(); return; }
@@ -278,10 +308,13 @@ function advancePhase(isNatural = true) {
     // Idempotência por id; skip preserva note:'' em t.logs e NÃO cria pomodoro.
     if (isNatural) {
       const pomTs = Date.now();
-      const pomId = 'pom_' + tfnv(String(S.timer.taskId || '') + '|' + String(S.timer.targetMin || '') + '|' + pomTs);
+      // v102: id determinístico da SESSÃO (não do instante). Duas chamadas para o
+      // mesmo foco geram o mesmo id — nada de duplicar o Pomodoro.
+      const sid = pomodoroSessionId(S.timer);
+      const pomId = 'pom_' + tfnv(sid);
       if (!Array.isArray(S.pomodoros)) S.pomodoros = [];
-      if (!S.pomodoros.some(p => p.id === pomId)) {
-        S.pomodoros.push(mkPomodoro({ id: pomId, date: iso(new Date(pomTs)), ts: pomTs, targetMin: S.timer.targetMin, taskId: S.timer.taskId || null, subId: S.timer.subId || null }));
+      if (!S.pomodoros.some(p => p.id === pomId || p.sessionId === sid)) {
+        S.pomodoros.push(mkPomodoro({ id: pomId, sessionId: sid, date: iso(new Date(pomTs)), ts: pomTs, targetMin: S.timer.targetMin, taskId: S.timer.taskId || null, subId: S.timer.subId || null }));
       }
     }
     // O descanso NÃO inicia sozinho: entra em "descanso sugerido" (pausado).

@@ -86,8 +86,29 @@ const THEME_ART = {
   chrome: {},
   'deepbone-light': {}
 };
+// v102 (Etapa 2): paleta de 9 papéis por tema (ordem fixa: vermelho, laranja,
+// amarelo, verde, ciano, azul, violeta, rosa, neutro). Verificada >=4.5:1 contra
+// bg/s1/s2/s3. Fonte: theme-palettes.js (fora do app) + DESIGN-SYSTEM §3.
+const PALETTE_ROLES = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'violet', 'pink', 'neutral'];
+const THEME_PALETTES = {
+  obsidian: ['#f0815f','#f5ac5e','#e2cf6f','#83c171','#7adbd2','#55a6e2','#cb99ed','#fea4d0','#9c9a96'],
+  vampire: ['#e37770','#f09e69','#dec26b','#7db76c','#74ceda','#6d95da','#c091df','#f19dc6','#969191'],
+  occult: ['#ed7f81','#faa772','#e8cc74','#66c58f','#7ed8e3','#769ee4','#c09ef0','#eea9e6','#979599'],
+  noir: ['#c98988','#e4b497','#d6d9a8','#79ab8c','#aedfe2','#7e9dc2','#a99bca','#e9bfe0','#989b9e'],
+  cyanotic: ['#fe7d81','#feb34d','#dbdd4e','#2cd486','#4ce6f0','#32adfe','#baa8ff','#fea8f4','#9da2a4'],
+  toxic: ['#fb784f','#f9ab3e','#d3d660','#65c774','#65ded4','#40a7ee','#b5a0fe','#fea3d0','#9ea19e'],
+  ember: ['#f47855','#fca353','#eac85a','#7ac066','#69dad1','#6b9aed','#cb92f0','#ff9dce','#9e9a97'],
+  moonlight: ['#d58989','#f5bb97','#d7d99e','#7ab692','#a6e0e8','#7ba2cd','#afa4dd','#f3c2ec','#9c9fa3'],
+  rose: ['#d38383','#f4b791','#e7d397','#87b17c','#a3e1e9','#7d9acc','#bc9bd3','#fbc0e3','#9d989a'],
+  abyss: ['#ed7f81','#faa772','#d2d47c','#66c58f','#7ed8e3','#6ca2e3','#b4a2f6','#eea9e6','#999b9f'],
+  bone: ['#d18972','#edbb8c','#e4d499','#89b07e','#a6e2dc','#6fa0c7','#bb9bd2','#fdc0dc','#9d9a97'],
+  deepbone: ['#bf8978','#dcb895','#ded5a9','#8aa781','#b3dfda','#769ab7','#b199c2','#ecbfd4','#979692'],
+  chrome: ['#b48584','#e2bea8','#d6d8b4','#8aad97','#b9dcdf','#7c93ad','#aea4c6','#e9c9e1','#8f9195'],
+  'deepbone-light': ['#78321b','#693e03','#473d03','#29511c','#004d49','#104b72','#5c3b70','#662f4c','#4a4945']
+};
 Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
 Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });
+Object.keys(THEME_PALETTES).forEach(id => { if (THEMES[id]) THEMES[id].palette = THEME_PALETTES[id]; });
 const PR = ['Alta','Média','Baixa'];
 const PRC = ['var(--pr-high, #e0626a)','var(--pr-med, #e0a33b)','var(--pr-low, #6f8de0)'];
 const DAYS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
@@ -167,7 +188,27 @@ function alive(arr) {return (arr || []).filter(x => !x.deletedAt);}
 function touch(obj) {if (obj) obj.updatedAt = Date.now();}
 function getAreas() {return (S.areas || []).filter(a => !a.archived).sort((a,b) => (a.order||0)-(b.order||0));}
 function getAllAreas() {return (S.areas || []).slice().sort((a,b) => (a.order||0)-(b.order||0));}
-function areaColor(name) {const a = (S.areas || []).find(x => x.id === name || x.n === name); return a ? a.color : '#888';}
+function areaColor(name) {const a = (S.areas || []).find(x => x.id === name || x.n === name); return a ? themeColor(a.color) : '#888';}
+// v102: cor de exibição pela paleta do tema. Toggle desligado (ou cor não-hex,
+// ex. var(--pr-*)) → devolve a cor original. Cache por tema+hex para o render.
+const _tcCache = {};
+function _hexRgb(h) {if (typeof h !== 'string' || h[0] !== '#') return null; let s = h.slice(1); if (s.length === 3) s = s.split('').map(c => c + c).join(''); if (!/^[0-9a-f]{6}$/i.test(s)) return null; return [parseInt(s.slice(0,2),16), parseInt(s.slice(2,4),16), parseInt(s.slice(4,6),16)];}
+function themeColor(hex) {
+  if (!S || !S.cfg || S.cfg.themePalette === false) return hex;
+  const rgb = _hexRgb(hex); if (!rgb) return hex;
+  const themeId = S.cfg.theme || 'obsidian';
+  const key = themeId + '|' + hex.toLowerCase();
+  if (_tcCache[key]) return _tcCache[key];
+  const pal = (THEMES[themeId] || THEMES.obsidian).palette || THEME_PALETTES.obsidian;
+  let best = pal[0], bd = Infinity;
+  pal.forEach(function (p) {
+    const q = _hexRgb(p); if (!q) return;
+    const d = (rgb[0]-q[0])*(rgb[0]-q[0]) + (rgb[1]-q[1])*(rgb[1]-q[1]) + (rgb[2]-q[2])*(rgb[2]-q[2]);
+    if (d < bd) {bd = d; best = p;}
+  });
+  _tcCache[key] = best;
+  return best;
+}
 function areaLabel(id) {const a = (S.areas || []).find(x => x.id === id); return a ? a.n : (id || '—');}
 function convertTo(amount, from, to) {
   if (!from || !to || from === to) return amount;
@@ -326,7 +367,7 @@ function themeArtVars(t) {
 
 /* --- MODELOS (fábricas de objetos) --- */
 function mkTask(t, o={}) {return {id: uid(), t, desc:'', pr:1, est:0, spent:0, day:null, order:0, next:false, done:false, doneAt:null, area:'Carreira', skills:[], proj:'', due:'', time:'', section:'', subs:[], logs:[], xpClaimed:false, type:'', color:'', labels:[], createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0, lastPostponedAt: null, ...o};}
-function mkPomodoro(o={}) {return {id: o.id || uid(), date: o.date || iso(new Date()), ts: o.ts || Date.now(), targetMin: o.targetMin ?? null, taskId: o.taskId || null, subId: o.subId || null};}
+function mkPomodoro(o={}) {return {id: o.id || uid(), sessionId: o.sessionId || null, date: o.date || iso(new Date()), ts: o.ts || Date.now(), targetMin: o.targetMin ?? null, taskId: o.taskId || null, subId: o.subId || null};}
 function mkSkill(n, color) {return {id: uid(), n, color: color || '#9a94a3', archived:false, xp:0, order:0, deletedAt: null, createdAt: Date.now(), updatedAt: Date.now()};}
 function mkContact(o={}) {return {id: uid(), n:'', type:'pro', cat:'Prospect', where:'', url:'', role:'', context:'', interests:'', notes:'', priority:1, lastContact:'', nextContact:'', nextAction:'', cadence:30, archived:false, lastConversation:'', waitingFor:false, waitingSince:null, tags:[], birthday:'', importantDates:[], snoozedUntil:'', snoozeReason:'', interactions:[], sentCount:0, receivedCount:0, clientId:null, deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
 function mkCommand(n, cat, cmd, example='') {return {id: uid(), n, cat, cmd, example, order:0, updatedAt: Date.now()};}
@@ -368,7 +409,7 @@ function seed() {
   const p1 = mkProject({id:'p1', n:'Prospecção internacional', area:'Carreira', reward:'Jantar fora'});
   return {
     v: VERSION,
-    cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, reviewChecks:{}, weekPriority:{}, theme:'obsidian', accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
+    cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, themePalette:true, reviewChecks:{}, weekPriority:{}, theme:'obsidian', accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
     areas: AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()})),
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
@@ -394,6 +435,7 @@ function migrate(raw) {
   s.cfg.focus = s.cfg.focus ?? 50; s.cfg.brk = s.cfg.brk ?? 5; s.cfg.longBrk = s.cfg.longBrk ?? 15; s.cfg.cap = s.cfg.cap ?? 360;
   s.cfg.logo = s.cfg.logo ?? null; s.cfg.notif = s.cfg.notif ?? false;
   s.cfg.autoPriority = s.cfg.autoPriority ?? true;
+  if (s.cfg.themePalette === undefined) s.cfg.themePalette = true; // v102
   s.cfg.reviewChecks = s.cfg.reviewChecks || {}; s.cfg.weekPriority = s.cfg.weekPriority || {};
   s.cfg.theme = s.cfg.theme || 'obsidian';
   s.cfg.accentColor = s.cfg.accentColor ?? null;
