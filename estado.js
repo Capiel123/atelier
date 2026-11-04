@@ -757,7 +757,20 @@ function restoreCopy(kind, confirmed) {
   return {ok: true, restoredAt: copy.ts};
 }
 function snapshot() {undoStack.push(JSON.stringify(S)); if (undoStack.length > 30) undoStack.shift();}
-function undo() {if (!undoStack.length) return toast('Nada para desfazer'); try {S = JSON.parse(undoStack.pop()); applyTheme(); save(); render(); toast('Desfeito');} catch(e) {toast('Erro', true);}}
+function undo() {
+  if (!undoStack.length) return toast('Nada para desfazer');
+  try {
+    const before = new Set((S.tasks||[]).map(t => t.id));
+    S = JSON.parse(undoStack.pop());
+    const after = new Set((S.tasks||[]).map(t => t.id));
+    /* v119: entidades removidas pelo undo (ex.: cópia) precisam de tombstone;
+       senão o próximo pull ressuscita. */
+    before.forEach(id => {
+      if (!after.has(id) && window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id);
+    });
+    applyTheme(); save(); render(); toast('Desfeito');
+  } catch (e) { toast('Erro', true); }
+}
 
 /* --- AVISOS INFORMATIVOS DISPENSÁVEIS (por dispositivo) ---
    Preferência de UI local: NÃO vive em S — não sincroniza, não entra em

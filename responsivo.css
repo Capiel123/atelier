@@ -1049,4 +1049,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   /* v115 — barra "Tarefas" é redundante no celular e, sticky, cobria os cards.
      Os controles Expandir/Recolher continuam disponíveis no desktop. */
   .tasks-header{display:none}
+
+  /* v120 — respiro do agendamento na Fila (mobile) */
+  .queue-schedule{gap:12px;padding-bottom:14px}
+  .queue-schedule-label{margin-bottom:2px;line-height:1.2}
+  .queue-days{gap:8px 6px}
+  .queue-days button{min-height:40px;padding:0 10px}
+  .queue-body .acts{gap:10px}
+  .queue-order{gap:6px}
 }

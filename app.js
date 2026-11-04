@@ -249,7 +249,7 @@ document.addEventListener('click', ev => {
       if (!id) break;
       selectedTaskId = id;
       if (expandedTasks.has(id)) expandedTasks.delete(id);
-      else {expandedTasks.add(id); subsCollapsed.delete(id);}
+      else {expandedTasks.add(id);} // v119: preserva o recolhimento de Fases ao reabrir
       if (tab === 'q') {
         const ql = document.getElementById('queueList');
         if (ql) ql.innerHTML = dayTasks(null).length ? dayTasks(null).map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>';

@@ -955,11 +955,18 @@
 .section-title{color:var(--c)}
 [data-family="nordic"] .section-ico{color:var(--mu)}
 [data-family="nordic"] .section-title{color:var(--tx)}
-.queue-schedule{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--bd)}
+.queue-schedule{display:flex;flex-direction:column;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
 .queue-schedule-label{font-size:11px;color:var(--mu)}
 .queue-days{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.queue-days button{min-height:36px;padding:0 9px}
 .queue-dup{display:inline-flex;align-items:center;gap:4px}
 .queue-body > textarea{margin-top:10px}
+.queue-order{display:flex;align-items:center;gap:4px}
+.queue-order button{min-width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:640px){
+  .queue-days button{min-height:40px;padding:0 8px}
+  .queue-order button{min-width:40px;height:40px}
+}
 [data-family="nordic"] .search-btn{width:34px;height:34px;border-color:var(--bd);color:var(--mu)}
 [data-family="nordic"] .search-btn .ico{width:18px;height:18px}
 [data-family="nordic"] .fab{background:var(--ac);border:0;color:var(--on-ac);box-shadow:none}

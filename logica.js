@@ -463,7 +463,7 @@ function reorderTask(t, delta) {
   list.forEach((x, ix) => x.order = ix);
   // A ordem manual só é visível com a prioridade automática desligada; sem isso
   // as setas mudam `order` mas a lista continua ordenada por score (F09 da auditoria).
-  if (S.cfg.autoPriority) {
+  if (t.day !== null && S.cfg.autoPriority) {
     S.cfg.autoPriority = false;
     if (typeof toast === 'function') toast('Ordem manual ativada (⭐ Auto desligado)');
   }

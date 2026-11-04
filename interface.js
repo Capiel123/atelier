@@ -868,7 +868,11 @@ function cardQueue(t) {
       <textarea data-p="${esc(k('desc'))}" placeholder="Descrição e notas da tarefa..." rows="2" style="margin-bottom:8px">${esc(t.desc||'')}</textarea>
       ${renderSubs(t)}
 
-      <div class="acts" style="margin-top:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <div class="acts" style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="queue-order" aria-label="Reordenar na Fila">
+          <button data-a="moveUp" data-id="${t.id}" title="Subir na Fila" aria-label="Subir na Fila">${ico('arrow-up')}</button>
+          <button data-a="moveDown" data-id="${t.id}" title="Descer na Fila" aria-label="Descer na Fila">${ico('arrow-down')}</button>
+        </div>
         <button data-a="del" data-id="${t.id}" style="margin-left:auto;background:transparent;border:1px solid var(--bd)">${ico('trash')} Excluir</button>
       </div>
 
