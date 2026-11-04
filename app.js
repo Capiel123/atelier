@@ -20,7 +20,13 @@ document.addEventListener('toggle', ev => {
 /* --- CLIQUE (grande roteador de ações) --- */
 document.addEventListener('click', ev => {
   // Fechar overlays ao clicar fora deles
-  if (ev.target.classList.contains('shortcuts-modal')) {ev.target.remove(); return;}
+  if (ev.target.classList.contains('shortcuts-modal')) {
+    if (ev.target.id === 'focusCompleteModal' && window.__focusCompletePausedTimer) {
+      window.__focusCompletePausedTimer = false;
+      try { resumeTimer(); } catch (e) {}
+    }
+    ev.target.remove(); return;
+  }
   if (ev.target.classList.contains('search-modal')) {closeSearch(); return;}
   if (ev.target.classList.contains('more-sheet')) {hideMoreSheet(); return;}
 
@@ -406,7 +412,7 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'histReopen': {const tt = T(id); if (tt && tt.done) {tt.done = false; tt.doneAt = null; touch(tt); toast('Tarefa reaberta');} break;}
-    case 'histCopy': {const tt = T(id); if (!tt) return; const copy = {...tt, id: uid(), done: false, doneAt: null, xpClaimed: false, next: false, order: 0, spent: 0, logs: [], skills: Array.isArray(tt.skills)?[...tt.skills]:[], labels: Array.isArray(tt.labels)?[...tt.labels]:[], subs: (tt.subs||[]).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: todayI(), createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; S.tasks.push(copy); toast('Copiada para hoje'); break;}
+    case 'histCopy': {const tt = T(id); if (!tt) return; const copy = {...tt, id: uid(), done: false, doneAt: null, xpClaimed: false, next: false, order: 0, spent: 0, logs: [], skills: Array.isArray(tt.skills)?[...tt.skills]:[], labels: Array.isArray(tt.labels)?[...tt.labels]:[], subs: (tt.subs||[]).filter(sb => !sb.deletedAt).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: todayI(), createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; S.tasks.push(copy); toast('Copiada para hoje'); break;}
     case 'histDel': if (!confirm('Excluir tarefa permanentemente do histórico?')) return; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.tasks = S.tasks.filter(x => x.id !== id); if (focusTaskId === id) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); } break;
     case 'earnFilter': earningsFilter = btn.dataset.v; render(); return;
     case 'histFilter': historyFilter = btn.dataset.v; render(); return;
@@ -477,7 +483,7 @@ document.addEventListener('click', ev => {
     case 'setnext': if (!t) break; if (t.next) {t.next = false; touch(t);} else {S.tasks.forEach(x => {if (x.next) {x.next = false; touch(x);}}); t.next = true; touch(t); toast('⭐');} break;
     case 'moveUp': case 'moveDown': if (!t) break; reorderTask(t, a === 'moveUp' ? -1 : 1); return;
     case 'setTaskColor': if (!t) break; t.color = btn.dataset.color || ''; touch(t); break;
-    case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: t.subs.map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
+    case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: (t.subs||[]).filter(sb => !sb.deletedAt).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; if (copy.day != null) copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast('Copiada'); break;}
     case 'del': if (!t) break; if (S.timer && S.timer.taskId === id) stopTimer(); if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.trash = S.trash || []; S.trash.unshift({id: uid(), task: t, deletedAt: Date.now()}); S.tasks = S.tasks.filter(x => x.id !== id); if (focusTaskId === id) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); } break;
     case 'sdel': {
       if (!t) break;
@@ -558,12 +564,17 @@ document.addEventListener('click', ev => {
     case 'focusStop': stopTimer(); if (focusTaskId) renderFocus(); return;
     case 'focusCompleteYes': {
       document.getElementById('focusCompleteModal')?.remove();
-      const ft = T(id);
+      window.__focusCompletePausedTimer = false;
+      const ft = T(id) || T(focusTaskId);
       if (ft) completeTaskInFocus(ft);
       return;
     }
     case 'focusCompleteNo': {
       document.getElementById('focusCompleteModal')?.remove();
+      if (window.__focusCompletePausedTimer) {
+        window.__focusCompletePausedTimer = false;
+        try { resumeTimer(); } catch (e) {}
+      }
       return;
     }
     case 'focusSetTarget': focusTargetMin = +btn.dataset.m; renderFocus(); return;

@@ -1499,6 +1499,14 @@ function showCloseFocusModal() {
 }
 function showFocusCompleteModal(t) {
   document.getElementById('focusCompleteModal')?.remove();
+  // v116: congela o timer enquanto o modal está aberto. Sem isso, o tempo
+  // gasto decidindo "Concluir" era contado na tarefa (mais perceptível no mobile).
+  try {
+    if (S.timer && !S.timer.paused && S.timer.taskId === t.id) {
+      pauseTimer();
+      window.__focusCompletePausedTimer = true;
+    }
+  } catch (e) {}
   const modal = document.createElement('div');
   modal.id = 'focusCompleteModal';
   modal.className = 'shortcuts-modal';
@@ -1506,8 +1514,8 @@ function showFocusCompleteModal(t) {
     <h3 style="margin-top:0">Concluir tarefa?</h3>
     <div style="font-size:13px;color:var(--mu);margin:8px 0 14px">Todas as subtarefas de "${esc(t.t)}" foram concluídas.</div>
     <div style="display:flex;flex-direction:column;gap:6px">
-      <button data-a="focusCompleteYes" data-id="${t.id}" style="background:var(--ac);color:#000;border-color:var(--ac);padding:10px">Concluir tarefa</button>
-      <button data-a="focusCompleteNo" style="padding:10px">Continuar sem concluir</button>
+      <button type="button" data-a="focusCompleteYes" data-id="${t.id}" style="background:var(--ac);color:#000;border-color:var(--ac);padding:10px">Concluir tarefa</button>
+      <button type="button" data-a="focusCompleteNo" style="padding:10px">Continuar sem concluir</button>
     </div>
   </div>`;
   document.body.appendChild(modal);

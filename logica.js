@@ -414,7 +414,9 @@ function switchTimerSub(newSubId) {
   if (t && elapsed > 0 && S.timer.phase !== 'rest') recordTimerMinutes(t, elapsed, S.timer.subId, '', S.timer);
   S.timer.subId = newSubId;
   S.timer.subAccumulated = 0;
-  S.timer.subStartedAt = (S.timer.phase === 'rest') ? null : Date.now();
+  // v116: não reiniciar o relógio da subtarefa quando o timer está pausado
+  // (o modal "Concluir tarefa" pode ficar aberto com o foco pausado).
+  S.timer.subStartedAt = (S.timer.paused || S.timer.phase === 'rest') ? null : Date.now();
   S.timer.updatedAt = Date.now();
   save(); renderTimer();
 }
@@ -431,9 +433,13 @@ function reconcileTimerSub(t, changedSubId) {
 // Conclui a tarefa a partir do modo foco (todas as subtarefas feitas): registra a sessão, marca done e fecha.
 function completeTaskInFocus(t) {
   if (!t) return;
-  if (S.timer && S.timer.taskId === t.id) stopTimer();
-  t.done = true; t.doneAt = Date.now(); touch(t); awardTaskXp(t);
-  closeFocus();
+  try { if (S.timer && S.timer.taskId === t.id) stopTimer(); } catch (e) { S.timer = null; }
+  t.done = true; t.doneAt = Date.now(); t.next = false; touch(t);
+  try { awardTaskXp(t); } catch (e) {}
+  // Persistir a conclusão ANTES de fechar o overlay: se closeFocus/render falhar
+  // (ou abrir o modal de saída no mobile), a tarefa já foi salva como concluída.
+  save();
+  try { closeFocus(); } catch (e) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); }
   save(); render();
 }
 function beep() {try {const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 720; g.gain.setValueAtTime(0.15, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.5); o.start(); o.stop(a.currentTime + 0.5);} catch(e) {}}
