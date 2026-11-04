@@ -16,16 +16,342 @@
 <link rel="stylesheet" href="./responsivo.css">
 </head>
 <body>
+<!-- icons-sprite.svg v2 — 10 famílias de silhueta (soft, lunar, abyss, petal, ink, gothic, occult, tech, block, forge), 31 símbolos cada.
+     Inserir após <body> em index.html, fora do #app. ids: i-<familia>-<nome>.
+     Só stroke/currentColor; traço, ponta, junção e glow vêm das variáveis CSS ico-* (não definir stroke-* aqui).
+     forge usa fill="currentColor" com fill-opacity .16 nas formas fechadas (duotone). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- soft -->
+  <symbol id="i-soft-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-soft-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-soft-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-soft-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-soft-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-soft-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-soft-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  <symbol id="i-soft-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-soft-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></symbol>
+  <symbol id="i-soft-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
+  <symbol id="i-soft-pause" viewBox="0 0 24 24"><path d="M8.5 5v14M15.5 5v14"/></symbol>
+  <symbol id="i-soft-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></symbol>
+  <symbol id="i-soft-focus" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
+  <symbol id="i-soft-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="1.5"/><path d="M15.5 8.5V5.5a1.5 1.5 0 0 0-1.5-1.5H5.5A1.5 1.5 0 0 0 4 5.5V14a1.5 1.5 0 0 0 1.5 1.5h3"/></symbol>
+  <symbol id="i-soft-edit" viewBox="0 0 24 24"><path d="M14.5 5.5l4 4M4 20l1-4.5L16 4.5a2.8 2.8 0 0 1 4 4L8.5 19.5z"/></symbol>
+  <symbol id="i-soft-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7M10 11v5M14 11v5"/></symbol>
+  <symbol id="i-soft-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.7 1-5.9L3.5 9.7l5.9-.8z"/></symbol>
+  <symbol id="i-soft-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-soft-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V9.5M9.5 3.5h5M18.5 6.5l1.3-1.3"/></symbol>
+  <symbol id="i-soft-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13.5h6L10 21l9-11h-6z"/></symbol>
+  <symbol id="i-soft-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12" rx="1.5"/><path d="M9 7.5v-2A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5v2M3 13h18"/></symbol>
+  <symbol id="i-soft-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></symbol>
+  <symbol id="i-soft-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="1.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-soft-tomato" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 6.5C11.5 4.8 10 3.8 8 3.5M12 6.5c.5-1.7 2-2.7 4-3"/></symbol>
+  <symbol id="i-soft-sparkle" viewBox="0 0 24 24"><path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9zM19 16v4M17 18h4"/></symbol>
+  <symbol id="i-soft-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5h4"/></symbol>
+  <symbol id="i-soft-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 5h11l-2 4 2 4H6"/></symbol>
+  <symbol id="i-soft-inbox" viewBox="0 0 24 24"><path d="M4 13l2-7h12l2 7v5.5H4zM4 13h5l1 2.2h4L15 13h5"/></symbol>
+  <symbol id="i-soft-repeat" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 0 1 13.2-4.9M18 3.5v4h-4M19.5 12a7.5 7.5 0 0 1-13.2 4.9M6 20.5v-4h4"/></symbol>
+  <symbol id="i-soft-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="1.5"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-soft-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <!-- lunar -->
+  <symbol id="i-lunar-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-lunar-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-lunar-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-lunar-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-lunar-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-lunar-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-lunar-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-lunar-more" viewBox="0 0 24 24"><use href="#i-soft-more"/></symbol>
+  <symbol id="i-lunar-search" viewBox="0 0 24 24"><use href="#i-soft-search"/></symbol>
+  <symbol id="i-lunar-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-lunar-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-lunar-stop" viewBox="0 0 24 24"><use href="#i-soft-stop"/></symbol>
+  <symbol id="i-lunar-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-lunar-copy" viewBox="0 0 24 24"><use href="#i-soft-copy"/></symbol>
+  <symbol id="i-lunar-edit" viewBox="0 0 24 24"><use href="#i-soft-edit"/></symbol>
+  <symbol id="i-lunar-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-lunar-star" viewBox="0 0 24 24"><path d="M12 3c.6 5 3.5 8.4 9 9-5.5.6-8.4 4-9 9-.6-5-3.5-8.4-9-9 5.5-.6 8.4-4 9-9z"/></symbol>
+  <symbol id="i-lunar-clock" viewBox="0 0 24 24"><use href="#i-soft-clock"/></symbol>
+  <symbol id="i-lunar-timer" viewBox="0 0 24 24"><use href="#i-soft-timer"/></symbol>
+  <symbol id="i-lunar-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-lunar-briefcase" viewBox="0 0 24 24"><use href="#i-soft-briefcase"/></symbol>
+  <symbol id="i-lunar-user" viewBox="0 0 24 24"><use href="#i-soft-user"/></symbol>
+  <symbol id="i-lunar-calendar" viewBox="0 0 24 24"><use href="#i-soft-calendar"/></symbol>
+  <symbol id="i-lunar-tomato" viewBox="0 0 24 24"><use href="#i-soft-tomato"/></symbol>
+  <symbol id="i-lunar-sparkle" viewBox="0 0 24 24"><path d="M14.5 4a8 8 0 1 0 5.5 11.5A6.5 6.5 0 0 1 14.5 4z"/><path d="M19 3.5v3M17.5 5h3"/></symbol>
+  <symbol id="i-lunar-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-lunar-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-lunar-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-lunar-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-lunar-mail" viewBox="0 0 24 24"><use href="#i-soft-mail"/></symbol>
+  <symbol id="i-lunar-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- abyss -->
+  <symbol id="i-abyss-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-abyss-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-abyss-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-abyss-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-abyss-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-abyss-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-abyss-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-abyss-more" viewBox="0 0 24 24"><path d="M5.5 15l6.5-5 6.5 4" stroke-opacity=".6"/><circle cx="5.5" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r="1.3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-abyss-search" viewBox="0 0 24 24"><use href="#i-soft-search"/></symbol>
+  <symbol id="i-abyss-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-abyss-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-abyss-stop" viewBox="0 0 24 24"><use href="#i-soft-stop"/></symbol>
+  <symbol id="i-abyss-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-abyss-copy" viewBox="0 0 24 24"><use href="#i-soft-copy"/></symbol>
+  <symbol id="i-abyss-edit" viewBox="0 0 24 24"><use href="#i-soft-edit"/></symbol>
+  <symbol id="i-abyss-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-abyss-star" viewBox="0 0 24 24"><use href="#i-soft-star"/></symbol>
+  <symbol id="i-abyss-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2M12 3.5v1.2M12 19.3v1.2M3.5 12h1.2M19.3 12h1.2"/></symbol>
+  <symbol id="i-abyss-timer" viewBox="0 0 24 24"><use href="#i-soft-timer"/></symbol>
+  <symbol id="i-abyss-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-abyss-briefcase" viewBox="0 0 24 24"><use href="#i-soft-briefcase"/></symbol>
+  <symbol id="i-abyss-user" viewBox="0 0 24 24"><use href="#i-soft-user"/></symbol>
+  <symbol id="i-abyss-calendar" viewBox="0 0 24 24"><use href="#i-soft-calendar"/></symbol>
+  <symbol id="i-abyss-tomato" viewBox="0 0 24 24"><use href="#i-soft-tomato"/></symbol>
+  <symbol id="i-abyss-sparkle" viewBox="0 0 24 24"><use href="#i-soft-sparkle"/></symbol>
+  <symbol id="i-abyss-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-abyss-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-abyss-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-abyss-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-abyss-mail" viewBox="0 0 24 24"><use href="#i-soft-mail"/></symbol>
+  <symbol id="i-abyss-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- petal -->
+  <symbol id="i-petal-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-petal-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-petal-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-petal-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-petal-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-petal-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-petal-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-petal-more" viewBox="0 0 24 24"><use href="#i-soft-more"/></symbol>
+  <symbol id="i-petal-search" viewBox="0 0 24 24"><use href="#i-soft-search"/></symbol>
+  <symbol id="i-petal-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-petal-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-petal-stop" viewBox="0 0 24 24"><use href="#i-soft-stop"/></symbol>
+  <symbol id="i-petal-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-petal-copy" viewBox="0 0 24 24"><use href="#i-soft-copy"/></symbol>
+  <symbol id="i-petal-edit" viewBox="0 0 24 24"><use href="#i-soft-edit"/></symbol>
+  <symbol id="i-petal-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-petal-star" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/></symbol>
+  <symbol id="i-petal-clock" viewBox="0 0 24 24"><use href="#i-soft-clock"/></symbol>
+  <symbol id="i-petal-timer" viewBox="0 0 24 24"><use href="#i-soft-timer"/></symbol>
+  <symbol id="i-petal-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-petal-briefcase" viewBox="0 0 24 24"><use href="#i-soft-briefcase"/></symbol>
+  <symbol id="i-petal-user" viewBox="0 0 24 24"><use href="#i-soft-user"/></symbol>
+  <symbol id="i-petal-calendar" viewBox="0 0 24 24"><use href="#i-soft-calendar"/></symbol>
+  <symbol id="i-petal-tomato" viewBox="0 0 24 24"><use href="#i-soft-tomato"/></symbol>
+  <symbol id="i-petal-sparkle" viewBox="0 0 24 24"><path d="M12 12c-1-3-1-5.5 0-8 1 2.5 1 5 0 8zM12 12c3-1 5.5-1 8 0-2.5 1-5 1-8 0zM12 12c1 3 1 5.5 0 8-1-2.5-1-5 0-8zM12 12c-3 1-5.5 1-8 0 2.5-1 5-1 8 0z"/></symbol>
+  <symbol id="i-petal-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-petal-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-petal-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-petal-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-petal-mail" viewBox="0 0 24 24"><use href="#i-soft-mail"/></symbol>
+  <symbol id="i-petal-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- ink -->
+  <symbol id="i-ink-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-ink-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-ink-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-ink-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-ink-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-ink-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-ink-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-ink-more" viewBox="0 0 24 24"><use href="#i-soft-more"/></symbol>
+  <symbol id="i-ink-search" viewBox="0 0 24 24"><use href="#i-soft-search"/></symbol>
+  <symbol id="i-ink-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-ink-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-ink-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></symbol>
+  <symbol id="i-ink-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-ink-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5"/><path d="M15.5 8.5V4H4v11.5h4.5"/></symbol>
+  <symbol id="i-ink-edit" viewBox="0 0 24 24"><path d="M19.5 4.5c-6.5 0-11 4-12 11.5L4.5 19.5M7.5 16c4.5.5 8.5-1.5 12-11.5M10 13.5h4.5"/></symbol>
+  <symbol id="i-ink-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-ink-star" viewBox="0 0 24 24"><path d="M12 4v16M4.5 8l15 8M19.5 8l-15 8"/></symbol>
+  <symbol id="i-ink-clock" viewBox="0 0 24 24"><use href="#i-soft-clock"/></symbol>
+  <symbol id="i-ink-timer" viewBox="0 0 24 24"><use href="#i-soft-timer"/></symbol>
+  <symbol id="i-ink-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-ink-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12"/><path d="M9 7.5V4h6v3.5M3 13h18"/></symbol>
+  <symbol id="i-ink-user" viewBox="0 0 24 24"><use href="#i-soft-user"/></symbol>
+  <symbol id="i-ink-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-ink-tomato" viewBox="0 0 24 24"><use href="#i-soft-tomato"/></symbol>
+  <symbol id="i-ink-sparkle" viewBox="0 0 24 24"><use href="#i-soft-sparkle"/></symbol>
+  <symbol id="i-ink-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-ink-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-ink-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-ink-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-ink-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-ink-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- gothic -->
+  <symbol id="i-gothic-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-gothic-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-gothic-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-gothic-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-gothic-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-gothic-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-gothic-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-gothic-more" viewBox="0 0 24 24"><path d="M5.5 10L7 12L5.5 14L4 12z" fill="currentColor" stroke="none"/><path d="M12 10L13.5 12L12 14L10.5 12z" fill="currentColor" stroke="none"/><path d="M18.5 10L20 12L18.5 14L17 12z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-gothic-search" viewBox="0 0 24 24"><path d="M10.5 3.3L16.2 10.5L10.5 17.7L4.8 10.5z"/><path d="M15 15l5 5"/></symbol>
+  <symbol id="i-gothic-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-gothic-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-gothic-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></symbol>
+  <symbol id="i-gothic-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-gothic-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5"/><path d="M15.5 8.5V4H4v11.5h4.5"/></symbol>
+  <symbol id="i-gothic-edit" viewBox="0 0 24 24"><path d="M14.5 5.5l4 4M4 20l1-4.5L16 4.5l4 4L8.5 19.5z"/></symbol>
+  <symbol id="i-gothic-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-gothic-star" viewBox="0 0 24 24"><path d="M12 2.5c.7 5.2 4.3 8.8 9.5 9.5-5.2.7-8.8 4.3-9.5 9.5-.7-5.2-4.3-8.8-9.5-9.5 5.2-.7 8.8-4.3 9.5-9.5z"/></symbol>
+  <symbol id="i-gothic-clock" viewBox="0 0 24 24"><path d="M12 1.8L20.07 12L12 22.2L3.93 12z"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-gothic-timer" viewBox="0 0 24 24"><path d="M12 5.1L18.65 13.5L12 21.9L5.35 13.5z"/><path d="M12 13.5V9.5M9.5 3.5h5M18.5 6.5l1.3-1.3"/></symbol>
+  <symbol id="i-gothic-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-gothic-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12"/><path d="M9 7.5V4h6v3.5M3 13h18"/></symbol>
+  <symbol id="i-gothic-user" viewBox="0 0 24 24"><path d="M12 3.68L15.42 8L12 12.32L8.58 8z"/><path d="M4.5 20.5c0-3.2 3-5.5 7.5-5.5s7.5 2.3 7.5 5.5"/></symbol>
+  <symbol id="i-gothic-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-gothic-tomato" viewBox="0 0 24 24"><use href="#i-soft-tomato"/></symbol>
+  <symbol id="i-gothic-sparkle" viewBox="0 0 24 24"><use href="#i-soft-sparkle"/></symbol>
+  <symbol id="i-gothic-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-gothic-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-gothic-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-gothic-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-gothic-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-gothic-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- occult -->
+  <symbol id="i-occult-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-occult-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-occult-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-occult-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-occult-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-occult-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-occult-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-occult-more" viewBox="0 0 24 24"><path d="M5.5 10L7 12L5.5 14L4 12z" fill="currentColor" stroke="none"/><path d="M12 10L13.5 12L12 14L10.5 12z" fill="currentColor" stroke="none"/><path d="M18.5 10L20 12L18.5 14L17 12z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-occult-search" viewBox="0 0 24 24"><path d="M10.5 3.3L16.2 10.5L10.5 17.7L4.8 10.5z"/><path d="M15 15l5 5"/></symbol>
+  <symbol id="i-occult-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-occult-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-occult-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></symbol>
+  <symbol id="i-occult-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-occult-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5"/><path d="M15.5 8.5V4H4v11.5h4.5"/></symbol>
+  <symbol id="i-occult-edit" viewBox="0 0 24 24"><path d="M14.5 5.5l4 4M4 20l1-4.5L16 4.5l4 4L8.5 19.5z"/></symbol>
+  <symbol id="i-occult-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-occult-star" viewBox="0 0 24 24"><path d="M12 3.5l-5.8 17 15-10.5H2.8l15 10.5z"/></symbol>
+  <symbol id="i-occult-clock" viewBox="0 0 24 24"><path d="M12 1.8L20.07 12L12 22.2L3.93 12z"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-occult-timer" viewBox="0 0 24 24"><path d="M12 5.1L18.65 13.5L12 21.9L5.35 13.5z"/><path d="M12 13.5V9.5M9.5 3.5h5M18.5 6.5l1.3-1.3"/></symbol>
+  <symbol id="i-occult-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-occult-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12"/><path d="M9 7.5V4h6v3.5M3 13h18"/></symbol>
+  <symbol id="i-occult-user" viewBox="0 0 24 24"><path d="M12 3.68L15.42 8L12 12.32L8.58 8z"/><path d="M4.5 20.5c0-3.2 3-5.5 7.5-5.5s7.5 2.3 7.5 5.5"/></symbol>
+  <symbol id="i-occult-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-occult-tomato" viewBox="0 0 24 24"><use href="#i-soft-tomato"/></symbol>
+  <symbol id="i-occult-sparkle" viewBox="0 0 24 24"><path d="M12 3v18M5 7.5l14 9M19 7.5l-14 9"/></symbol>
+  <symbol id="i-occult-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-occult-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-occult-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-occult-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-occult-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-occult-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- tech -->
+  <symbol id="i-tech-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-tech-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-tech-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-tech-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-tech-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-tech-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/><rect x="10.8" y="19" width="2.4" height="2.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-tech-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-tech-more" viewBox="0 0 24 24"><rect x="4.2" y="10.7" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="10.7" y="10.7" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="17.2" y="10.7" width="2.6" height="2.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-tech-search" viewBox="0 0 24 24"><path d="M10.5 4.02L16.11 7.26L16.11 13.74L10.5 16.98L4.89 13.74L4.89 7.26z"/><path d="M15 15l5 5"/></symbol>
+  <symbol id="i-tech-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-tech-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-tech-stop" viewBox="0 0 24 24"><path d="M7.9 6L16.1 6L18 7.9L18 16.1L16.1 18L7.9 18L6 16.1L6 7.9z"/></symbol>
+  <symbol id="i-tech-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-tech-copy" viewBox="0 0 24 24"><path d="M10.4 8.5L18.1 8.5L20 10.4L20 18.1L18.1 20L10.4 20L8.5 18.1L8.5 10.4z"/><path d="M15.5 8.5V4H4v11.5h4.5"/></symbol>
+  <symbol id="i-tech-edit" viewBox="0 0 24 24"><path d="M14.5 5.5l4 4M4 20l1-4.5L16 4.5l4 4L8.5 19.5z"/></symbol>
+  <symbol id="i-tech-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-tech-star" viewBox="0 0 24 24"><use href="#i-soft-star"/></symbol>
+  <symbol id="i-tech-clock" viewBox="0 0 24 24"><path d="M12 2.82L19.95 7.41L19.95 16.59L12 21.18L4.05 16.59L4.05 7.41z"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-tech-timer" viewBox="0 0 24 24"><path d="M12 5.94L18.55 9.72L18.55 17.28L12 21.06L5.45 17.28L5.45 9.72z"/><path d="M12 13.5V9.5M9.5 3.5h5M18.5 6.5l1.3-1.3"/></symbol>
+  <symbol id="i-tech-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-tech-briefcase" viewBox="0 0 24 24"><path d="M4.9 7.5L19.1 7.5L21 9.4L21 17.6L19.1 19.5L4.9 19.5L3 17.6L3 9.4z"/><path d="M9 7.5V4h6v3.5M3 13h18"/></symbol>
+  <symbol id="i-tech-user" viewBox="0 0 24 24"><path d="M12 4.11L15.37 6.06L15.37 9.94L12 11.89L8.63 9.94L8.63 6.06z"/><path d="M5 20l2.2-4.5h9.6L19 20"/></symbol>
+  <symbol id="i-tech-calendar" viewBox="0 0 24 24"><path d="M5.9 5.5L18.1 5.5L20 7.4L20 18.1L18.1 20L5.9 20L4 18.1L4 7.4z"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-tech-tomato" viewBox="0 0 24 24"><path d="M12 5.94L18.55 9.72L18.55 17.28L12 21.06L5.45 17.28L5.45 9.72z"/><path d="M12 6.5C11.5 4.8 10 3.8 8 3.5M12 6.5c.5-1.7 2-2.7 4-3"/></symbol>
+  <symbol id="i-tech-sparkle" viewBox="0 0 24 24"><use href="#i-soft-sparkle"/></symbol>
+  <symbol id="i-tech-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-tech-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-tech-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-tech-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-tech-mail" viewBox="0 0 24 24"><path d="M4.9 5.5L19.1 5.5L21 7.4L21 16.6L19.1 18.5L4.9 18.5L3 16.6L3 7.4z"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-tech-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- block -->
+  <symbol id="i-block-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-block-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-block-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-block-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-block-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-block-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-block-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-block-more" viewBox="0 0 24 24"><rect x="4.2" y="10.7" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="10.7" y="10.7" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="17.2" y="10.7" width="2.6" height="2.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-block-search" viewBox="0 0 24 24"><path d="M7.3 4.98L13.7 4.98L16.02 7.3L16.02 13.7L13.7 16.02L7.3 16.02L4.98 13.7L4.98 7.3z"/><path d="M15 15l5 5"/></symbol>
+  <symbol id="i-block-play" viewBox="0 0 24 24"><use href="#i-soft-play"/></symbol>
+  <symbol id="i-block-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-block-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></symbol>
+  <symbol id="i-block-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-block-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5"/><path d="M15.5 8.5V4H4v11.5h4.5"/></symbol>
+  <symbol id="i-block-edit" viewBox="0 0 24 24"><path d="M14.5 5.5l4 4M4 20l1-4.5L16 4.5l4 4L8.5 19.5z"/></symbol>
+  <symbol id="i-block-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-block-star" viewBox="0 0 24 24"><use href="#i-soft-star"/></symbol>
+  <symbol id="i-block-clock" viewBox="0 0 24 24"><path d="M7.46 4.18L16.54 4.18L19.82 7.46L19.82 16.54L16.54 19.82L7.46 19.82L4.18 16.54L4.18 7.46z"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-block-timer" viewBox="0 0 24 24"><path d="M8.26 7.06L15.74 7.06L18.44 9.76L18.44 17.24L15.74 19.94L8.26 19.94L5.56 17.24L5.56 9.76z"/><path d="M12 13.5V9.5M9.5 3.5h5M18.5 6.5l1.3-1.3"/></symbol>
+  <symbol id="i-block-bolt" viewBox="0 0 24 24"><use href="#i-soft-bolt"/></symbol>
+  <symbol id="i-block-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12"/><path d="M9 7.5V4h6v3.5M3 13h18"/></symbol>
+  <symbol id="i-block-user" viewBox="0 0 24 24"><path d="M10.08 4.69L13.92 4.69L15.31 6.08L15.31 9.92L13.92 11.31L10.08 11.31L8.69 9.92L8.69 6.08z"/><path d="M5 20v-2.5l2.5-2h9l2.5 2V20"/></symbol>
+  <symbol id="i-block-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-block-tomato" viewBox="0 0 24 24"><path d="M8.26 7.06L15.74 7.06L18.44 9.76L18.44 17.24L15.74 19.94L8.26 19.94L5.56 17.24L5.56 9.76z"/><path d="M12 6.5C11.5 4.8 10 3.8 8 3.5M12 6.5c.5-1.7 2-2.7 4-3"/></symbol>
+  <symbol id="i-block-sparkle" viewBox="0 0 24 24"><use href="#i-soft-sparkle"/></symbol>
+  <symbol id="i-block-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-block-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-block-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-block-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-block-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-block-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+  <!-- forge -->
+  <symbol id="i-forge-x" viewBox="0 0 24 24"><use href="#i-soft-x"/></symbol>
+  <symbol id="i-forge-plus" viewBox="0 0 24 24"><use href="#i-soft-plus"/></symbol>
+  <symbol id="i-forge-check" viewBox="0 0 24 24"><use href="#i-soft-check"/></symbol>
+  <symbol id="i-forge-chevron-down" viewBox="0 0 24 24"><use href="#i-soft-chevron-down"/></symbol>
+  <symbol id="i-forge-chevron-up" viewBox="0 0 24 24"><use href="#i-soft-chevron-up"/></symbol>
+  <symbol id="i-forge-arrow-up" viewBox="0 0 24 24"><use href="#i-soft-arrow-up"/></symbol>
+  <symbol id="i-forge-arrow-down" viewBox="0 0 24 24"><use href="#i-soft-arrow-down"/></symbol>
+  <symbol id="i-forge-more" viewBox="0 0 24 24"><use href="#i-soft-more"/></symbol>
+  <symbol id="i-forge-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" fill="currentColor" fill-opacity=".16"/><path d="M15 15l5 5"/></symbol>
+  <symbol id="i-forge-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" fill-opacity=".16"/></symbol>
+  <symbol id="i-forge-pause" viewBox="0 0 24 24"><use href="#i-soft-pause"/></symbol>
+  <symbol id="i-forge-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" fill-opacity=".16"/></symbol>
+  <symbol id="i-forge-focus" viewBox="0 0 24 24"><use href="#i-soft-focus"/></symbol>
+  <symbol id="i-forge-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="1.5" fill="currentColor" fill-opacity=".16"/><path d="M15.5 8.5V5.5a1.5 1.5 0 0 0-1.5-1.5H5.5A1.5 1.5 0 0 0 4 5.5V14a1.5 1.5 0 0 0 1.5 1.5h3"/></symbol>
+  <symbol id="i-forge-edit" viewBox="0 0 24 24"><use href="#i-soft-edit"/></symbol>
+  <symbol id="i-forge-trash" viewBox="0 0 24 24"><use href="#i-soft-trash"/></symbol>
+  <symbol id="i-forge-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.7 1-5.9L3.5 9.7l5.9-.8z" fill="currentColor" fill-opacity=".16"/></symbol>
+  <symbol id="i-forge-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="currentColor" fill-opacity=".16"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-forge-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7" fill="currentColor" fill-opacity=".16"/><path d="M12 13.5V9.5M9.5 3.5h5M18.5 6.5l1.3-1.3"/></symbol>
+  <symbol id="i-forge-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13.5h6L10 21l9-11h-6z" fill="currentColor" fill-opacity=".16"/></symbol>
+  <symbol id="i-forge-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12" rx="1.5" fill="currentColor" fill-opacity=".16"/><path d="M9 7.5v-2A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5v2M3 13h18"/></symbol>
+  <symbol id="i-forge-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="currentColor" fill-opacity=".16"/><path d="M5 20c0-3.6 3-6 7-6s7 2.4 7 6"/></symbol>
+  <symbol id="i-forge-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="1.5" fill="currentColor" fill-opacity=".16"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-forge-tomato" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7" fill="currentColor" fill-opacity=".16"/><path d="M12 6.5C11.5 4.8 10 3.8 8 3.5M12 6.5c.5-1.7 2-2.7 4-3"/></symbol>
+  <symbol id="i-forge-sparkle" viewBox="0 0 24 24"><use href="#i-soft-sparkle"/></symbol>
+  <symbol id="i-forge-bell" viewBox="0 0 24 24"><use href="#i-soft-bell"/></symbol>
+  <symbol id="i-forge-flag" viewBox="0 0 24 24"><use href="#i-soft-flag"/></symbol>
+  <symbol id="i-forge-inbox" viewBox="0 0 24 24"><use href="#i-soft-inbox"/></symbol>
+  <symbol id="i-forge-repeat" viewBox="0 0 24 24"><use href="#i-soft-repeat"/></symbol>
+  <symbol id="i-forge-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="1.5" fill="currentColor" fill-opacity=".16"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-forge-menu" viewBox="0 0 24 24"><use href="#i-soft-menu"/></symbol>
+</svg>
 <div class="wrap">
   <header>
     <div class="logo" id="logo"></div>
     <div class="header-right">
       <div id="syncPill" class="sync-pill" role="group" data-state="saved"><span class="sp-dot"></span><span class="sp-text">Salvo</span></div>
-      <button class="search-btn" data-a="openSearch" title="Buscar (Ctrl+K)" aria-label="Buscar">🔍</button>
+      <button class="search-btn" data-a="openSearch" title="Buscar (Ctrl+K)" aria-label="Buscar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-soft-search"/></svg></button>
       <div id="timerWidget" class="timer">
         <span id="tlabel">Pronto</span>
         <b id="ttime">00:00</b>
-        <button id="tstop" style="display:none">⏸ Parar</button>
+        <button id="tstop" style="display:none"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-soft-pause"/></svg> Parar</button>
       </div>
     </div>
     <div id="lvl"></div>

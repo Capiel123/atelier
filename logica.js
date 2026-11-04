@@ -165,7 +165,7 @@ function computeTaskScore(t, ctx) {
 }
 function scoreBreakdown(t, ctx) {
   if (t.done) return 'concluída';
-  if (t.next) return '⭐ marcada como próxima';
+  if (t.next) return 'marcada como próxima';
   const parts = [];
   parts.push('prioridade ' + PR[t.pr].toLowerCase() + ' +' + [40,25,12][t.pr]);
   if (t.due) {const days = Math.ceil((new Date(t.due) - new Date(ctx.today)) / 86400000); const bonus = days < 0 ? 80 : days === 0 ? 55 : days === 1 ? 40 : days <= 3 ? 25 : days <= 7 ? 12 : 4; parts.push('prazo ' + (days < 0 ? 'vencido' : days === 0 ? 'hoje' : 'em '+days+'d') + ' +' + bonus);}

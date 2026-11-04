@@ -445,6 +445,8 @@
 .filter-bar select{flex:none;width:auto;font-size:12px;padding:5px 6px;max-width:140px}
 .filter-bar button{padding:5px 10px;font-size:12px;background:var(--s2);border:1px solid var(--bd)}
 .filter-bar button.on{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac)}
+.filter-ico{display:inline-flex;align-items:center;flex:none;color:var(--mu)}
+.rank-badge{font-weight:700;color:var(--mu);font-variant-numeric:tabular-nums}
 
 .labels-filter{display:flex;flex-wrap:wrap;gap:5px;padding:8px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;margin-bottom:8px}
 .label-pill{font-size:10.5px;padding:1px 7px;border-radius:var(--radius-sm,8px);background:color-mix(in srgb,var(--lc) 15%,var(--s2));color:var(--lc);border:1px solid color-mix(in srgb,var(--lc) 35%,transparent);cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:3px;transition:.15s}
@@ -653,12 +655,6 @@
   background-image:
     linear-gradient(currentColor,currentColor),
     linear-gradient(currentColor,currentColor);
-}
-
-/* A lupa do brutal usa haste mais curta e reta (sem ponta arredondada). */
-[data-look="brutal"] .search-btn::after{
-  background-size:5px 5px;
-  background-position:16px 25px;
 }
 
 /* =========================================================

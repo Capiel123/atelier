@@ -25,7 +25,7 @@
   var S_KEYS = { user_settings: null, active_timer: null, labels: 'labels', areas: 'areas', skills: 'skills', clients: 'clients', projects: 'projects', tasks: 'tasks', contacts: 'contacts', applications: 'applications', goals: 'goals', work_logs: 'workLogs' };
   var HAS_DELETED = { user_settings: false, active_timer: false, labels: false, areas: false, skills: true, clients: true, projects: true, tasks: true, contacts: true, applications: true, goals: true, work_logs: false };
 
-  var state = { status: 'idle', pending: 0, lastError: null, lastFlushAt: null, lastPullAt: null, owner: null, deviceId: null, inFlight: false, enqTimer: null, flushTimer: null, flushAt: null };
+  var state = { status: 'idle', pending: 0, lastError: null, lastFlushAt: null, lastPullAt: null, owner: null, deviceId: null, inFlight: false, hydrated: false, enqTimer: null, flushTimer: null, flushAt: null };
 
   /* ---------------- storage ---------------- */
   function readJSON(key, dflt) { try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : dflt; } catch (e) { return dflt; } }
@@ -137,28 +137,15 @@
           changed = true;
         }
       });
-      // exclusões (entidades que sumiram)
+      // v100: estado local ausente NUNCA vira exclusão remota.
+      // Exclusões são explícitas (markDeleted / softDelete); aqui só esquecemos a entidade.
       Object.keys(seen[table]).forEach(function (id) {
         if (current[id]) return;
         var prev = seen[table][id];
-        if (prev.h === 'DELETED') return; // já tombstoneado, aguardando envio
-        if (prev.flushed === true) {
-          if (HAS_DELETED[table]) {
-            pushOp(store, table, id, 'tombstone');
-            seen[table][id] = { h: 'DELETED', flushed: true };
-            changed = true;
-          } else {
-            // sem deleted_at: nada a enviar (app não exclui labels/areas/work_logs)
-            removeOp(store, table, id);
-            delete seen[table][id];
-            changed = true;
-          }
-        } else {
-          // criou e excluiu antes de enviar: descarta a op pendente, sem tombstone
-          removeOp(store, table, id);
-          delete seen[table][id];
-          changed = true;
-        }
+        if (prev && prev.h === 'DELETED') return; // tombstone já registrado
+        removeOp(store, table, id); // criou e sumiu antes de enviar: descarta a op
+        delete seen[table][id];
+        changed = true;
       });
     });
     if (changed) {
@@ -366,6 +353,7 @@
     localStorage.removeItem(SETTINGS_CU_KEY); // nova conta: user_settings podem aplicar
     localStorage.removeItem(SEEDID_KEY);      // reavalia o seed para a nova conta
     state.owner = newUid;
+    state.hydrated = false;
     // Troca de conta: desvincula a sessão de timer local (não vaza para a nova conta).
     // O pull inicial da nova conta reaplicará a sessão remota correspondente.
     if (typeof S !== 'undefined' && S) { S.timer = null; S.timerStoppedAt = Date.now(); if (typeof save === 'function') save(); }
@@ -392,6 +380,7 @@
     localStorage.removeItem(SEEDID_KEY);
     state.pending = 0;
     state.owner = null;
+    state.hydrated = false;
     setStatus('pending');
   }
   // Reconstroi o estado local a partir da conta autenticada: descarta o S local
@@ -408,6 +397,8 @@
       if (!client) { setStatus(navigator && navigator.onLine === false ? 'offline' : 'paused'); return; }
       var own = resolveOwner(user);
       if (own.blocked) { setStatus('paused-account'); return; }
+      // v100: até o pull concluir, nada de push.
+      state.hydrated = false;
       var prevS = (typeof S !== 'undefined') ? S : null;
       var KEYS = [OUTBOX_KEY, SEEN_KEY, SETTINGS_CU_KEY, SEEDID_KEY, CURSORS_KEY];
       var prev = {};
@@ -451,6 +442,73 @@
     renderSync();
   }
 
+  /* ---------------- recuperação de excluídas (v101) ----------------
+     O usuário não precisa de SQL: busca no servidor as linhas com deleted_at
+     recente, restaura (deleted_at=null + client_updated_at novo) e aplica local. */
+  var RECOVER_TABLES = ['tasks', 'projects', 'clients', 'contacts', 'applications', 'goals', 'skills'];
+  var RECOVER_LABEL = { tasks: 'Tarefa', projects: 'Projeto', clients: 'Cliente', contacts: 'Contato', applications: 'Vaga', goals: 'Meta', skills: 'Habilidade' };
+  function recoverTitle(table, r) {
+    if (table === 'tasks') return r.title || r.t || '(sem título)';
+    if (table === 'applications') return (r.client || '') + (r.role ? ' · ' + r.role : '') || '(sem título)';
+    return r.name || r.n || r.title || r.client || '(sem título)';
+  }
+  async function fetchDeleted(days) {
+    var user = authUser();
+    if (!user) throw new Error('Entre na conta');
+    var client = await getClient();
+    if (!client) throw new Error('Sem conexão');
+    var since = new Date(Date.now() - Math.max(1, days || 30) * 86400000).toISOString();
+    var out = [];
+    for (var i = 0; i < RECOVER_TABLES.length; i++) {
+      var table = RECOVER_TABLES[i];
+      var res = await client.from(table).select('*').eq('user_id', user.id)
+        .not('deleted_at', 'is', null).gte('deleted_at', since)
+        .order('deleted_at', { ascending: false }).limit(200);
+      if (res && res.error) throw res.error;
+      (res && res.data || []).forEach(function (r) {
+        out.push({ table: table, id: r.id, title: recoverTitle(table, r), deletedAt: r.deleted_at, kind: RECOVER_LABEL[table] });
+      });
+    }
+    out.sort(function (a, b) { return String(b.deletedAt).localeCompare(String(a.deletedAt)); });
+    return out.slice(0, 300);
+  }
+  function recoverDeleted(items) {
+    return withLock(async function () {
+      var user = authUser();
+      if (!user) throw new Error('Entre na conta');
+      var client = await getClient();
+      if (!client) throw new Error('Sem conexão');
+      var now = Date.now();
+      var restored = [];
+      for (var i = 0; i < (items || []).length; i++) {
+        var it = items[i];
+        if (!it || !it.table || !it.id) continue;
+        var up = await client.from(it.table).update({ deleted_at: null, client_updated_at: now }).eq('user_id', user.id).eq('id', it.id);
+        if (up && up.error) throw up.error;
+        var rr = await client.from(it.table).select('*').eq('user_id', user.id).eq('id', it.id).limit(1);
+        if (rr && rr.error) throw rr.error;
+        var row = rr && rr.data && rr.data[0];
+        if (row && typeof applyRemoteRow === 'function') { applyRemoteRow(it.table, row); restored.push(it); }
+      }
+      // seen de DELETED pendente bloquearia o pull (v92): re-baseline dos restaurados
+      var seen = readJSON(SEEN_KEY, null) || buildBaseline(S);
+      restored.forEach(function (it) {
+        var e = findEntity(it.table, S, it.id);
+        if (e) { seen[it.table] = seen[it.table] || {}; seen[it.table][it.id] = { h: versionOf(it.table, S, e), flushed: true }; }
+      });
+      writeJSON(SEEN_KEY, seen);
+      var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
+      restored.forEach(function (it) { removeOp(store, it.table, it.id); });
+      writeJSON(OUTBOX_KEY, store);
+      state.pending = store.ops.length;
+      state.hydrated = false; // próximo ciclo puxa antes de qualquer envio
+      if (typeof save === 'function') save();
+      if (typeof render === 'function') render();
+      scheduleFlush(300);
+      return restored.length;
+    });
+  }
+
   async function flushOnce() {
     if (state.inFlight) return;
     var user = authUser();
@@ -460,6 +518,9 @@
     // isolamento por conta (mesma regra em push e pull)
     var own = resolveOwner(user);
     if (own.blocked) { setStatus('paused-account'); return; }
+    // v100: nunca fazer push antes da hidratação remota. Um local vazio/seed não
+    // pode preceder o pull; o próximo syncCycle puxa e então envia.
+    if (!state.hydrated) { setStatus('pending'); scheduleFlush(1500); return; }
     state.inFlight = true;
     try { await doFlush(client, user); }
     catch (e) { setStatus('error', String(e && e.message || e)); }
@@ -484,12 +545,39 @@
     } catch (e) { return false; }
   }
 
+  function countSeen(seen) {
+    var n = 0;
+    if (!seen) return 0;
+    ORDER.forEach(function (t) { n += Object.keys(seen[t] || {}).length; });
+    return n;
+  }
+
+  // v100 (BUG 1): local "pristine seed" + memória de sync existente = perda de
+  // estado local (cache/corrupção/reload no meio). Nunca é uma exclusão: zera o
+  // rastro de sync e deixa o pull hidratar do remoto. Nada remoto é apagado.
+  function guardStateLoss() {
+    if (typeof S === 'undefined' || !S) return false;
+    if (!isPristineSeed()) return false;
+    var seen = readJSON(SEEN_KEY, null);
+    if (!seen || !countSeen(seen)) return false;
+    localStorage.removeItem(SEEN_KEY);
+    localStorage.removeItem(OUTBOX_KEY);
+    localStorage.removeItem(CURSORS_KEY);
+    localStorage.removeItem(SETTINGS_CU_KEY);
+    state.pending = 0;
+    state.hydrated = false;
+    setStatus('pending');
+    return true;
+  }
+
   function applyUserSettings(row) {
     var cu = numVal(row.client_updated_at, 0);
     var last = numVal(localStorage.getItem(SETTINGS_CU_KEY), 0);
     if (last && cu <= last) return false;
     var data = row.data || {};
     var cfg = Object.assign({}, data.cfg || {});
+    // v100 (BUG 3): recolhimento de seções é preferência LOCAL (não vai no pull).
+    var localSections = (S.cfg && S.cfg.sectionsCollapsed) || null;
     cfg.lastBackupAt = (S.cfg && S.cfg.lastBackupAt) || null;
     cfg.backupReminderDismissedAt = (S.cfg && S.cfg.backupReminderDismissedAt) || 0;
     // preferências visuais são LOCAIS: não sobrescrever com o valor remoto
@@ -502,6 +590,7 @@
     if (Array.isArray(data.pomodoros)) S.pomodoros = data.pomodoros;
     S.cfg.theme = localTheme;
     S.cfg.accentColor = localAccent;
+    if (localSections) S.cfg.sectionsCollapsed = localSections;
     localStorage.setItem(SETTINGS_CU_KEY, String(cu));
     return true;
   }
@@ -617,6 +706,7 @@
       if (typeof applyTheme === 'function') applyTheme();
       if (typeof render === 'function') render();
       state.lastPullAt = Date.now();
+      state.hydrated = true;
       renderSync();
       return;
     }
@@ -683,6 +773,7 @@
     state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
     if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
     state.lastPullAt = Date.now();
+    state.hydrated = true;
     renderSync();
   }
 
@@ -864,7 +955,7 @@
       '</div>' +
       (stamps ? '<div class="sync-last-row">' + stamps + '</div>' : '') +
       unlock +
-      '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button><button data-a="syncResetLocal">Restaurar dados da conta</button></div>';
+      '<div class="acts" style="margin-top:6px"><button data-a="syncFlushNow">Enviar agora</button><button data-a="syncForceFull">Reenviar tudo</button><button data-a="syncResetLocal">Restaurar dados da conta</button><button data-a="recoverOpen">Recuperar excluídas</button></div>';
   }
 
   function onSave() { scheduleEnqueue(); scheduleFlush(); }
@@ -876,6 +967,9 @@
     if (!dev) { dev = 'dev_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); localStorage.setItem(DEVICE_KEY, dev); }
     state.deviceId = dev;
     state.owner = localStorage.getItem(OWNER_KEY) || null;
+    // v100 (BUG 1): se o local é o seed mas já houve sync, NÃO enfileirar nada —
+    // trata como perda de estado e deixa o pull hidratar.
+    guardStateLoss();
     // adota baseline e enfileira o que for necessário (sem rede)
     withLock(enqueueAll);
     scheduleFlush(800);
@@ -889,6 +983,8 @@
     syncNow: function () { return withLock(syncCycle); },
     markDeleted: markDeleted,
     resetStateBaseline: resetStateBaseline,
+    fetchDeleted: fetchDeleted,
+    recoverDeleted: recoverDeleted,
     clearSyncQueue: clearSyncQueue,
     resetLocalData: resetLocalData,
     forceFullSync: forceFullSync,
@@ -897,6 +993,7 @@
     pillMarker: pillMarker,
     _test: {
       enqueueAll: enqueueAll, doFlush: doFlush, hashStr: hashStr, isoMs: isoMs,
+      guardStateLoss: guardStateLoss, state: state, fetchDeleted: fetchDeleted, recoverDeleted: recoverDeleted,
       buildBaseline: buildBaseline, readJSON: readJSON, writeJSON: writeJSON,
       OUTBOX_KEY: OUTBOX_KEY, SEEN_KEY: SEEN_KEY, DEVICE_KEY: DEVICE_KEY, OWNER_KEY: OWNER_KEY,
       CURSORS_KEY: CURSORS_KEY, SEEDID_KEY: SEEDID_KEY, SETTINGS_CU_KEY: SETTINGS_CU_KEY,

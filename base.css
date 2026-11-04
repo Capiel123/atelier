@@ -69,6 +69,8 @@
   --ac-glow:none;
   --panel-border-style:solid;
   --panel-border-width:1px;
+  /* Ícones por identidade (v99) — fallback = família soft */
+  --ico-stroke:1.5;--ico-cap:round;--ico-join:round;--ico-glow:none;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px)
@@ -77,6 +79,24 @@
 /* Rolagem respeita notch/entalhe no topo em celulares */
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
+
+/* --- ÍCONES POR IDENTIDADE (v99) ---
+   O sprite inline define só a geometria (stroke/currentColor). Espessura,
+   ponta, junção e glow vêm de --ico-*, gravadas por applyTheme(). */
+.ico{
+  display:inline-block;width:1.15em;height:1.15em;vertical-align:-0.2em;flex:none;
+  fill:none;stroke:currentColor;
+  stroke-width:var(--ico-stroke,1.5);
+  stroke-linecap:var(--ico-cap,round);
+  stroke-linejoin:var(--ico-join,round);
+  filter:var(--ico-glow,none);
+  pointer-events:none;
+}
+.ico.ico--on{fill:currentColor}
+/* v100: rotações para setas que o sprite não tem em todas as direções. */
+.ico--prev{transform:rotate(90deg)}
+.ico--next{transform:rotate(-90deg)}
+.ico--drag{transform:rotate(90deg)}
 
 /* --- ESTILO GLOBAL DO CORPO --- */
 body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 var(--font-body,'DM Sans',system-ui,sans-serif);transition:background .3s ease;isolation:isolate}

@@ -50,20 +50,20 @@ const THEMES = {
    topOrnament: caractere decorativo (string) ou vazio
    isGlass: boolean — glassmorphism nos menus/popovers */
 const THEME_IDENTITY = {
-  obsidian:  { dotShape:'circle',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false },
-  vampire:   { bgPattern:"radial-gradient(ellipse at 20% 30%, rgba(184,50,74,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 70%, rgba(92,18,40,0.06) 0%, transparent 50%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'diamond', chkShape:'square',  progressType:'solid',  logoEffect:'serif',  topOrnament:'✦',  isGlass:false },
-  occult:    { bgPattern:"repeating-linear-gradient(45deg, rgba(163,116,212,0.04) 0px, rgba(163,116,212,0.04) 1px, transparent 1px, transparent 12px), repeating-linear-gradient(-45deg, rgba(163,116,212,0.03) 0px, rgba(163,116,212,0.03) 1px, transparent 1px, transparent 12px)", bgPatternSize:'24px 24px', bgPatternOpacity:1, dotShape:'diamond', chkShape:'hex',     progressType:'glow',   logoEffect:'glow',   topOrnament:'◆',  isGlass:false },
-  noir:      { bgPattern:"repeating-linear-gradient(0deg, rgba(197,197,201,0.03) 0px, rgba(197,197,201,0.03) 1px, transparent 1px, transparent 4px)", bgPatternSize:'100% 4px', bgPatternOpacity:1, dotShape:'square',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false },
-  cyanotic:  { bgPattern:"linear-gradient(rgba(79,179,212,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(79,179,212,0.05) 1px, transparent 1px)", bgPatternSize:'30px 30px', bgPatternOpacity:1, dotShape:'ring',    chkShape:'square',  progressType:'glow',   logoEffect:'glow',   topOrnament:'',   isGlass:true  },
-  toxic:     { bgPattern:"repeating-linear-gradient(-45deg, rgba(122,184,118,0.05) 0px, rgba(122,184,118,0.05) 1px, transparent 1px, transparent 8px)", bgPatternSize:'12px 12px', bgPatternOpacity:1, dotShape:'square',  chkShape:'square',  progressType:'liquid', logoEffect:'none',   topOrnament:'',   isGlass:false },
-  ember:     { bgPattern:"radial-gradient(ellipse at 50% 80%, rgba(224,138,79,0.07) 0%, transparent 60%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'circle',  chkShape:'circle',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:false },
-  moonlight: { bgPattern:"radial-gradient(ellipse at 30% 20%, rgba(168,190,219,0.05) 0%, transparent 55%), radial-gradient(ellipse at 70% 80%, rgba(90,107,138,0.04) 0%, transparent 45%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'circle',  chkShape:'circle',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:true  },
-  rose:      { dotShape:'circle',  chkShape:'circle',  progressType:'solid',  logoEffect:'serif',  topOrnament:'❦',  isGlass:false },
-  abyss:     { bgPattern:"radial-gradient(1px 1px at 20% 30%, rgba(122,159,212,0.6) 0%, transparent 100%), radial-gradient(1px 1px at 60% 70%, rgba(122,159,212,0.5) 0%, transparent 100%), radial-gradient(1px 1px at 80% 15%, rgba(255,255,255,0.4) 0%, transparent 100%), radial-gradient(1px 1px at 10% 80%, rgba(122,159,212,0.45) 0%, transparent 100%), radial-gradient(1px 1px at 45% 55%, rgba(255,255,255,0.35) 0%, transparent 100%), radial-gradient(1px 1px at 90% 40%, rgba(122,159,212,0.5) 0%, transparent 100%)", bgPatternSize:'200px 200px', bgPatternOpacity:1, dotShape:'circle', chkShape:'circle', progressType:'glow', logoEffect:'none', topOrnament:'•', isGlass:false },
-  bone:      { bgPattern:"repeating-linear-gradient(0deg, rgba(201,179,148,0.03) 0px, rgba(201,179,148,0.03) 1px, transparent 1px, transparent 18px)", bgPatternSize:'100% 18px', bgPatternOpacity:1, dotShape:'circle',  chkShape:'square',  progressType:'solid',  logoEffect:'serif',  topOrnament:'',   isGlass:false },
-  deepbone:  { dotShape:'square',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false },
-  chrome:    { dotShape:'square',  chkShape:'square',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:true  },
-  'deepbone-light': { dotShape:'square', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false }
+  obsidian:  { dotShape:'circle',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false, iconSet:'soft',    icoStroke:'1.5',  icoCap:'round',  icoJoin:'round' },
+  vampire:   { bgPattern:"radial-gradient(ellipse at 20% 30%, rgba(184,50,74,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 70%, rgba(92,18,40,0.06) 0%, transparent 50%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'diamond', chkShape:'square',  progressType:'solid',  logoEffect:'serif',  topOrnament:'✦',  isGlass:false, iconSet:'gothic',  icoStroke:'1.25', icoCap:'butt',   icoJoin:'miter' },
+  occult:    { bgPattern:"repeating-linear-gradient(45deg, rgba(163,116,212,0.04) 0px, rgba(163,116,212,0.04) 1px, transparent 1px, transparent 12px), repeating-linear-gradient(-45deg, rgba(163,116,212,0.03) 0px, rgba(163,116,212,0.03) 1px, transparent 1px, transparent 12px)", bgPatternSize:'24px 24px', bgPatternOpacity:1, dotShape:'diamond', chkShape:'hex',     progressType:'glow',   logoEffect:'glow',   topOrnament:'◆',  isGlass:false, iconSet:'occult',  icoStroke:'1.25', icoCap:'round',  icoJoin:'miter', icoGlow:'drop-shadow(0 0 3px color-mix(in srgb, currentColor 55%, transparent))' },
+  noir:      { bgPattern:"repeating-linear-gradient(0deg, rgba(197,197,201,0.03) 0px, rgba(197,197,201,0.03) 1px, transparent 1px, transparent 4px)", bgPatternSize:'100% 4px', bgPatternOpacity:1, dotShape:'square',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false, iconSet:'ink',     icoStroke:'1.5',  icoCap:'square', icoJoin:'miter' },
+  cyanotic:  { bgPattern:"linear-gradient(rgba(79,179,212,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(79,179,212,0.05) 1px, transparent 1px)", bgPatternSize:'30px 30px', bgPatternOpacity:1, dotShape:'ring',    chkShape:'square',  progressType:'glow',   logoEffect:'glow',   topOrnament:'',   isGlass:true, iconSet:'tech',    icoStroke:'1.5',  icoCap:'round',  icoJoin:'miter', icoGlow:'drop-shadow(0 0 3px color-mix(in srgb, var(--ac) 60%, transparent))' },
+  toxic:     { bgPattern:"repeating-linear-gradient(-45deg, rgba(122,184,118,0.05) 0px, rgba(122,184,118,0.05) 1px, transparent 1px, transparent 8px)", bgPatternSize:'12px 12px', bgPatternOpacity:1, dotShape:'square',  chkShape:'square',  progressType:'liquid', logoEffect:'none',   topOrnament:'',   isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
+  ember:     { bgPattern:"radial-gradient(ellipse at 50% 80%, rgba(224,138,79,0.07) 0%, transparent 60%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'circle',  chkShape:'circle',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:false, iconSet:'forge',   icoStroke:'1.75', icoCap:'round',  icoJoin:'round', icoGlow:'drop-shadow(0 0 3px color-mix(in srgb, var(--ac) 60%, transparent))' },
+  moonlight: { bgPattern:"radial-gradient(ellipse at 30% 20%, rgba(168,190,219,0.05) 0%, transparent 55%), radial-gradient(ellipse at 70% 80%, rgba(90,107,138,0.04) 0%, transparent 45%)", bgPatternSize:'100% 100%', bgPatternOpacity:1, dotShape:'circle',  chkShape:'circle',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:true, iconSet:'lunar',   icoStroke:'1.25', icoCap:'round',  icoJoin:'round' },
+  rose:      { dotShape:'circle',  chkShape:'circle',  progressType:'solid',  logoEffect:'serif',  topOrnament:'❦',  isGlass:false, iconSet:'petal',   icoStroke:'1.25', icoCap:'round',  icoJoin:'round' },
+  abyss:     { bgPattern:"radial-gradient(1px 1px at 20% 30%, rgba(122,159,212,0.6) 0%, transparent 100%), radial-gradient(1px 1px at 60% 70%, rgba(122,159,212,0.5) 0%, transparent 100%), radial-gradient(1px 1px at 80% 15%, rgba(255,255,255,0.4) 0%, transparent 100%), radial-gradient(1px 1px at 10% 80%, rgba(122,159,212,0.45) 0%, transparent 100%), radial-gradient(1px 1px at 45% 55%, rgba(255,255,255,0.35) 0%, transparent 100%), radial-gradient(1px 1px at 90% 40%, rgba(122,159,212,0.5) 0%, transparent 100%)", bgPatternSize:'200px 200px', bgPatternOpacity:1, dotShape:'circle', chkShape:'circle', progressType:'glow', logoEffect:'none', topOrnament:'•', isGlass:false, iconSet:'abyss',   icoStroke:'1.5',  icoCap:'round',  icoJoin:'round' },
+  bone:      { bgPattern:"repeating-linear-gradient(0deg, rgba(201,179,148,0.03) 0px, rgba(201,179,148,0.03) 1px, transparent 1px, transparent 18px)", bgPatternSize:'100% 18px', bgPatternOpacity:1, dotShape:'circle',  chkShape:'square',  progressType:'solid',  logoEffect:'serif',  topOrnament:'',   isGlass:false, iconSet:'ink',     icoStroke:'1.5',  icoCap:'butt',   icoJoin:'round' },
+  deepbone:  { dotShape:'square',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
+  chrome:    { dotShape:'square',  chkShape:'square',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:true, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
+  'deepbone-light': { dotShape:'square', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' }
 };
 
 /* --- DIREÇÃO DE ARTE POR TEMA ---
@@ -259,7 +259,10 @@ function applyTheme() {
     bgPattern: '--bg-pattern', bgPatternSize: '--bg-pattern-size',
     dotShape: '--dot-shape', chkShape: '--chk-shape',
     progressType: '--progress-type', logoEffect: '--logo-effect',
-    topOrnament: '--top-ornament'
+    topOrnament: '--top-ornament',
+    // Ícones por identidade (v99)
+    icoStroke: '--ico-stroke', icoCap: '--ico-cap',
+    icoJoin: '--ico-join', icoGlow: '--ico-glow'
   };
   // bgPatternOpacity: número (pode ser 0, não é falsy safe); tratamento explícito
   if (t.bgPatternOpacity !== undefined && t.bgPatternOpacity !== null)
@@ -291,6 +294,14 @@ function applyTheme() {
   else rootEl.removeAttribute('data-progress-type');
   if (t.logoEffect && t.logoEffect !== 'none') rootEl.setAttribute('data-logo-effect', t.logoEffect);
   else rootEl.removeAttribute('data-logo-effect');
+
+  // Ícones por identidade (v99): a família vive no <html>; o CSS lê --ico-*.
+  if (t.iconSet) rootEl.setAttribute('data-icon-set', t.iconSet);
+  else rootEl.removeAttribute('data-icon-set');
+
+  // Header/FAB/timer ficam fora do render(); precisam acompanhar a troca de tema.
+  // (interface.js define a função; em testes que carregam só estado.js ela não existe.)
+  if (typeof refreshStaticIcons === 'function') refreshStaticIcons();
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', t.bg);

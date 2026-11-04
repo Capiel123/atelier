@@ -58,6 +58,7 @@ Este repositório adota **gerenciamento de contexto modular**. Consulte os docum
 | [docs/design/HEADER-TOP-MENU.md](./docs/design/HEADER-TOP-MENU.md) | Especificações do Header, Navegação (`#nav`), busca CSS, Timer e Nível/XP. |
 | [docs/ui/DASHBOARD-WEEK-TAB.md](./docs/ui/DASHBOARD-WEEK-TAB.md) | Especificações do Card Resumo Semanal (`.week-summary-card`), estatísticas e faixa dos dias. |
 | [docs/ui/WEEK-AND-TASK-CARDS.md](./docs/ui/WEEK-AND-TASK-CARDS.md) | Aba Semana, cards, fases, conclusão persistente e escopo da semana. |
+| [docs/ui/MODO-FOCO-E-TIMER.md](./docs/ui/MODO-FOCO-E-TIMER.md) | **Modo Foco e Timer:** tela imersiva, gestão de subtarefas, anel de progresso, Pomodoro e atalhos. |
 | [docs/design/FONTES.md](./docs/design/FONTES.md) | **Governança tipográfica oficial:** uso exclusivo de fontes góticas no logo, fontes de leitura da interface e tokens. |
 | [docs/design/TEMAS.md](./docs/design/TEMAS.md) | Catálogo e receita dos 14 temas, tokens CSS, direção de arte e identidade visual avançada. |
 | [docs/AUDITORIA-UX-UI.md](./docs/AUDITORIA-UX-UI.md) | Fricções de UX priorizadas, sistema de tokens de cor e melhorias de usabilidade. |

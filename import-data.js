@@ -142,6 +142,7 @@
     delete c.backupReminderDismissedAt;
     delete c.theme;       // preferência LOCAL por dispositivo (não sincroniza)
     delete c.accentColor; // preferência LOCAL por dispositivo (não sincroniza)
+    delete c.sectionsCollapsed; // v100 (BUG 3): recolhimento de seções é local
     return c;
   }
 

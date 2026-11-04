@@ -46,7 +46,7 @@
   .xp-hero{padding:12px;gap:10px}
   .xp-hero .xp-level{font-size:34px}
   .theme-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
-  .history-actions button{min-width:38px;min-height:38px}
+  .history-actions button{min-width:44px;min-height:44px}
   .history-report-bar .hr-generate{width:100%;margin-left:0}
   .logo-text{font-size:20px}
   .logo img{max-height:28px;max-width:80px}
@@ -358,7 +358,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     padding:0;
     justify-content:center;
     border-radius:6px;
-    font-size:0;
+    font-size:14px;
   }
 }
 
@@ -517,26 +517,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
    FAB quadrado e opacidades das concluídas. Só mobile (≤640px).
    ========================================================= */
 @media(max-width:640px){
-  /* FAB: fundo/borda por token e "+" desenhado por pseudo-elementos.
+  /* FAB: fundo/borda por token e "+" vindo do sprite (v99).
      Tamanho, posição e z-index continuam os mesmos. */
   .fab{
     border-radius:var(--radius-sm);
     background:var(--fab-bg);
     border:1.5px solid var(--fab-border);
     color:var(--ac);
-    font-size:0;
+    font-size:26px;
   }
-  .fab::before,
-  .fab::after{
-    content:"";
-    position:absolute;
-    left:50%;
-    top:50%;
-    background:var(--ac);
-    transform:translate(-50%,-50%);
-  }
-  .fab::before{width:18px;height:1.5px}
-  .fab::after{width:1.5px;height:18px}
   .fab:hover{
     border:1.5px solid var(--fab-border);
     filter:brightness(1.08);

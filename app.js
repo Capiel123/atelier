@@ -162,6 +162,27 @@ document.addEventListener('click', ev => {
       else toast('Sincronização indisponível', true);
       return;
     }
+    case 'recoverOpen': {
+      if (typeof openRecoverSheet === 'function') openRecoverSheet();
+      else toast('Recuperação indisponível', true);
+      return;
+    }
+    case 'closeRecover': {
+      document.getElementById('recoverModal')?.remove();
+      return;
+    }
+    case 'recoverApply': {
+      const checks = Array.from(document.querySelectorAll('#recoverModal input[data-recover]:checked'));
+      if (!checks.length) { toast('Nada selecionado', true); return; }
+      if (!confirm('Restaurar ' + checks.length + ' item(ns) no servidor?\n\nEles voltam para todos os aparelhos. Itens excluídos de propósito também serão restaurados se estiverem marcados.')) return;
+      const items = checks.map(c => { const [table, rid] = c.dataset.recover.split(':'); return {table, id: rid}; });
+      const btnRec = btn;
+      btnRec.disabled = true;
+      (window.__sync && window.__sync.recoverDeleted ? window.__sync.recoverDeleted(items) : Promise.reject(new Error('Sincronização indisponível')))
+        .then(n => { document.getElementById('recoverModal')?.remove(); toast(n + ' item(ns) restaurado(s)'); render(); })
+        .catch(e => { btnRec.disabled = false; toast('Erro ao restaurar: ' + (e && e.message ? e.message : e), true); });
+      return;
+    }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
     case 'toggleQueueCard': {
@@ -565,7 +586,7 @@ document.addEventListener('click', ev => {
     case 'cmdUp': case 'cmdDown': {const sorted = [...S.commands].sort((a,b) => (a.order||0)-(b.order||0)); const idx = sorted.findIndex(x => x.id === id); const nidx = idx + (a === 'cmdUp' ? -1 : 1); if (idx < 0 || nidx < 0 || nidx >= sorted.length) break; [sorted[idx], sorted[nidx]] = [sorted[nidx], sorted[idx]]; sorted.forEach((x, ix) => x.order = ix); S.commands = sorted; break;}
     case 'reviewToggle': {const check = btn.dataset.check; S.cfg.reviewChecks = S.cfg.reviewChecks || {}; const wIso = iso(weekStart()); if (!S.cfg.reviewChecks[wIso]) S.cfg.reviewChecks[wIso] = {}; S.cfg.reviewChecks[wIso][check] = !S.cfg.reviewChecks[wIso][check]; break;}
     case 'reviewComplete': {const tt = T(id); if (tt) {tt.done = true; tt.doneAt = Date.now(); touch(tt); awardTaskXp(tt);} break;}
-    case 'reviewArchive': S.tasks = S.tasks.filter(x => x.id !== id); break;
+    case 'reviewArchive': if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.tasks = S.tasks.filter(x => x.id !== id); break;
     case 'reviewArchiveProj': {const p = S.projects.find(x => x.id === id); if (p) {p.archived = true; touch(p);} break;}
     case 'reviewContactDone': {if (c) logInteraction(c, 'out'); break;}
     case 'reviewContactSnooze': {if (c) snoozeContact(c, 7, 'not-a-good-moment'); break;}
@@ -812,7 +833,12 @@ document.addEventListener('keydown', ev => {
 /* --- ATALHOS GLOBAIS DE TECLADO --- */
 document.addEventListener('keydown', ev => {
   const tgt = ev.target;
-  const isTyping = ev.isComposing || (tgt && tgt.isContentEditable) || (tgt && ['INPUT','TEXTAREA','SELECT'].includes(tgt.tagName));
+  const ae = document.activeElement;
+  // v100 (BUG 2): o campo com foco manda, mesmo que o evento chegue no body
+  // (teclado virtual/IME). Digitar subtarefa/título nunca dispara atalhos do timer.
+  const isTyping = ev.isComposing
+    || (tgt && tgt.isContentEditable) || (tgt && ['INPUT','TEXTAREA','SELECT'].includes(tgt.tagName))
+    || (ae && ae.isContentEditable) || (ae && ['INPUT','TEXTAREA','SELECT'].includes(ae.tagName));
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {ev.preventDefault(); openSearch(); return;}
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z' && !ev.shiftKey) {if (isTyping) return; ev.preventDefault(); undo(); return;}
   // Esc fecha a busca mesmo com o foco no input (o overlay abre com autofocus).
@@ -850,6 +876,11 @@ document.addEventListener('keydown', ev => {
     return;
   }
   if (ev.key === ' ' && focusTaskId) {
+    // v100 (BUG 2): espaço só pausa/retoma quando o foco NÃO está num campo de
+    // texto (mesmo que o keydown chegue no body em teclados virtuais). Digitar
+    // subtarefa/título no modo foco nunca mexe no timer.
+    const aeSpace = document.activeElement;
+    if (aeSpace && aeSpace !== document.body && aeSpace.matches && aeSpace.matches('input, textarea, select, [contenteditable="true"]')) return;
     ev.preventDefault();
     const task = T(focusTaskId);
     if (S.timer && S.timer.taskId === focusTaskId) {
@@ -1094,7 +1125,7 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
 /* --- BOTÃO FLUTUANTE (FAB) — só aparece quando há um campo de "nova tarefa" na tela --- */
 (function () {
   const f = document.createElement('button');
-  f.className = 'fab'; f.id = 'fab'; f.hidden = true; f.textContent = '+';
+  f.className = 'fab'; f.id = 'fab'; f.hidden = true; f.innerHTML = ico('plus');
   f.setAttribute('aria-label', 'Nova tarefa');
   document.body.appendChild(f);
   const find = () => document.getElementById('qa') || document.getElementById('qaJob');
@@ -1243,9 +1274,9 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     banner.id = 'updateBanner';
     banner.className = 'update-banner';
     banner.innerHTML = `
-      <span class="ub-msg">✨ Nova versão disponível</span>
+      <span class="ub-msg">${ico('sparkle')} Nova versão disponível</span>
       <button data-pwa="update">Atualizar</button>
-      <button data-pwa="dismiss" aria-label="Depois">✕</button>
+      <button data-pwa="dismiss" aria-label="Depois" title="Depois">${ico('x')}</button>
     `;
     const header = document.querySelector('.wrap > header');
     (header)?.insertAdjacentElement('afterend', banner);

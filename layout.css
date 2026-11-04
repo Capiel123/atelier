@@ -19,12 +19,10 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 [data-look="brutal"] .logo-text{font-family:var(--font-wordmark,'Grenze Gotisch Wordmark','Grenze Gotisch','UnifrakturCook','DM Sans',serif)}
 
 /* Botão de busca do topo.
-   A lupa é desenhada em CSS (círculo + haste) para não depender do
-   glifo 🔍. O ::after garante 44px de altura de toque: a haste fica
-   no canto inferior direito e o restante da área é invisível. */
-.search-btn{position:relative;flex:none;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--bd);cursor:pointer;color:var(--mu);border-radius:var(--radius-sm,8px);font-size:0;line-height:0}
-.search-btn::before{content:"";position:absolute;top:4px;left:4px;width:13px;height:13px;box-sizing:border-box;border:1.5px solid currentColor;border-radius:50%}
-.search-btn::after{content:"";position:absolute;inset:-9px 0;background:linear-gradient(45deg,transparent calc(50% - .75px),currentColor calc(50% - .75px),currentColor calc(50% + .75px),transparent calc(50% + .75px)) no-repeat 16px 25px/7px 7px}
+   O ícone vem do sprite (v99); o ::after mantém a área de toque de 44px,
+   sem desenhar uma segunda lupa em CSS. */
+.search-btn{position:relative;flex:none;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--bd);cursor:pointer;color:var(--mu);border-radius:var(--radius-sm,8px);font-size:14px;line-height:1}
+.search-btn::after{content:"";position:absolute;inset:-9px 0}
 .search-btn:hover{color:var(--ac);border-color:var(--ac)}
 
 /* Barra de nível (progresso do usuário) */
