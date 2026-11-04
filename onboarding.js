@@ -8,7 +8,7 @@
 
   var KEY = 'atelier_onboarding_v1';
   var STEPS = ['login', 'intro', 'theme'];
-  var state = { step: 0, overlay: null, force: false, loginStatus: '', selectedTheme: null, busy: false };
+  var state = { step: 0, overlay: null, force: false, loginStatus: '', selectedTheme: null, busy: false, showAllThemes: false };
 
   function readStore() {
     try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; }
@@ -43,9 +43,14 @@
     });
   }
 
-  function themeGrid(selected) {
+  function themeGrid(selected, all) {
     var themes = (typeof THEMES !== 'undefined') ? THEMES : {};
-    return Object.keys(themes).map(function (id) {
+    var ids = Object.keys(themes);
+    if (!all) {
+      var nordic = selected === 'nordic-dark' ? 'nordic-dark' : 'nordic-light';
+      ids = [nordic, 'obsidian', 'vampire'].filter(function (id) { return !!themes[id]; });
+    }
+    return ids.map(function (id) {
       var t = themes[id];
       var axis = (t.mode === 'light' ? 'CLARO' : 'ESCURO') + (t.look ? ' · ' + t.look.toUpperCase() : '');
       var art = (typeof themeArtVars === 'function') ? themeArtVars(t) : '';
@@ -82,9 +87,10 @@
     }
     return '<div class="ob-step"><h2>Escolha seu tema</h2>' +
       '<p class="msg">Aplique agora e mude quando quiser em Configurações.</p>' +
-      '<div class="theme-grid">' + themeGrid(ctx.selectedTheme) + '</div>' +
+      '<div class="theme-grid">' + themeGrid(ctx.selectedTheme, !!state.showAllThemes) + '</div>' +
       '<div class="acts"><button type="button" data-ob="finish">Concluir</button>' +
-      '<button type="button" data-ob="skip-theme">Pular</button></div></div>';
+      '<button type="button" data-ob="skip-theme">Pular</button>' +
+      '<button type="button" data-ob="toggle-themes">' + (state.showAllThemes ? 'Ver menos' : 'Ver todos os 16 temas') + '</button></div></div>';
   }
 
   function render() {
@@ -100,6 +106,7 @@
     state.step = state.force ? startStep() : startStep();
     state.loginStatus = '';
     state.selectedTheme = (typeof S !== 'undefined' && S.cfg) ? (S.cfg.theme || 'obsidian') : 'obsidian';
+    state.showAllThemes = false;
     var el = document.createElement('div');
     el.className = 'ob-overlay';
     el.addEventListener('click', onClick);
@@ -166,6 +173,7 @@
     }
     if (act === 'skip-login') { state.step = 1; render(); return; }
     if (act === 'next' || act === 'skip-intro') { state.step = 2; render(); return; }
+    if (act === 'toggle-themes') { state.showAllThemes = !state.showAllThemes; render(); return; }
     if (act === 'finish') { finish({ theme: state.selectedTheme }); return; }
     if (act === 'skip-theme') { finish({ skippedTheme: true }); return; }
   }

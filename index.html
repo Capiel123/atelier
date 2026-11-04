@@ -3,7 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0e0d11">
+<meta name="theme-color" content="#181713">
+<script>
+/* v111 — pré-paint sem flash: novo usuário recebe os tokens Nordic antes do CSS;
+   quem já tem tema salvo fica oculto até applyTheme() (ou 1,8s de segurança). */
+(function () {
+  var h = document.documentElement;
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem('atelier') || 'null'); } catch (e) {}
+  function done() { h.classList.remove('theme-booting'); }
+  window.__atelierBootDone = done;
+  setTimeout(done, 1800);
+  if (saved && saved.cfg && saved.cfg.theme) { h.className += ' theme-booting'; return; }
+  var dark = false;
+  try { dark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); } catch (e) {}
+  var t = dark ? {
+    '--bg':'#181714','--s1':'#201F1B','--s2':'#282722','--s3':'#312F2A','--bd':'#3B3832',
+    '--tx':'#ECE9E1','--mu':'#AAA59B','--ac':'#B4C0C3','--bu':'#8A857B','--on-ac':'#181714',
+    '--ok':'#8FB8A4','--wr':'#D8B47E','--er':'#E59B93',
+    '--surface-card':'#201F1B','--surface-panel':'#282722',
+    '--chk-bg':'#201F1B','--chk-bd':'#6B675E','--chk-done':'#B4C0C3','--chk-mark':'#181714',
+    '--radius':'6px','--radius-sm':'4px','--radius-pill':'4px',
+    '--font-body':"'Atelier Nordic', system-ui, sans-serif",'--font-wordmark':"'Atelier Nordic', system-ui, sans-serif"
+  } : {
+    '--bg':'#F2F0EA','--s1':'#EAE6DD','--s2':'#FAF9F5','--s3':'#DFDAD0','--bd':'#D3CDC2',
+    '--tx':'#1E1D19','--mu':'#605C54','--ac':'#4F5D64','--bu':'#7C7870','--on-ac':'#F7F5EF',
+    '--ok':'#486B58','--wr':'#7A5B2E','--er':'#8D4A44',
+    '--surface-card':'#FAF9F5','--surface-panel':'#EAE6DD',
+    '--chk-bg':'#FAF9F5','--chk-bd':'#7B766C','--chk-done':'#4F5D64','--chk-mark':'#F7F5EF',
+    '--radius':'6px','--radius-sm':'4px','--radius-pill':'4px',
+    '--font-body':"'Atelier Nordic', system-ui, sans-serif",'--font-wordmark':"'Atelier Nordic', system-ui, sans-serif"
+  };
+  h.setAttribute('data-mode', dark ? 'dark' : 'light');
+  h.setAttribute('data-family', 'nordic');
+  h.setAttribute('data-dot-shape', 'ticks');
+  h.setAttribute('data-icon-set', 'soft');
+  h.setAttribute('data-palette-use', 'marker');
+  for (var k in t) h.style.setProperty(k, t[k]);
+})();
+</script>
+<style>html.theme-booting body{visibility:hidden}html.theme-booting{background:#181713}</style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atelier">

@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    BASE.CSS
    Fundação do app: variáveis de cor, reset, tipografia,
    controles genéricos (botões, inputs, textos).
@@ -13,6 +13,23 @@
   font-family:'Grenze Gotisch';
   src:url('./fonts/grenze-gotisch-bold-latin.woff2') format('woff2');
   font-weight:700;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF,U+0100-017F,U+2000-206F,U+20AC,U+2122;
+}
+
+@font-face{
+  font-family:'Atelier Nordic';
+  src:url('./fonts/hanken-grotesk-400-latin.woff2') format('woff2');
+  font-weight:400;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF,U+0100-017F,U+2000-206F,U+20AC,U+2122;
+}
+@font-face{
+  font-family:'Atelier Nordic';
+  src:url('./fonts/hanken-grotesk-500-latin.woff2') format('woff2');
+  font-weight:500;
   font-style:normal;
   font-display:swap;
   unicode-range:U+0000-00FF,U+0100-017F,U+2000-206F,U+20AC,U+2122;

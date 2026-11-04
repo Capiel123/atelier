@@ -327,6 +327,18 @@ function bar(p, label, msg) {
   return `<div class="bar"><div class="fill" style="width:${Math.min(100,p)}%"></div>${[25,50,75].map(x => `<i class="${p>=x?'lit':''}" style="left:${x}%"></i>`).join('')}${lbl}</div>${msg ? `<div class="msg">${msg}</div>` : ''}`;
 }
 
+/* v114 — prioridade Nordic como risquinhos inline (3/2/1), sem depender de
+   data-dot-shape nem de máscaras antigas. Fora do Nordic, mantém o `.dot` de cor. */
+function prMark(pr) {
+  let nordic = false;
+  try { nordic = !!(typeof S !== 'undefined' && S.cfg && THEMES[S.cfg.theme] && THEMES[S.cfg.theme].family === 'nordic'); } catch (e) {}
+  if (!nordic) return `<i class="dot" data-pr="${pr}" style="--pr-c:${PRC[pr]}"></i>`;
+  const tx = 'var(--tx)', bd = 'var(--bd)';
+  const cols = pr === 0 ? [tx, tx, tx] : pr === 1 ? [tx, tx, bd] : [tx, bd, bd];
+  const bg = cols.map((c, i) => `linear-gradient(${c},${c}) ${i * 5}px 0/2px 100% no-repeat`).join(',');
+  return `<i class="pr-bars" data-pr="${pr}" aria-hidden="true" style="background:${bg}"></i>`;
+}
+
 /* --- DATA REAL DO DIA SELECIONADO (0=Seg … 6=Dom) --- */
 function weekDateForDay(dayIndex, refDate = new Date()) {
   const monday = weekStart(refDate);
@@ -374,7 +386,7 @@ function viewWeek() {
   const energyName = (ENERGY_LEVELS.find(x => x.id === currentE) || {}).n || currentE;
   const prevDay = (day + 6) % 7;
   const nextDay = (day + 1) % 7;
-  const prInds = prCounts.map((n, i) => `<span class="pr-ind" title="${PR[i]}" style="${n===0?'opacity:.35':''}"><i class="dot" data-pr="${i}" style="background:${PRC[i]}"></i>${n}</span>`).join('');
+  const prInds = prCounts.map((n, i) => `<span class="pr-ind" title="${PR[i]}" style="${n===0?'opacity:.35':''}">${prMark(i)}${n}</span>`).join('');
   const dayHead = `<section class="day-head" data-mode="${dhMode}" role="group" aria-label="Cabeçalho do dia">
     <div class="day-head-row">
       <button class="day-head-arrow day-head-arrow--prev" data-a="day" data-i="${prevDay}" aria-label="Dia anterior" title="Dia anterior">${ico('chevron-down','ico--prev')}</button>
@@ -534,8 +546,8 @@ function renderFilteredTasks() {
 
     const headerHtml = `<div class="section-header" data-a="toggleSection" data-section="${section}" role="button" tabindex="0" aria-expanded="${!collapsed}">
       <div class="section-header-title">
-        <span style="color:${meta.color};font-size:14px">${sectionIcon(section)}</span>
-        <b style="color:${meta.color}">${meta.n}</b>
+        <span class="section-ico" style="--c:${meta.color};font-size:14px">${sectionIcon(section)}</span>
+        <b class="section-title" style="--c:${meta.color}">${meta.n}</b>
         <span class="section-header-meta">${pend} pend · ${allItems.length} total</span>
       </div>
       <div class="section-header-right">
@@ -670,7 +682,7 @@ function cardTaskCompact(t, score) {
       <div class="ti">
         <div class="compact-tt">${t.time?`<span style="color:var(--wr)">${ico('clock')} ${esc(t.time)} </span>`:''}${esc(t.t)}</div>
         <div class="compact-meta">
-          <i class="dot" data-pr="${t.pr}" style="background:${PRC[t.pr]}"></i>
+          ${prMark(t.pr)}
           <span>${fmtMin(spent)}${t.est?'/'+fmtMin(t.est):''}</span>
           ${subsTotal?`<span>· ${subsDone}/${subsTotal} sub</span>`:''}
           ${isQuick?`<span style="color:var(--mu)">${ico('bolt')}</span>`:''}
@@ -710,7 +722,7 @@ function cardTask(t, score) {
       <div class="ti" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
         <div class="tt">${type ? `<span class="type-icon ${type.id}" aria-hidden="true">${ico(TASK_TYPE_ICON[type.id] || 'flag')}</span>` : ''}<span class="tt-title-text">${esc(t.t)}</span><button type="button" class="tt-edit" data-a="editInline" data-kind="title" data-id="${t.id}" title="Editar título" aria-label="Editar título">${ico('edit')}</button>${isQuick ? `<span class="quick-ind">${ico('bolt')}</span>` : ''}${t.time ? `<span class="tag" style="color:var(--wr)">${ico('clock')} ${esc(t.time)}</span>` : ''}</div>
         ${t.desc ? `<div class="tdesc">${esc(t.desc)}</div>` : ''}
-        <div class="meta"><i class="dot" data-pr="${t.pr}" style="background:${PRC[t.pr]}"></i>${PR[t.pr]}<span class="tag" style="color:${areaColor(t.area)}">${esc(areaLabel(t.area))}</span>${flagsHtml ? `<span class="task-flags task-flags--inline">${flagsHtml}</span>` : ''}${skillObjs.map(s => `<span class="tag" style="color:${themeColor(s.color)}">${esc(s.n)}</span>`).join('')}${proj ? `<span class="tag">${esc(proj.n)}</span>` : ''}${t.due ? `<span class="tag">prazo ${fmtDate(t.due)}</span>` : ''}${t.next ? `<span class="tag" style="color:var(--ac)">${ico('star', 'ico--on')}</span>` : ''}${labels.slice(0,4).map(l => `<span class="label-pill" style="--lc:${themeColor(l.color)}">${esc(l.n)}</span>`).join('')}${labels.length>4 ? `<span class="label-pill">+${labels.length-4}</span>` : ''}</div>
+        <div class="meta">${prMark(t.pr)}${PR[t.pr]}<span class="tag tag-area" style="--c:${areaColor(t.area)}">${esc(areaLabel(t.area))}</span>${flagsHtml ? `<span class="task-flags task-flags--inline">${flagsHtml}</span>` : ''}${skillObjs.map(s => `<span class="tag tag-skill" style="--c:${themeColor(s.color)}">${esc(s.n)}</span>`).join('')}${proj ? `<span class="tag">${esc(proj.n)}</span>` : ''}${t.due ? `<span class="tag">prazo ${fmtDate(t.due)}</span>` : ''}${t.next ? `<span class="tag" style="color:var(--ac)">${ico('star', 'ico--on')}</span>` : ''}${labels.slice(0,4).map(l => `<span class="label-pill" style="--lc:${themeColor(l.color)}">${esc(l.n)}</span>`).join('')}${labels.length>4 ? `<span class="label-pill">+${labels.length-4}</span>` : ''}</div>
       </div>
       <div class="tm" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
         <div class="tm-time"><b>${fmtMin(spent)}</b><span class="tm-sep">/</span><button type="button" class="tm-est" data-a="editInline" data-kind="est" data-id="${t.id}" title="Editar tempo estimado" aria-label="Editar tempo estimado">${t.est ? fmtMin(t.est) : '—'}</button><span class="tm-chev" aria-hidden="true">${ico('chevron-up')}</span></div>
@@ -832,11 +844,11 @@ function cardQueue(t) {
       <div class="ti" style="min-width:0">
         <div class="tt">${esc(t.t)}</div>
         <div class="meta">
-          <i class="dot" data-pr="${t.pr}" style="background:${PRC[t.pr]}"></i>
+          ${prMark(t.pr)}
           ${t.time ? `<span class="tag" style="color:var(--wr)">${ico('clock')} ${esc(t.time)}</span>` : ''}
           ${t.est ? `<span class="tag">${ico('timer')} ${fmtMin(t.est)}</span>` : ''}
           ${subsTotal ? `<span class="tag queue-subcount">${subsDone}/${subsTotal} sub</span>` : ''}
-          ${skillObjs.map(s => `<span class="tag" style="color:${themeColor(s.color)}">${esc(s.n)}</span>`).join('')}
+          ${skillObjs.map(s => `<span class="tag tag-skill" style="--c:${themeColor(s.color)}">${esc(s.n)}</span>`).join('')}
           ${labelObjs.slice(0,4).map(l => `<span class="label-pill" style="--lc:${themeColor(l.color)}">${esc(l.n)}</span>`).join('')}${labelObjs.length>4 ? `<span class="label-pill">+${labelObjs.length-4}</span>` : ''}
         </div>
       </div>
@@ -900,7 +912,7 @@ function cardJob(app) {
   const prospectCta = app.stage === 'prospect' ? `<div class="prospect-cta"><span style="font-size:12px;color:var(--mu)">Ainda não apliquei.</span><button data-a="jobApply" data-id="${app.id}">${ico('check')} Apliquei</button></div>` : '';
   const projectBadge = proj ? `<span class="tag" style="color:var(--ok);cursor:pointer" data-a="gotoProject" data-id="${proj.id}">${ico('chevron-down','ico--next')} ${esc(proj.n)}</span>` : '';
   const canConvert = !terminal && (app.stage === 'offer' || app.stage === 'accepted') && !app.projectId;
-  return `<div class="job-card ${terminal?'terminal':''}" style="--c:${themeColor(stage.color)}"><div class="big" style="margin:0 0 4px"><div class="job-title"><span class="job-client">${esc(app.client)}</span>${app.role && app.role!==app.client ? ' — ' + esc(app.role) : ''}</div><span class="stage-badge" style="--c:${themeColor(stage.color)}">${stage.n}</span></div><div class="meta"><i class="dot" data-pr="${app.priority}" style="background:${PRC[app.priority]}"></i>${PR[app.priority]}${app.platform?`<span class="tag">${esc(app.platform)}</span>`:''}${app.area?`<span class="tag" style="color:${alive(S.skills).find(s=>s.n===app.area)?.color||'var(--mu)'}">${esc(app.area)}</span>`:''}${app.subarea?`<span class="tag">${esc(app.subarea)}</span>`:''}${app.ticket?`<span class="tag">${fmtBRL(app.ticket)}</span>`:''}${!terminal && days>0?`<span class="tag">${days}d na fase</span>`:''}${timeInvested?`<span class="tag">${ico('timer')} ${fmtMin(timeInvested)}</span>`:''}${app.url?`<a class="tag" href="${esc(app.url)}" target="_blank" rel="noopener noreferrer">vaga ↗</a>`:''}${!terminal?`<span class="score-badge ${scoreClass(score)}">${score}</span>`:''}${projectBadge}</div>${app.contactName||app.contactInfo ? `<div class="meta">${app.contactName?`<span class="tag">${ico('user')} ${esc(app.contactName)}</span>`:''}${app.contactInfo?`<span class="tag">${esc(app.contactInfo)}</span>`:''}</div>` : ''}${fuBadge ? `<div class="job-followup-row">${fuBadge}</div>` : ''}${app.notes ? `<div class="tdesc">${esc(app.notes)}</div>` : ''}${prospectCta}<div class="acts">${!terminal?`<select class="postpone-sel" data-a="jobStage" data-id="${app.id}"><option value="">→ estágio</option>${JOB_STAGES.filter(s => s.id !== app.stage).map(s => `<option value="${s.id}">${s.n}</option>`).join('')}</select>`:''}${!terminal && app.nextFollowUp?`<button data-a="jobFollowUp" data-id="${app.id}">Falei hoje</button>`:''}${!terminal && !app.linkedTaskId?`<button data-a="jobCreateTask" data-id="${app.id}">+ Tarefa</button>`:''}${canConvert?`<button data-a="jobConvert" data-id="${app.id}" style="background:var(--ok);color:#000">→ Virou projeto</button>`:''}<button data-a="jobDel" data-id="${app.id}" aria-label="Excluir vaga" title="Excluir vaga">${ico('x')}</button></div><details data-eid="${app.id}" ${openEdits.has(app.id)?'open':''}><summary>Editar</summary><div class="form"><label>Cliente<input data-p="${esc(k('client'))}" value="${esc(app.client)}"></label><label>Vaga<input data-p="${esc(k('role'))}" value="${esc(app.role)}"></label><label class="full">Link<input data-p="${esc(k('url'))}" value="${esc(app.url||'')}"></label><label>Contato<input data-p="${esc(k('contactName'))}" value="${esc(app.contactName||'')}"></label><label>Email<input data-p="${esc(k('contactInfo'))}" value="${esc(app.contactInfo||'')}"></label><label>Plataforma<input data-p="${esc(k('platform'))}" list="jobPlatforms" value="${esc(app.platform||'')}"></label><label>Área<select data-p="${esc(k('area'))}"><option value="">—</option>${alive(S.skills).filter(s=>!s.archived).map(s => `<option value="${esc(s.n)}" ${app.area===s.n?'selected':''}>${esc(s.n)}</option>`).join('')}</select></label><label>Subárea<input data-p="${esc(k('subarea'))}" list="jobSubareas" value="${esc(app.subarea||'')}"></label><label>Ticket<input type="number" data-p="${esc(k('ticket'))}" value="${app.ticket||0}"></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), app.priority)}</select></label><label>Follow-up<input type="date" data-p="${esc(k('nextFollowUp'))}" value="${esc(app.nextFollowUp||'')}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="2">${esc(app.notes||'')}</textarea></label></div></details></div>`;
+  return `<div class="job-card ${terminal?'terminal':''}" style="--c:${themeColor(stage.color)}"><div class="big" style="margin:0 0 4px"><div class="job-title"><span class="job-client">${esc(app.client)}</span>${app.role && app.role!==app.client ? ' — ' + esc(app.role) : ''}</div><span class="stage-badge" style="--c:${themeColor(stage.color)}">${stage.n}</span></div><div class="meta">${prMark(app.priority)}${PR[app.priority]}${app.platform?`<span class="tag">${esc(app.platform)}</span>`:''}${app.area?`<span class="tag tag-skill" style="--c:${alive(S.skills).find(s=>s.n===app.area)?.color||'var(--mu)'}">${esc(app.area)}</span>`:''}${app.subarea?`<span class="tag">${esc(app.subarea)}</span>`:''}${app.ticket?`<span class="tag">${fmtBRL(app.ticket)}</span>`:''}${!terminal && days>0?`<span class="tag">${days}d na fase</span>`:''}${timeInvested?`<span class="tag">${ico('timer')} ${fmtMin(timeInvested)}</span>`:''}${app.url?`<a class="tag" href="${esc(app.url)}" target="_blank" rel="noopener noreferrer">vaga ↗</a>`:''}${!terminal?`<span class="score-badge ${scoreClass(score)}">${score}</span>`:''}${projectBadge}</div>${app.contactName||app.contactInfo ? `<div class="meta">${app.contactName?`<span class="tag">${ico('user')} ${esc(app.contactName)}</span>`:''}${app.contactInfo?`<span class="tag">${esc(app.contactInfo)}</span>`:''}</div>` : ''}${fuBadge ? `<div class="job-followup-row">${fuBadge}</div>` : ''}${app.notes ? `<div class="tdesc">${esc(app.notes)}</div>` : ''}${prospectCta}<div class="acts">${!terminal?`<select class="postpone-sel" data-a="jobStage" data-id="${app.id}"><option value="">→ estágio</option>${JOB_STAGES.filter(s => s.id !== app.stage).map(s => `<option value="${s.id}">${s.n}</option>`).join('')}</select>`:''}${!terminal && app.nextFollowUp?`<button data-a="jobFollowUp" data-id="${app.id}">Falei hoje</button>`:''}${!terminal && !app.linkedTaskId?`<button data-a="jobCreateTask" data-id="${app.id}">+ Tarefa</button>`:''}${canConvert?`<button data-a="jobConvert" data-id="${app.id}" style="background:var(--ok);color:#000">→ Virou projeto</button>`:''}<button data-a="jobDel" data-id="${app.id}" aria-label="Excluir vaga" title="Excluir vaga">${ico('x')}</button></div><details data-eid="${app.id}" ${openEdits.has(app.id)?'open':''}><summary>Editar</summary><div class="form"><label>Cliente<input data-p="${esc(k('client'))}" value="${esc(app.client)}"></label><label>Vaga<input data-p="${esc(k('role'))}" value="${esc(app.role)}"></label><label class="full">Link<input data-p="${esc(k('url'))}" value="${esc(app.url||'')}"></label><label>Contato<input data-p="${esc(k('contactName'))}" value="${esc(app.contactName||'')}"></label><label>Email<input data-p="${esc(k('contactInfo'))}" value="${esc(app.contactInfo||'')}"></label><label>Plataforma<input data-p="${esc(k('platform'))}" list="jobPlatforms" value="${esc(app.platform||'')}"></label><label>Área<select data-p="${esc(k('area'))}"><option value="">—</option>${alive(S.skills).filter(s=>!s.archived).map(s => `<option value="${esc(s.n)}" ${app.area===s.n?'selected':''}>${esc(s.n)}</option>`).join('')}</select></label><label>Subárea<input data-p="${esc(k('subarea'))}" list="jobSubareas" value="${esc(app.subarea||'')}"></label><label>Ticket<input type="number" data-p="${esc(k('ticket'))}" value="${app.ticket||0}"></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), app.priority)}</select></label><label>Follow-up<input type="date" data-p="${esc(k('nextFollowUp'))}" value="${esc(app.nextFollowUp||'')}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="2">${esc(app.notes||'')}</textarea></label></div></details></div>`;
 }
 
 function viewProjects() {

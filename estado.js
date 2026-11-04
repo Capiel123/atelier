@@ -37,7 +37,9 @@ const THEMES = {
   bone:      {n:'Osso',       desc:'Bege frio',              mode:'dark', ac:'#c9b394', bu:'#7a6a55', bg:'#0e0d0b', s1:'#171613', s2:'#1f1e1a', s3:'#27261f', bd:'#31302a', chkBg:'#171613', chkBd:'#31302a', chkDone:'#c9b394', chkMark:'#000'},
   deepbone:  {n:'Osso Profundo', desc:'Bege mineral · brutal', mode:'dark', look:'brutal', ac:'#D2CCC0', bu:'#55524B', bg:'#0A0A09', s1:'#121211', s2:'#1A1A18', s3:'#242421', bd:'#34332F', chkBg:'#121211', chkBd:'#34332F', chkDone:'#D2CCC0', chkMark:'#0A0A09', tx:'#E4DED4', mu:'#9A958B', ok:'#A9B3A0', wr:'#C2AE86', er:'#C98077', onAc:'#0A0A09', radius:'2px', bevel:'6px', noise:'0.045', prHigh:'#E4DED4', prMed:'#A39E94', prLow:'#7C776F', surfaceCard:'#242421', surfacePanel:'#0E0E0D'},
   chrome:    {n:'Cromo',       desc:'Metal frio · brutal',   mode:'dark', look:'brutal', ac:'#E6E6EC', bu:'#3A3A42', bg:'#050506', s1:'#0D0D0F', s2:'#151518', s3:'#1F1F23', bd:'#35353B', chkBg:'#0D0D0F', chkBd:'#35353B', chkDone:'#E6E6EC', chkMark:'#050506', tx:'#F0F0F2', mu:'#9C9CA6', ok:'#B6C2C4', wr:'#C9BC94', er:'#C77C78', onAc:'#050506', radius:'1px', bevel:'4px', noise:'0.035', prHigh:'#F4F4F8', prMed:'#A7A7B2', prLow:'#74747E', surfaceCard:'#1F1F23', surfacePanel:'#0A0A0B'},
-  'deepbone-light': {n:'Osso Profundo Claro', desc:'Bege claro · brutal', mode:'light', look:'brutal', ac:'#1B1A17', bu:'#8D887B', bg:'#DEDAD0', s1:'#D3CEC3', s2:'#E9E6DF', s3:'#F4F2EC', bd:'#A9A496', chkBg:'#D3CEC3', chkBd:'#A9A496', chkDone:'#1B1A17', chkMark:'#F2F0EA', tx:'#12110E', mu:'#4F4C44', ok:'#44503F', wr:'#5F4F26', er:'#842F27', onAc:'#F2F0EA', radius:'2px', bevel:'6px', noise:'0.05', prHigh:'#12110E', prMed:'#4A473F', prLow:'#6C675B', surfaceCard:'#F4F2EC', surfacePanel:'#D3CEC3'}
+  'deepbone-light': {n:'Osso Profundo Claro', desc:'Bege claro · brutal', mode:'light', look:'brutal', ac:'#1B1A17', bu:'#8D887B', bg:'#DEDAD0', s1:'#D3CEC3', s2:'#E9E6DF', s3:'#F4F2EC', bd:'#A9A496', chkBg:'#D3CEC3', chkBd:'#A9A496', chkDone:'#1B1A17', chkMark:'#F2F0EA', tx:'#12110E', mu:'#4F4C44', ok:'#44503F', wr:'#5F4F26', er:'#842F27', onAc:'#F2F0EA', radius:'2px', bevel:'6px', noise:'0.05', prHigh:'#12110E', prMed:'#4A473F', prLow:'#6C675B', surfaceCard:'#F4F2EC', surfacePanel:'#D3CEC3'},
+  'nordic-light': {n:'Nordic Claro', desc:'Linho, pedra e névoa', mode:'light', ac:'#4F5D64', bu:'#7C7870', bg:'#F2F0EA', s1:'#EAE6DD', s2:'#FAF9F5', s3:'#DFDAD0', bd:'#D3CDC2', chkBg:'#FAF9F5', chkBd:'#7B766C', chkDone:'#4F5D64', chkMark:'#F7F5EF', tx:'#1E1D19', mu:'#605C54', ok:'#486B58', wr:'#7A5B2E', er:'#8D4A44', onAc:'#F7F5EF', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#FAF9F5', surfacePanel:'#EAE6DD', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"},
+  'nordic-dark':  {n:'Nordic Escuro', desc:'Pedra, carvão e névoa', mode:'dark', ac:'#B4C0C3', bu:'#8A857B', bg:'#181714', s1:'#201F1B', s2:'#282722', s3:'#312F2A', bd:'#3B3832', chkBg:'#201F1B', chkBd:'#6B675E', chkDone:'#B4C0C3', chkMark:'#181714', tx:'#ECE9E1', mu:'#AAA59B', ok:'#8FB8A4', wr:'#D8B47E', er:'#E59B93', onAc:'#181714', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#201F1B', surfacePanel:'#282722', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"}
 };
 
 /* --- IDENTIDADE VISUAL (Fase Identidade v2) ---
@@ -63,7 +65,9 @@ const THEME_IDENTITY = {
   bone:      { bgPattern:"repeating-linear-gradient(0deg, rgba(201,179,148,0.03) 0px, rgba(201,179,148,0.03) 1px, transparent 1px, transparent 18px)", bgPatternSize:'100% 18px', bgPatternOpacity:1, dotShape:'circle',  chkShape:'square',  progressType:'solid',  logoEffect:'serif',  topOrnament:'',   isGlass:false, iconSet:'ink',     icoStroke:'1.5',  icoCap:'butt',   icoJoin:'round' },
   deepbone:  { dotShape:'square',  chkShape:'square',  progressType:'solid',  logoEffect:'none',   topOrnament:'',   isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
   chrome:    { dotShape:'square',  chkShape:'square',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:true, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
-  'deepbone-light': { dotShape:'square', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' }
+  'deepbone-light': { dotShape:'square', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
+  'nordic-light': { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
+  'nordic-dark':  { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' }
 };
 
 /* --- DIREÇÃO DE ARTE POR TEMA ---
@@ -104,7 +108,9 @@ const THEME_PALETTES = {
   bone: ['#d18972','#edbb8c','#e4d499','#89b07e','#a6e2dc','#6fa0c7','#bb9bd2','#fdc0dc','#9d9a97'],
   deepbone: ['#bf8978','#dcb895','#ded5a9','#8aa781','#b3dfda','#769ab7','#b199c2','#ecbfd4','#979692'],
   chrome: ['#b48584','#e2bea8','#d6d8b4','#8aad97','#b9dcdf','#7c93ad','#aea4c6','#e9c9e1','#8f9195'],
-  'deepbone-light': ['#78321b','#693e03','#473d03','#29511c','#004d49','#104b72','#5c3b70','#662f4c','#4a4945']
+  'deepbone-light': ['#78321b','#693e03','#473d03','#29511c','#004d49','#104b72','#5c3b70','#662f4c','#4a4945'],
+  'nordic-light': ['#A66A57','#9A7548','#857848','#647D68','#4F777A','#5A7182','#756C85','#8A6872','#7A766D'],
+  'nordic-dark':  ['#CFA08E','#D8BB91','#C9C098','#94B29C','#93C0C0','#9DB4C4','#B7AAC5','#D4AEB8','#B2ADA3']
 };
 Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
 Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });
@@ -292,6 +298,7 @@ function applyTheme() {
     prHigh: '--pr-high', prMed: '--pr-med', prLow: '--pr-low',
     surfaceCard: '--surface-card', surfacePanel: '--surface-panel',
     fontDisplay: '--font-display', fontMono: '--font-mono', titleTrack: '--title-track',
+    fontBody: '--font-body', fontWordmark: '--font-wordmark',
     titleTransform: '--title-transform', titleSpacing: '--title-spacing',
     fontStyle: '--font-display-style', cardShadow: '--card-shadow',
     accentGlow: '--ac-glow', borderStyle: '--panel-border-style',
@@ -338,6 +345,11 @@ function applyTheme() {
   // Ícones por identidade (v99): a família vive no <html>; o CSS lê --ico-*.
   if (t.iconSet) rootEl.setAttribute('data-icon-set', t.iconSet);
   else rootEl.removeAttribute('data-icon-set');
+  // v108 (Nordic): família e uso de paleta (marcador × texto).
+  if (t.family) rootEl.setAttribute('data-family', t.family);
+  else rootEl.removeAttribute('data-family');
+  if (t.paletteUse) rootEl.setAttribute('data-palette-use', t.paletteUse);
+  else rootEl.removeAttribute('data-palette-use');
 
   // Header/FAB/timer ficam fora do render(); precisam acompanhar a troca de tema.
   // (interface.js define a função; em testes que carregam só estado.js ela não existe.)
@@ -345,6 +357,9 @@ function applyTheme() {
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', t.bg);
+  // v111 — libera o app depois do pré-paint (index.html). Sem isso, o <body>
+  // fica oculto por até 2s em quem já tem tema salvo.
+  try { if (typeof window !== 'undefined' && typeof window.__atelierBootDone === 'function') window.__atelierBootDone(); } catch (e) {}
 }
 
 /* Variáveis de direção de arte para o preview local de um card de tema. */
@@ -402,13 +417,20 @@ function defaultCommands() {
 }
 
 /* --- SEED E MIGRATE --- */
+function defaultThemeId() {
+  try {
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'nordic-dark';
+  } catch (e) {}
+  return 'nordic-light';
+}
+
 function seed() {
   const skills = DEF_SKILLS.map((d,i) => {const s = mkSkill(d.n, d.color); s.order = i; return s;});
   const sid = n => skills.find(s => s.n === n)?.id || '';
   const p1 = mkProject({id:'p1', n:'Prospecção internacional', area:'Carreira', reward:'Jantar fora'});
   return {
     v: VERSION,
-    cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, themePalette:true, reviewChecks:{}, weekPriority:{}, theme:'obsidian', accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
+    cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, themePalette:true, reviewChecks:{}, weekPriority:{}, theme:defaultThemeId(), accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
     areas: AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()})),
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
