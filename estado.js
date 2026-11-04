@@ -785,18 +785,11 @@ function getEnergyCollapsed() {
 function setEnergyCollapsed(v) {
   try { localStorage.setItem(ENERGY_COLLAPSED_KEY, v ? '1' : '0'); return true; } catch (e) { return false; }
 }
-const TOOLS_COLLAPSED_KEY = 'atelier_tools_collapsed_v1';
-function getToolsCollapsed() {
-  try {
-    const v = localStorage.getItem(TOOLS_COLLAPSED_KEY);
-    if (v === '0') return false;
-    if (v === '1') return true;
-  } catch (e) {}
-  return typeof window !== 'undefined' && window.innerWidth <= 640;
-}
-function setToolsCollapsed(v) {
-  try { localStorage.setItem(TOOLS_COLLAPSED_KEY, v ? '1' : '0'); return true; } catch (e) { return false; }
-}
+// v107: ferramentas começam SEMPRE fechadas (mobile e desktop) e não persistem;
+// abrem só por clique e voltam a fechar ao recarregar.
+let _toolsCollapsed = true;
+function getToolsCollapsed() { return _toolsCollapsed; }
+function setToolsCollapsed(v) { _toolsCollapsed = !!v; return true; }
 
 /* --- LIXEIRA --- */
 function softDelete(collection, id) {

@@ -1040,6 +1040,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .day-head[data-mode="compact"] .day-head-row{min-height:44px}
   .day-head[data-mode="full"]{padding:8px 10px 10px}
   .day-head-toggles .energy-toggle{display:none}
+  .day-head .energy-row{display:none}
+  .section-progress{display:none}
   .tools-toggle{min-height:36px}
   .day-head-extra .days{margin-bottom:6px}
   .day-head-extra .week-controls-row{margin-bottom:4px}

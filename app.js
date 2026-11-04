@@ -46,7 +46,7 @@ document.addEventListener('click', ev => {
     case 'moreOpen': showMoreSheet(); return;
     case 'closeMore': hideMoreSheet(); return;
     case 'toggleQuickAdd': showQuickAdd = !showQuickAdd; render(); if (showQuickAdd) focusQuickAdd(); return;
-    case 'openQuickAdd': showQuickAdd = true; setToolsCollapsed(false); setDayHeadMode('full'); render(); focusQuickAdd(); return;
+    case 'openQuickAdd': showQuickAdd = true; setDayHeadMode('full'); render(); focusQuickAdd(); return;
     case 'toggleFilters': showFilters = !showFilters; render(); return;
     case 'toggleEnergy': setEnergyCollapsed(!getEnergyCollapsed()); render(); return;
     case 'toggleTools': setToolsCollapsed(!getToolsCollapsed()); render(); return;
@@ -914,7 +914,7 @@ document.addEventListener('keydown', ev => {
     ev.target.click();
     return;
   }
-  if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); if (tab === 'week' && (!showQuickAdd || getDayHeadMode() !== 'full' || getToolsCollapsed())) { showQuickAdd = true; setToolsCollapsed(false); setDayHeadMode('full'); render(); } focusQuickAdd(); return;}
+  if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); if (tab === 'week' && (!showQuickAdd || getDayHeadMode() !== 'full')) { showQuickAdd = true; setDayHeadMode('full'); render(); } focusQuickAdd(); return;}
   if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
     ev.preventDefault();
     // v94: não roubar o foco enquanto o usuário edita subtarefa/detalhes
@@ -1222,7 +1222,6 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
     if (tab === 'week') {
       let needRender = false;
       if (!showQuickAdd) { showQuickAdd = true; needRender = true; }
-      if (getToolsCollapsed()) { setToolsCollapsed(false); needRender = true; }
       if (getDayHeadMode() !== 'full') { setDayHeadMode('full'); needRender = true; }
       if (needRender) render();
     }

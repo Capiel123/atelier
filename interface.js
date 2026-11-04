@@ -394,6 +394,7 @@ function viewWeek() {
     <div class="day-head-extra">
       <div class="days">${DAYS.map((d,i) => {const a = dayTasks(i).filter(t => inWeekScope(t)); return `<button class="${i===day?'on':''}" data-a="day" data-i="${i}">${d}${i===todayI()?'<i></i>':''}<small>${a.filter(t=>isDoneThisWeek(t)).length}/${a.length}</small></button>`;}).join('')}</div>
       ${nextCard}
+      ${quickAddHtml}
       <div class="day-head-toggles">
         <button class="energy-toggle" data-a="toggleEnergy" aria-expanded="${!energyCollapsed}" title="Mostrar/ocultar níveis de energia">
           <span>Energia · ${esc(slotLabel)}</span><span class="energy-current">${esc(energyName)}</span><span class="energy-chev" aria-hidden="true">${ico('chevron-down')}</span>
@@ -403,7 +404,7 @@ function viewWeek() {
         </button>
       </div>
       ${energyCollapsed ? '' : `<div class="energy-row"><div class="energy-pills">${ENERGY_LEVELS.map(e => `<button data-a="setEnergy" data-e="${e.id}" class="${currentE===e.id?'active':''}">${ico(ENERGY_ICON[e.id] || 'bolt')} ${e.n}</button>`).join('')}</div></div>`}
-      ${toolsCollapsed ? '' : `<div class="tools-body">${quickAddHtml}${filtersHtml}${controlsRow}</div>`}
+      ${toolsCollapsed ? '' : `<div class="tools-body">${filtersHtml}${controlsRow}</div>`}
     </div>
   </section>`;
 
