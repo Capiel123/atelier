@@ -857,12 +857,18 @@ function cardQueue(t) {
 
   if (isExpanded) {
     html += `<div class="queue-body" style="margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">
+      <div class="queue-schedule">
+        <span class="queue-schedule-label">Agendar para:</span>
+        <div class="queue-days">
+          ${DAYS.map((d,i) => `<button data-a="cp" data-id="${t.id}" data-i="${i}" title="Duplicar para ${d}">${d}</button>`).join('')}
+          <button data-a="cp" data-id="${t.id}" data-i="q" class="queue-dup" title="Duplicar na Fila">${ico('copy')} Duplicar</button>
+        </div>
+      </div>
+
       <textarea data-p="${esc(k('desc'))}" placeholder="Descrição e notas da tarefa..." rows="2" style="margin-bottom:8px">${esc(t.desc||'')}</textarea>
       ${renderSubs(t)}
 
       <div class="acts" style="margin-top:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--mu);margin-right:2px">Agendar para:</span>
-        ${DAYS.map((d,i) => `<button data-a="moveToDay" data-id="${t.id}" data-i="${i}">${d}</button>`).join('')}
         <button data-a="del" data-id="${t.id}" style="margin-left:auto;background:transparent;border:1px solid var(--bd)">${ico('trash')} Excluir</button>
       </div>
 
@@ -877,6 +883,7 @@ function cardQueue(t) {
           <label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label>
           <label class="full">Habilidades<div class="pill-stack">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="--pc:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label>
           <label class="full">Labels<div class="pill-stack">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="--pc:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label>
+          <label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label>
         </div>
       </details>
     </div>`;

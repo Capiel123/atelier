@@ -955,6 +955,11 @@
 .section-title{color:var(--c)}
 [data-family="nordic"] .section-ico{color:var(--mu)}
 [data-family="nordic"] .section-title{color:var(--tx)}
+.queue-schedule{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--bd)}
+.queue-schedule-label{font-size:11px;color:var(--mu)}
+.queue-days{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.queue-dup{display:inline-flex;align-items:center;gap:4px}
+.queue-body > textarea{margin-top:10px}
 [data-family="nordic"] .search-btn{width:34px;height:34px;border-color:var(--bd);color:var(--mu)}
 [data-family="nordic"] .search-btn .ico{width:18px;height:18px}
 [data-family="nordic"] .fab{background:var(--ac);border:0;color:var(--on-ac);box-shadow:none}
