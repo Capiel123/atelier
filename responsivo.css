@@ -1046,4 +1046,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .day-head-extra .days{margin-bottom:6px}
   .day-head-extra .week-controls-row{margin-bottom:4px}
   .day-head-lvl{padding:0 2px}
+  /* v115 — barra "Tarefas" é redundante no celular e, sticky, cobria os cards.
+     Os controles Expandir/Recolher continuam disponíveis no desktop. */
+  .tasks-header{display:none}
 }
