@@ -233,14 +233,18 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .section-group{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:14px;margin-bottom:12px;box-shadow:var(--card-shadow,none)}
 .section-group h3{margin-top:0}
 .theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-.theme-card{background:var(--s2);border:2px solid var(--bd);border-radius:10px;padding:0;overflow:hidden;cursor:pointer;transition:.15s;text-align:left;color:var(--tx);box-shadow:var(--card-shadow,none)}
+/* v122 — flex column + topo alinhado: o <button> centralizava o conteúdo
+   quando a linha do grid esticava (descrição de 2 linhas), deixando um vazio
+   acima do swatch nos temas vizinhos. Agora o conteúdo começa sempre no topo
+   e a área de texto preenche a altura restante. */
+.theme-card{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;background:var(--s2);border:2px solid var(--bd);border-radius:10px;padding:0;overflow:hidden;cursor:pointer;transition:.15s;text-align:left;color:var(--tx);box-shadow:var(--card-shadow,none)}
 .theme-card:hover{border-color:var(--ac);transform:translateY(-1px)}
 .theme-card.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac),0 4px 12px color-mix(in srgb,var(--ac) 25%,transparent)}
-.theme-swatch{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;gap:6px}
+.theme-swatch{height:44px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 10px;gap:6px}
 .theme-swatch .ts-aa{font-family:var(--font-display,inherit);text-transform:var(--title-transform,none);letter-spacing:var(--title-spacing,normal);font-style:var(--font-display-style,normal);font-size:15px;line-height:1;color:var(--ac);flex:none;font-weight:700}
 .theme-swatch .ts-dot{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
 .theme-swatch .ts-bar{flex:1;height:6px;border-radius:3px;margin:0 4px}
-.theme-info{padding:8px 10px;background:var(--s1);border-top:1px solid var(--bd)}
+.theme-info{flex:1 1 auto;min-width:0;padding:8px 10px;background:var(--s1);border-top:1px solid var(--bd)}
 .theme-name{font-size:12.5px;font-weight:600;color:var(--tx);line-height:1.2}
 .theme-desc{font-size:10.5px;color:var(--mu);margin-top:1px}
 .theme-preview{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:10px 0}

@@ -9,15 +9,22 @@ Para evitar degradação de performance por estouro ou poluição de contexto, s
 ```text
 SUA TAREFA ENVOLVE...                    CARREGUE E CONSULTE...
 ├─ Header, Timer, Logo ou Nav Topo   ──> docs/design/HEADER-TOP-MENU.md + layout.css
-├─ Card Resumo / Dashboard Semanal   ──> docs/ui/DASHBOARD-WEEK-TAB.md + responsivo.css
-├─ Semana, cards e conclusão         ──> docs/ui/WEEK-AND-TASK-CARDS.md + logica.js (isDone/inWeekScope)
+├─ Cabeçalho do dia / resumo         ──> docs/ui/DASHBOARD-WEEK-TAB.md §0 + responsivo.css
+├─ Semana, cards e conclusão         ──> docs/ui/WEEK-AND-TASK-CARDS.md + logica.js
+├─ Fila                              ──> docs/guides/GUIA-FILA.md
+├─ Foco ou Pomodoro                  ──> docs/ui/MODO-FOCO-E-TIMER.md + docs/ui/TIMER.md
+├─ Histórico                         ──> docs/ui/HISTORICO-TAB.md
 ├─ Avisos e busca global             ──> docs/ui/AVISOS-E-BUSCA.md + interface.js
-├─ CSS Mobile (≤640px) ou Breakpoints ─> responsivo.css (final do arquivo) + docs/design/CSS_DOCS.md
-├─ Design System, temas, fontes      ──> docs/design/DESIGN-SYSTEM.md + TEMAS.md + FONTES.md
-├─ Estado Local, Sync ou Supabase    ──> estado.js + sync.js + docs/data/DATA-MODEL.md
-├─ Estrutura do App / Módulos JS     ──> docs/ARCHITECTURE.md + docs/guides/JS_DOCS.md
-└─ Regras de Negócio e XP            ──> logica.js + docs/data/BUSINESS-RULES.md
+├─ CSS Mobile (≤640px)               ──> responsivo.css (final) + docs/design/CSS_DOCS.md
+├─ Temas, Nordic ou Herbário         ──> docs/design/TEMAS.md + o plano aberto em docs/design/
+├─ Estado, sync ou Supabase          ──> estado.js + sync.js + docs/data/DATA-MODEL.md
+├─ Um termo ou uma chave local       ──> docs/GLOSSARIO.md ou docs/CHAVES.md
+├─ Qual teste rodar                  ──> docs/TESTES.md
+├─ Módulos JS                        ──> docs/ARCHITECTURE.md + docs/guides/JS_DOCS.md
+└─ Regras de negócio e XP            ──> logica.js + docs/data/BUSINESS-RULES.md
 ```
+
+Leitura obrigatória de qualquer alteração: `docs/HANDOFF.md` e **um** documento da árvore acima. `CHANGELOG.md` e `KNOWN-ISSUES.md` entram por versão ou por ID (`Kxx`/`Fxx`), não inteiros. `docs/archive/` fica fora do caminho.
 
 ---
 
@@ -25,12 +32,12 @@ SUA TAREFA ENVOLVE...                    CARREGUE E CONSULTE...
 
 Antes de efetuar qualquer alteração no repositório, execute sequencialmente:
 
-1. **Leitura de Contexto:** Consulte `docs/PROJECT_CONTEXT.md` e verifique o painel em `docs/HANDOFF.md`.
-2. **Dívidas conhecidas:** Consulte `docs/KNOWN-ISSUES.md` — o problema pode já estar mapeado (ID `Kxx`/`Fxx`) com sintoma e próximo passo.
-3. **Histórico de versões:** Consulte `docs/CHANGELOG.md` para saber quando a área mudou e qual `CACHE_VERSION` a acompanha.
-4. **Inspeção Direta do Código:** Confirme no código real o estado de assinaturas de funções, seletores CSS e eventos (não confie apenas em memórias de conversas anteriores).
-5. **Análise de Impacto de Dados:** Se a alteração envolver a camada de armazenamento (`estado.js`, `localStorage`, `Supabase`), mapeie dependências em `docs/data/DEPENDENCIES.md`.
-6. **Confirmação de Backup:** Certifique-se com o desenvolvedor de que há backup recente antes de alterações com refatoração profunda ou mutações de estrutura de banco.
+1. **Estado:** Leia `docs/HANDOFF.md`. Decisões estáveis estão em `docs/PROJECT_CONTEXT.md` §5; abra esse arquivo só se a mudança puder revertê-las.
+2. **Dívida:** Se o pedido parece um bug já visto, busque o ID em `docs/KNOWN-ISSUES.md` em vez de ler o arquivo todo.
+3. **Versão:** Se precisar saber quando a área mudou, leia a entrada daquela versão no topo de `docs/CHANGELOG.md`.
+4. **Código:** Confirme assinaturas, seletores e eventos no arquivo real.
+5. **Dados:** Se mexer em `estado.js`, `localStorage` ou Supabase, leia `docs/CHAVES.md` e `docs/data/DEPENDENCIES.md`.
+6. **Backup:** Confirme com o desenvolvedor que há backup recente antes de refatoração profunda ou mudança de schema.
 
 ---
 
@@ -63,16 +70,15 @@ Antes de efetuar qualquer alteração no repositório, execute sequencialmente:
 ### Sistema de Temas e Tokens Coloridos
 - Utilize exclusivamente tokens CSS de tema (`var(--bg)`, `var(--s1..3)`, `var(--bd)`, `var(--tx)`, `var(--mu)`, `var(--ac)`, `var(--bu)`, `var(--ok)`, `var(--wr)`, `var(--er)`). Evite cores hexadecimais fixas inline.
 - **Preservação de Escopo de Efeitos:** Efeitos visuais avançados como `background-clip: text`, gradientes metálicos e `text-shadow` intensos são **estritamente restritos** ao elemento `.logo-text`. Nunca aplique essas propriedades a títulos de leitura (`.tt`, `h2`, `inputs`).
-- **Validação Cruzada de Temas:** Sempre valide alterações visuais nos 6 temas principais do sistema: *Obsidiana*, *Vampiro*, *Osso*, *Osso Profundo*, *Cromo* e *Osso Profundo Claro*.
+- **Validação de tema:** valide a alteração na família que você mudou (`data-family`) e em Obsidiana. São 18 temas; a contagem viva está em `THEMES` (`estado.js`).
 
 ---
 
 ## 5. Passagem de Trabalho entre Agentes (Handoff Protocol)
 
-1. **Ao Iniciar:** Leia o estado em `docs/HANDOFF.md`, as 3 entradas mais recentes de `docs/archive/HANDOFF-HISTORICO.md` e as pendências em `docs/KNOWN-ISSUES.md`.
-2. **Ao Concluir:**
-   - Resuma os arquivos alterados e a justificativa técnica de cada mudança.
-   - Registre a versão no topo de `docs/CHANGELOG.md` (o que mudou / o que foi corrigido / arquivos / validação) sempre que o shell mudar.
-   - Atualize `docs/KNOWN-ISSUES.md`: fechou uma dívida (mova para “Resolvidos”, citando a versão)? Abriu uma nova? Tomou uma decisão que não será corrigida?
-   - Atualize o arquivo `docs/HANDOFF.md`.
-   - Adicione o registro histórico no topo de `docs/archive/HANDOFF-HISTORICO.md` contendo: data, agente responsável, arquivos alterados, cenários validados e pendências conhecidas.
+1. **Ao iniciar:** leia `docs/HANDOFF.md` e o documento da tarefa. O histórico em `docs/archive/` só entra se uma decisão antiga não estiver no changelog.
+2. **Ao concluir:**
+   - Três bullets no `docs/HANDOFF.md`: o que mudou, o que ficou aberto, o que foi validado. Sem recontar versões antigas. Teto de 80 linhas; se passar, mova o miolo para o changelog.
+   - Se o shell mudou (HTML, CSS, JS, manifest), entrada no topo de `docs/CHANGELOG.md` e incremento de `CACHE_VERSION`.
+   - Se fechou ou abriu dívida, atualize só o item em `docs/KNOWN-ISSUES.md`.
+   - Não edite `docs/archive/`. O changelog é o registro.

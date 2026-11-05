@@ -58,7 +58,7 @@
         '<div class="theme-swatch" style="background:' + esc(t.bg) + ';border-bottom:1px solid ' + esc(t.bd) + '">' +
         '<span class="ts-aa" aria-hidden="true">Aa</span>' +
         '<span class="ts-dot" style="background:' + esc(t.ac) + ';color:' + esc(t.ac) + '"></span>' +
-        '<span class="ts-bar" style="background:linear-gradient(90deg,' + esc(t.bu) + ',' + esc(t.ac) + ')"></span>' +
+        '<span class="ts-bar" style="background:' + (typeof themeBarGradient === 'function' ? themeBarGradient(t) : 'linear-gradient(90deg,' + esc(t.bu) + ',' + esc(t.ac) + ')') + '"></span>' +
         '<span class="ts-dot" style="background:' + esc(t.bu) + ';color:' + esc(t.bu) + '"></span></div>' +
         '<div class="theme-info"><div class="theme-name">' + esc(t.n) + '</div><div class="theme-desc">' + esc(t.desc) + '</div>' +
         '<div class="theme-axis" style="font-size:8.5px;line-height:1.2;color:var(--mu);margin-top:2px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(axis) + '</div></div>' +

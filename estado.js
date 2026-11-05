@@ -39,7 +39,9 @@ const THEMES = {
   chrome:    {n:'Cromo',       desc:'Metal frio · brutal',   mode:'dark', look:'brutal', ac:'#E6E6EC', bu:'#3A3A42', bg:'#050506', s1:'#0D0D0F', s2:'#151518', s3:'#1F1F23', bd:'#35353B', chkBg:'#0D0D0F', chkBd:'#35353B', chkDone:'#E6E6EC', chkMark:'#050506', tx:'#F0F0F2', mu:'#9C9CA6', ok:'#B6C2C4', wr:'#C9BC94', er:'#C77C78', onAc:'#050506', radius:'1px', bevel:'4px', noise:'0.035', prHigh:'#F4F4F8', prMed:'#A7A7B2', prLow:'#74747E', surfaceCard:'#1F1F23', surfacePanel:'#0A0A0B'},
   'deepbone-light': {n:'Osso Profundo Claro', desc:'Bege claro · brutal', mode:'light', look:'brutal', ac:'#1B1A17', bu:'#8D887B', bg:'#DEDAD0', s1:'#D3CEC3', s2:'#E9E6DF', s3:'#F4F2EC', bd:'#A9A496', chkBg:'#D3CEC3', chkBd:'#A9A496', chkDone:'#1B1A17', chkMark:'#F2F0EA', tx:'#12110E', mu:'#4F4C44', ok:'#44503F', wr:'#5F4F26', er:'#842F27', onAc:'#F2F0EA', radius:'2px', bevel:'6px', noise:'0.05', prHigh:'#12110E', prMed:'#4A473F', prLow:'#6C675B', surfaceCard:'#F4F2EC', surfacePanel:'#D3CEC3'},
   'nordic-light': {n:'Nordic Claro', desc:'Linho, pedra e névoa', mode:'light', ac:'#4F5D64', bu:'#7C7870', bg:'#F2F0EA', s1:'#EAE6DD', s2:'#FAF9F5', s3:'#DFDAD0', bd:'#D3CDC2', chkBg:'#FAF9F5', chkBd:'#7B766C', chkDone:'#4F5D64', chkMark:'#F7F5EF', tx:'#1E1D19', mu:'#605C54', ok:'#486B58', wr:'#7A5B2E', er:'#8D4A44', onAc:'#F7F5EF', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#FAF9F5', surfacePanel:'#EAE6DD', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"},
-  'nordic-dark':  {n:'Nordic Escuro', desc:'Pedra, carvão e névoa', mode:'dark', ac:'#B4C0C3', bu:'#8A857B', bg:'#181714', s1:'#201F1B', s2:'#282722', s3:'#312F2A', bd:'#3B3832', chkBg:'#201F1B', chkBd:'#6B675E', chkDone:'#B4C0C3', chkMark:'#181714', tx:'#ECE9E1', mu:'#AAA59B', ok:'#8FB8A4', wr:'#D8B47E', er:'#E59B93', onAc:'#181714', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#201F1B', surfacePanel:'#282722', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"}
+  'nordic-dark':  {n:'Nordic Escuro', desc:'Pedra, carvão e névoa', mode:'dark', ac:'#B4C0C3', bu:'#8A857B', bg:'#181714', s1:'#201F1B', s2:'#282722', s3:'#312F2A', bd:'#3B3832', chkBg:'#201F1B', chkBd:'#6B675E', chkDone:'#B4C0C3', chkMark:'#181714', tx:'#ECE9E1', mu:'#AAA59B', ok:'#8FB8A4', wr:'#D8B47E', er:'#E59B93', onAc:'#181714', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#201F1B', surfacePanel:'#282722', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"},
+  'herbario-light': {n:'Herbário Claro', desc:'Jardim encantado · verde e orquídea', mode:'light', ac:'#246A42', bu:'#7049A9', bg:'#F1EAE3', s1:'#E8DCD5', s2:'#E3D9D1', s3:'#CDDDCA', bd:'#BDCFB9', chkBg:'#FAF6F0', chkBd:'#6B7D6E', chkDone:'#2F7F57', chkMark:'#FAF6F0', tx:'#26332A', mu:'#546056', ok:'#296A3B', wr:'#7F5505', er:'#9A413D', onAc:'#FAF6F0', radius:'14px', radiusSm:'10px', surfaceCard:'#DFEFDC', surfacePanel:'#E8DCD5', fontBody:"'Atelier Herbario', system-ui, sans-serif", fontWordmark:"'Atelier Herbario Display', Georgia, serif"},
+  'herbario-dark':  {n:'Herbário Escuro', desc:'Musgo, sálvia e bronze', mode:'dark', ac:'#8BBEAA', bu:'#B499E4', bg:'#231F13', s1:'#2B281A', s2:'#343021', s3:'#3E3B2A', bd:'#4D4937', chkBg:'#231F13', chkBd:'#8D8972', chkDone:'#8BBEAA', chkMark:'#231F13', tx:'#EFE6D3', mu:'#ABA693', ok:'#88CA95', wr:'#E0B771', er:'#F4928A', onAc:'#231F13', radius:'14px', radiusSm:'10px', surfaceCard:'#2B281A', surfacePanel:'#343021', fontBody:"'Atelier Herbario', system-ui, sans-serif", fontWordmark:"'Atelier Herbario Display', Georgia, serif"}
 };
 
 /* --- IDENTIDADE VISUAL (Fase Identidade v2) ---
@@ -67,7 +69,9 @@ const THEME_IDENTITY = {
   chrome:    { dotShape:'square',  chkShape:'square',  progressType:'metal',  logoEffect:'metal',  topOrnament:'',   isGlass:true, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
   'deepbone-light': { dotShape:'square', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
   'nordic-light': { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
-  'nordic-dark':  { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' }
+  'nordic-dark':  { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
+  'herbario-light': { dotShape:'circle', chkShape:'circle', progressType:'iris', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'marker' },
+  'herbario-dark':  { dotShape:'circle', chkShape:'circle', progressType:'bronze', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'text' }
 };
 
 /* --- DIREÇÃO DE ARTE POR TEMA ---
@@ -88,7 +92,19 @@ const THEME_ART = {
   bone: {titleSpacing: '1px', cardShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)'},
   deepbone: {},
   chrome: {},
-  'deepbone-light': {}
+  'deepbone-light': {},
+  'herbario-light': {
+    surfaceSummary: '#FAF6F0',
+    controlBd: '#6B7D6E',
+    detail: '#AA4298',
+    bronze: '#98713D',
+    progressGradient: 'linear-gradient(90deg,#654DB6 0%,#8E3EAE 33%,#C546A2 66%,#C84983 100%)'
+  },
+  'herbario-dark': {
+    controlBd: '#8D8972',
+    detail: '#D98DC9',
+    bronze: '#B9874F'
+  }
 };
 // v102 (Etapa 2): paleta de 9 papéis por tema (ordem fixa: vermelho, laranja,
 // amarelo, verde, ciano, azul, violeta, rosa, neutro). Verificada >=4.5:1 contra
@@ -110,7 +126,9 @@ const THEME_PALETTES = {
   chrome: ['#b48584','#e2bea8','#d6d8b4','#8aad97','#b9dcdf','#7c93ad','#aea4c6','#e9c9e1','#8f9195'],
   'deepbone-light': ['#78321b','#693e03','#473d03','#29511c','#004d49','#104b72','#5c3b70','#662f4c','#4a4945'],
   'nordic-light': ['#A66A57','#9A7548','#857848','#647D68','#4F777A','#5A7182','#756C85','#8A6872','#7A766D'],
-  'nordic-dark':  ['#CFA08E','#D8BB91','#C9C098','#94B29C','#93C0C0','#9DB4C4','#B7AAC5','#D4AEB8','#B2ADA3']
+  'nordic-dark':  ['#CFA08E','#D8BB91','#C9C098','#94B29C','#93C0C0','#9DB4C4','#B7AAC5','#D4AEB8','#B2ADA3'],
+  'herbario-light': ['#B55F44','#9B6923','#707124','#448551','#2F7E78','#3E7DAC','#844AC7','#AC3A8E','#757975'],
+  'herbario-dark':  ['#FA9B7D','#EAB26D','#D1D485','#7EC289','#89D8D1','#76B9EC','#B8A9F5','#F6A9CE','#B0B4B1']
 };
 Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
 Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });
@@ -297,6 +315,9 @@ function applyTheme() {
     bevel: '--bevel', noise: '--noise-opacity',
     prHigh: '--pr-high', prMed: '--pr-med', prLow: '--pr-low',
     surfaceCard: '--surface-card', surfacePanel: '--surface-panel',
+    surfaceSummary: '--surface-summary',
+    controlBd: '--control-bd', detail: '--detail', bronze: '--bronze',
+    progressGradient: '--progress-gradient',
     fontDisplay: '--font-display', fontMono: '--font-mono', titleTrack: '--title-track',
     fontBody: '--font-body', fontWordmark: '--font-wordmark',
     titleTransform: '--title-transform', titleSpacing: '--title-spacing',
