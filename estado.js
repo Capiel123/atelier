@@ -456,7 +456,7 @@ function seed() {
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
     goals: [mkGoal({id:'g1', t:'2-3 clientes recorrentes'})],
-    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, timerStoppedAt: 0, clearedDone: {}, workLogs: [], pomodoros: [],
+    contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, timerStoppedAt: 0, clearedDone: {}, workLogs: [], pomodoros: [], focusBank: {date: iso(new Date()), sec: 0, count: 0, updatedAt: Date.now()},
     _seedId: uid(),
     lastModified: Date.now()
   };
@@ -491,6 +491,15 @@ function migrate(raw) {
   // Fase 4: S.pomodoros é a fonte de verdade do KPI. NÃO reconstruir de t.logs
   // (histórico antigo contaminado); se já existe, preservar como está.
   if (!Array.isArray(s.pomodoros)) s.pomodoros = [];
+  // v126: banco de foco do Pomodoro (local; não entra no sync).
+  if (!s.focusBank || typeof s.focusBank !== 'object' || Array.isArray(s.focusBank)) {
+    s.focusBank = {date: iso(new Date()), sec: 0, count: 0, updatedAt: Date.now()};
+  } else {
+    if (!s.focusBank.date) s.focusBank.date = iso(new Date());
+    if (!(+s.focusBank.sec >= 0)) s.focusBank.sec = 0;
+    if (!(+s.focusBank.count >= 0)) s.focusBank.count = 0;
+    if (!s.focusBank.updatedAt) s.focusBank.updatedAt = Date.now();
+  }
 
   const isV1 = !s.v || s.v < 2, isV2 = !s.v || s.v < 3, isV3 = !s.v || s.v < 4;
   const isV4 = !s.v || s.v < 5, isV5 = !s.v || s.v < 6;
@@ -576,10 +585,15 @@ function migrate(raw) {
       accumulated: s.timer.accumulated || 0,
       paused: s.timer.paused || false,
       targetMin: s.timer.targetMin || null,
-      phase: s.timer.phase || null,
+      phase: s.timer.phase || 'focus',
       focusMin: s.timer.focusMin || s.timer.targetMin || null,
       restMin: s.timer.restMin || s.cfg.brk || 5,
       cycleCount: s.timer.cycleCount || 0,
+      bankBaseSec: s.timer.bankBaseSec != null ? s.timer.bankBaseSec : 0,
+      blockPoms: s.timer.blockPoms || 0,
+      reviewPoms: s.timer.reviewPoms || 0,
+      reviewMin: s.timer.reviewMin || 0,
+      restFromReview: !!s.timer.restFromReview,
       subStartedAt: s.timer.subStartedAt ?? s.timer.startedAt ?? null,
       subAccumulated: s.timer.subAccumulated ?? (s.timer.accumulated || 0),
       updatedAt: s.timer.updatedAt || s.timer.startedAt || Date.now()

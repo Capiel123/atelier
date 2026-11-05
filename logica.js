@@ -247,6 +247,66 @@ function upcomingBirthdays(withinDays = 14) {const out = []; const today = new D
 
 /* --- TIMER --- */
 function tfnv(s) { var h = 0x811c9dc5; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; } return h.toString(36); }
+// v126: banco global de foco. O alvo do bloco (10/25/50) é só um timebox;
+// o Pomodoro é contado a cada 25 min de foco, independente de tarefa/subtarefa.
+const POMODORO_SEC = 25 * 60;
+function ensureFocusBank() {
+  var today = iso(new Date());
+  if (!S.focusBank || typeof S.focusBank !== 'object' || Array.isArray(S.focusBank) || S.focusBank.date !== today) {
+    S.focusBank = {date: today, sec: 0, count: 0, updatedAt: Date.now()};
+    if (S.timer && S.timer.phase === 'focus') S.timer.bankBaseSec = 0;
+  }
+  return S.focusBank;
+}
+function focusBankSec() {
+  var b = ensureFocusBank();
+  if (S.timer && S.timer.phase === 'focus') {
+    var base = (S.timer.bankBaseSec != null) ? S.timer.bankBaseSec : (b.sec || 0);
+    return Math.max(0, base + timerElapsedSec());
+  }
+  return Math.max(0, b.sec || 0);
+}
+function commitFocusBank() {
+  var b = ensureFocusBank();
+  if (S.timer && S.timer.phase === 'focus') {
+    var sec = focusBankSec();
+    b.sec = sec;
+    S.timer.bankBaseSec = sec;
+    b.updatedAt = Date.now();
+  }
+  return Math.max(0, b.sec || 0);
+}
+function awardFocusPomodoros() {
+  if (!S.timer || S.timer.phase !== 'focus' || S.timer.paused) return 0;
+  var b = ensureFocusBank();
+  var n = 0;
+  while (focusBankSec() >= POMODORO_SEC && n < 20) {
+    var seq = (b.count || 0) + 1;
+    var pomTs = Date.now();
+    var id = 'pom_focus_' + b.date + '_' + seq;
+    if (!Array.isArray(S.pomodoros)) S.pomodoros = [];
+    if (!S.pomodoros.some(function (p) { return p.id === id; })) {
+      S.pomodoros.push(mkPomodoro({id: id, sessionId: 'focus:' + b.date + ':' + seq, date: b.date, ts: pomTs, targetMin: 25, taskId: S.timer.taskId || null, subId: S.timer.subId || null}));
+    }
+    b.count = seq;
+    b.lastPomodoroAt = pomTs;
+    b.updatedAt = pomTs;
+    S.timer.blockPoms = (S.timer.blockPoms || 0) + 1;
+    S.timer.bankBaseSec = (S.timer.bankBaseSec || 0) - POMODORO_SEC;
+    b.sec = Math.max(0, focusBankSec());
+    n++;
+    if (typeof toast === 'function') toast('🍅 Pomodoro ' + seq + ' batido!');
+    if (typeof beep === 'function') beep();
+  }
+  if (n) save();
+  return n;
+}
+function breakMinutesFor(awards) {
+  var b = ensureFocusBank();
+  var short = S.cfg.brk || 5;
+  if ((b.count || 0) > 0 && b.count % 4 === 0) return S.cfg.longBrk || 15;
+  return Math.max(short, (awards || 0) * short);
+}
 // Identidade determinística de um bloco de timer (idempotência dos logs entre
 // dispositivos e em repetições). A âncora é o INÍCIO DO SEGMENTO da subtarefa
 // (subStartedAt - subAccumulated*1000), não da fase — assim trocar de sub e
@@ -338,7 +398,7 @@ function subElapsedSec() {
   const st = (S.timer.subStartedAt != null) ? S.timer.subStartedAt : (S.timer.startedAt || null);
   return acc + (st ? (Date.now() - st) / 1000 : 0);
 }
-function startTimer(taskId, subId, targetMin) {if (S.timer) {if (S.timer.taskId === taskId) {if (S.timer.paused) { resumeTimer(); return; } toast('Timer já rodando', true);} else if (S.timer.paused) toast('Timer pausado em outra tarefa. Pare-o antes de iniciar esta.', true); else toast('Timer ativo em outra tarefa. Pare-o antes de iniciar esta.', true); return;} S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: targetMin ? 'focus' : null, focusMin: targetMin || null, restMin: S.cfg.brk || 5, cycleCount: 0, subStartedAt: Date.now(), subAccumulated: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
+function startTimer(taskId, subId, targetMin) {if (S.timer) {if (S.timer.taskId === taskId) {if (S.timer.paused) { resumeTimer(); return; } toast('Timer já rodando', true);} else if (S.timer.paused) toast('Timer pausado em outra tarefa. Pare-o antes de iniciar esta.', true); else toast('Timer ativo em outra tarefa. Pare-o antes de iniciar esta.', true); return;} const bank = ensureFocusBank(); S.timer = {taskId, subId: subId || null, startedAt: Date.now(), accumulated: 0, paused: false, targetMin: targetMin || null, phase: 'focus', focusMin: targetMin || null, restMin: S.cfg.brk || 5, cycleCount: 0, subStartedAt: Date.now(), subAccumulated: 0, bankBaseSec: bank.sec || 0, blockPoms: 0, updatedAt: Date.now()}; save(); renderTimer(); render(); if (targetMin) toast('▶ Bloco de ' + targetMin + 'min iniciado'); else toast('Timer iniciado');}
 function pauseTimer() {if (!S.timer || S.timer.paused) return; S.timer.accumulated = timerElapsedSec(); S.timer.subAccumulated = subElapsedSec(); S.timer.startedAt = null; S.timer.subStartedAt = null; S.timer.paused = true; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('⏸ Pausado');}
 function resumeTimer() {if (!S.timer || !S.timer.paused) return; S.timer.startedAt = Date.now(); S.timer.subStartedAt = Date.now(); S.timer.paused = false; S.timer.updatedAt = Date.now(); save(); renderTimer(); if (focusTaskId) renderFocus(); toast('▶ Retomado');}
 function advancePhase(isNatural = true) {
@@ -350,48 +410,84 @@ function advancePhase(isNatural = true) {
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   // v96: tarefa excluída durante o timer não pode gerar pomodoro/descanso órfãos.
   if (!t || isDone(t)) { stopTimer(); return; }
-  if (S.timer.phase === 'focus') {
-    const segSec = subElapsedSec();
-    const el = Math.round(segSec / 60);
-    if (t && el > 0) { recordTimerMinutes(t, el, S.timer.subId, isNatural ? 'pomodoro' : '', S.timer); toast('+' + el + 'min de foco registrados'); }
-    // Fase 4: pomodoro concluído naturalmente entra em S.pomodoros (fonte do KPI).
-    // Idempotência por id; skip preserva note:'' em t.logs e NÃO cria pomodoro.
-    if (isNatural) {
-      const pomTs = Date.now();
-      // v102: id determinístico da SESSÃO (não do instante). Duas chamadas para o
-      // mesmo foco geram o mesmo id — nada de duplicar o Pomodoro.
-      const sid = pomodoroSessionId(S.timer);
-      const pomId = 'pom_' + tfnv(sid);
-      if (!Array.isArray(S.pomodoros)) S.pomodoros = [];
-      if (!S.pomodoros.some(p => p.id === pomId || p.sessionId === sid)) {
-        S.pomodoros.push(mkPomodoro({ id: pomId, sessionId: sid, date: iso(new Date(pomTs)), ts: pomTs, targetMin: S.timer.targetMin, taskId: S.timer.taskId || null, subId: S.timer.subId || null }));
-      }
-    }
-    // O descanso NÃO inicia sozinho: entra em "descanso sugerido" (pausado).
-    S.timer.phase = 'rest'; S.timer.targetMin = S.timer.restMin || S.cfg.brk || 5;
-    S.timer.accumulated = 0; S.timer.startedAt = null; S.timer.paused = true;
-    S.timer.subAccumulated = Math.round(segSec); S.timer.subStartedAt = null; // congela o quadrado
-    if (isNatural) S.timer.cycleCount = (S.timer.cycleCount || 0) + 1;
-    beep(); setTimeout(beep, 220);
-    toast('✓ Foco concluído · escolha o descanso');
-  } else {
-    // descanso → foco (pular o descanso ou voltar ao foco)
-    S.timer.phase = 'focus'; S.timer.targetMin = S.timer.focusMin || focusTargetMin;
+  if (S.timer.phase !== 'focus') {
+    // descanso (ou bloco encerrado) → foco novamente
+    const fromReview = !!S.timer.restFromReview;
+    S.timer.phase = 'focus'; S.timer.targetMin = fromReview ? null : (S.timer.focusMin || focusTargetMin);
+    S.timer.focusMin = fromReview ? null : S.timer.focusMin;
     S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
-    S.timer.subAccumulated = 0; S.timer.subStartedAt = Date.now(); // quadrado recomeça
+    S.timer.subAccumulated = 0; S.timer.subStartedAt = Date.now();
+    S.timer.blockPoms = 0;
+    S.timer.restFromReview = false;
+    S.timer.bankBaseSec = ensureFocusBank().sec || 0;
     beep();
     toast('☀ De volta ao foco');
+  } else {
+    // v126: o alvo é só um timebox. O Pomodoro é o banco global de 25 min.
+    awardFocusPomodoros();
+    const targetSec = S.timer.targetMin ? S.timer.targetMin * 60 : null;
+    if (isNatural && targetSec && timerElapsedSec() < targetSec - 2) return;
+    const segSec = subElapsedSec();
+    const el = Math.round(segSec / 60);
+    const blockPoms = S.timer.blockPoms || 0;
+    if (t && el > 0) {
+      recordTimerMinutes(t, el, S.timer.subId, (isNatural && blockPoms > 0) ? 'pomodoro' : '', S.timer);
+      toast('+' + el + 'min de foco registrados');
+    }
+    commitFocusBank();
+    S.timer.cycleCount = (S.timer.cycleCount || 0) + blockPoms;
+    if (blockPoms > 0) {
+      const breakMin = breakMinutesFor(blockPoms);
+      S.timer.phase = 'rest';
+      S.timer.targetMin = breakMin;
+      S.timer.restMin = breakMin;
+      S.timer.reviewPoms = blockPoms;
+      S.timer.accumulated = 0; S.timer.startedAt = null; S.timer.paused = true;
+      S.timer.subAccumulated = Math.round(segSec); S.timer.subStartedAt = null;
+      toast('✓ ' + blockPoms + ' pomodoro' + (blockPoms > 1 ? 's' : '') + ' · pausa recomendada ' + breakMin + 'min');
+    } else {
+      // Bloco menor que 25: não é pomodoro e não recomenda pausa; ainda oferece
+      // continuar, encerrar ou pausar por escolha do usuário.
+      S.timer.phase = 'review';
+      S.timer.reviewPoms = 0;
+      S.timer.reviewMin = el;
+      S.timer.targetMin = null;
+      S.timer.accumulated = Math.round(segSec);
+      S.timer.startedAt = null;
+      S.timer.paused = true;
+      S.timer.subAccumulated = Math.round(segSec); S.timer.subStartedAt = null;
+      const remain = Math.max(0, Math.ceil((POMODORO_SEC - (focusBankSec() % POMODORO_SEC)) / 60));
+      toast('Bloco concluído · ' + el + 'min · faltam ' + remain + 'min para 1 pomodoro');
+    }
   }
   S.timer.updatedAt = Date.now();
   save(); renderTimer();
   if (focusTaskId) {renderFocus(); const overlay = document.getElementById('focusOverlay'); if (overlay) {overlay.classList.remove('flash'); void overlay.offsetWidth; overlay.classList.add('flash'); setTimeout(() => overlay.classList.remove('flash'), 1250);}}
 }
-// Inicia o descanso escolhido (curto ou longo), só a partir do estado "descanso sugerido".
-function startRest(long) {
-  if (!S.timer || S.timer.phase !== 'rest' || !S.timer.paused) return;
-  S.timer.restMin = long ? (S.cfg.longBrk || 15) : (S.cfg.brk || 5);
-  S.timer.targetMin = S.timer.restMin;
+// Continua o foco depois de um bloco encerrado, mantendo o banco de 25 min.
+function continueFocus() {
+  if (!S.timer || S.timer.phase !== 'review') return;
+  S.timer.phase = 'focus'; S.timer.targetMin = null; S.timer.focusMin = null;
   S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
+  S.timer.subAccumulated = 0; S.timer.subStartedAt = Date.now();
+  S.timer.blockPoms = 0;
+  S.timer.bankBaseSec = ensureFocusBank().sec || 0;
+  S.timer.updatedAt = Date.now();
+  save(); renderTimer();
+  if (focusTaskId) renderFocus();
+  toast('▶ Foco retomado');
+}
+// Inicia o descanso escolhido (curto ou longo), só a partir do estado "descanso sugerido".
+function startRest(long, minutes) {
+  if (!S.timer || !['rest','review'].includes(S.timer.phase) || !S.timer.paused) return;
+  const fromReview = S.timer.phase === 'review';
+  const requested = (+minutes > 0) ? Math.round(+minutes) : null;
+  S.timer.restMin = requested || (long ? (S.cfg.longBrk || 15) : (S.cfg.brk || 5));
+  S.timer.targetMin = S.timer.restMin;
+  S.timer.phase = 'rest';
+  S.timer.restFromReview = fromReview;
+  S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
+  S.timer.subAccumulated = 0; S.timer.subStartedAt = null;
   S.timer.updatedAt = Date.now();
   beep(); save(); renderTimer();
   if (focusTaskId) renderFocus();
@@ -409,10 +505,12 @@ function completeRest() {
 }
 function stopTimer(override) {
   if (!S.timer) return;
+  const phase = S.timer.phase;
   const elapsed = override != null ? override : Math.round(subElapsedSec() / 60);
   const t = S.tasks.find(x => x.id === S.timer.taskId);
-  // No descanso, os minutos de foco já foram registrados ao concluir a fase.
-  if (t && elapsed > 0 && S.timer.phase !== 'rest') { recordTimerMinutes(t, elapsed, S.timer.subId, '', S.timer); toast('+' + elapsed + 'min'); }
+  // Só a fase de foco gera log. Em review/descanso os minutos já foram gravados.
+  if (t && elapsed > 0 && phase === 'focus') { recordTimerMinutes(t, elapsed, S.timer.subId, '', S.timer); toast('+' + elapsed + 'min'); }
+  if (phase === 'focus') commitFocusBank();
   S.timerStoppedAt = Date.now();
   S.timer = null; save(); renderTimer();
   if (['week','skills','proj','stats'].includes(tab)) render();

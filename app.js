@@ -560,7 +560,8 @@ document.addEventListener('click', ev => {
       return;
     }
     case 'focusSkip': advancePhase(false); return;
-    case 'focusRest': startRest(btn.dataset.long === '1'); return;
+    case 'focusContinue': continueFocus(); return;
+    case 'focusRest': startRest(btn.dataset.long === '1', +btn.dataset.min || 0); return;
     case 'focusStop': stopTimer(); if (focusTaskId) renderFocus(); return;
     case 'focusCompleteYes': {
       document.getElementById('focusCompleteModal')?.remove();
@@ -1418,5 +1419,5 @@ function focusQuickAdd() {
 
 setInterval(() => {if (S.timer) renderTimer();}, 500);                             // relógio do timer no topo
 setInterval(() => {const slot = currentEnergySlot(); if (slot !== lastSlot) {lastSlot = slot; if (S && S.cfg.autoPriority && tab === 'week') refreshTaskList();}}, 60000); // reordena quando muda o período do dia
-setInterval(() => {if (!S.timer || S.timer.paused || !S.timer.targetMin) return; if (S.timer.phase === 'focus' && timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase(true); else if (S.timer.phase === 'rest' && timerElapsedSec() / 60 >= S.timer.targetMin) completeRest();}, 800); // foco conclui sozinho; descanso só sugere retorno
+setInterval(() => {if (!S.timer || S.timer.paused) return; if (S.timer.phase === 'focus') {awardFocusPomodoros(); if (S.timer.targetMin && timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase(true);} else if (S.timer.phase === 'rest' && S.timer.targetMin && timerElapsedSec() / 60 >= S.timer.targetMin) completeRest();}, 800); // foco conclui sozinho; descanso só sugere retorno
 setInterval(() => {if (focusTaskId) updateFocusTimer();}, 500);                    // anel do modo foco

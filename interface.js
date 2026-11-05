@@ -1205,6 +1205,10 @@ function viewStats() {
   // pelo mesmo foco contam uma vez.
   const pomodorosToday = dedupePomodoros(S.pomodoros || []).filter(p => p.date === td).length;
   const weekMin = weekLogs.reduce((a,l) => a + (+l.minutes||0), 0);
+  const manualWeekMin = weekLogs.filter(l => l.note === 'manual').reduce((a,l) => a + (+l.minutes||0), 0);
+  const todayLogs = allLogs.filter(l => l.end && iso(new Date(l.end)) === td);
+  const todayMin = todayLogs.reduce((a,l) => a + (+l.minutes||0), 0);
+  const manualTodayMin = todayLogs.filter(l => l.note === 'manual').reduce((a,l) => a + (+l.minutes||0), 0);
   const weekTasksDone = S.tasks.filter(t => t.done && t.doneAt && iso(new Date(t.doneAt)) >= weekAgoStr).length;
   const totalTasks = S.tasks.length; const doneTasks = S.tasks.filter(t => t.done).length;
   const completionRate = totalTasks ? Math.round(doneTasks/totalTasks*100) : 0;
@@ -1238,7 +1242,7 @@ function viewStats() {
 
   const xpBlock = `<h3 style="margin-top:0">Progressão</h3><div class="xp-hero"><div><div class="xp-level-label">Nível</div><div class="xp-level">${xp.lv}</div></div><div class="xp-bar-wrap"><div style="font-size:12px;color:var(--mu);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b style="color:var(--tx)">${Math.round(xp.inLevel)}</b> / ${xp.forLevel} XP neste nível</span><span>faltam <b style="color:var(--ac)">${xp.toNext}</b></span></div><div class="xp-bar"><div style="width:${(xp.progress*100)}%"></div></div><div class="xp-meta">Total: <b>${Math.round(xp.gxp)}</b> XP · Semana: <b>+${xp.weekXp}</b> · Mês: <b>+${xp.monthXp}</b></div></div></div><h4>Top habilidades por XP</h4>${xp.topSkills.length ? xp.topSkills.map(s => {const skXp = Math.round(num(s.xp)); const info = levelInfo(skXp); return `<div class="skill-xp-row"><div class="sxr-label" style="color:${themeColor(s.color)}">${esc(s.n)}</div><div class="sxr-bar"><div style="width:${(skXp/xp.maxSkillXp*100)}%;background:${themeColor(s.color)}"></div></div><div class="sxr-val"><b>N${info.lv}</b> · ${skXp} XP</div></div>`;}).join('') : '<div class="msg">Sem habilidades ainda.</div>'}`;
 
-  const overviewBlock = `<h3>Visão geral</h3><div class="kpi-grid"><div class="kpi"><div class="kpi-label">Horas (7d)</div><div class="kpi-value">${fmtMin(weekMin)}</div><div class="kpi-sub">${weekLogs.length} sessões</div></div><div class="kpi"><div class="kpi-label">Tarefas (7d)</div><div class="kpi-value">${weekTasksDone}</div><div class="kpi-sub">concluídas</div></div><div class="kpi"><div class="kpi-label">Pomodoros hoje</div><div class="kpi-value">${pomodorosToday}</div><div class="kpi-sub">focos concluídos</div></div><div class="kpi"><div class="kpi-label">Dias seguidos</div><div class="kpi-value">${streak}</div><div class="kpi-sub">com atividade</div></div><div class="kpi"><div class="kpi-label">Conclusão</div><div class="kpi-value">${completionRate}%</div><div class="kpi-sub">${doneTasks}/${totalTasks}</div></div><div class="kpi"><div class="kpi-label">Tempo médio</div><div class="kpi-value">${avgTaskMin?fmtMin(avgTaskMin):'—'}</div><div class="kpi-sub">por tarefa</div></div><div class="kpi"><div class="kpi-label">Rendimento total</div><div class="kpi-value" style="font-size:16px">${fmtMoney(earnedPrimary, primary)}</div><div class="kpi-sub">projetos concluídos</div></div></div><h3>Consistência</h3>${renderHeatmap()}<h3>Últimos 7 dias</h3><div class="bar-chart">${weekDays.map(x => `<div class="bar-col ${x.isToday?'today':''}"><div class="bar-val">${x.mins?fmtMin(x.mins):''}</div><div class="bar-fill" style="height:${(x.mins/maxWeekMin*100)}%"></div><div class="bar-label">${x.label}</div></div>`).join('')}</div>`;
+  const overviewBlock = `<h3>Visão geral</h3><div class="kpi-grid"><div class="kpi"><div class="kpi-label">Foco (7d)</div><div class="kpi-value">${fmtMin(weekMin)}</div><div class="kpi-sub">${weekLogs.length} sessões · ${fmtMin(manualWeekMin)} manual</div></div><div class="kpi"><div class="kpi-label">Manual (7d)</div><div class="kpi-value">${fmtMin(manualWeekMin)}</div><div class="kpi-sub">sem timer</div></div><div class="kpi"><div class="kpi-label">Tarefas (7d)</div><div class="kpi-value">${weekTasksDone}</div><div class="kpi-sub">concluídas</div></div><div class="kpi"><div class="kpi-label">Pomodoros hoje</div><div class="kpi-value">${pomodorosToday}</div><div class="kpi-sub">timer · 25 min cada</div></div><div class="kpi"><div class="kpi-label">Dias seguidos</div><div class="kpi-value">${streak}</div><div class="kpi-sub">com atividade</div></div><div class="kpi"><div class="kpi-label">Conclusão</div><div class="kpi-value">${completionRate}%</div><div class="kpi-sub">${doneTasks}/${totalTasks}</div></div><div class="kpi"><div class="kpi-label">Tempo médio</div><div class="kpi-value">${avgTaskMin?fmtMin(avgTaskMin):'—'}</div><div class="kpi-sub">por tarefa</div></div><div class="kpi"><div class="kpi-label">Rendimento total</div><div class="kpi-value" style="font-size:16px">${fmtMoney(earnedPrimary, primary)}</div><div class="kpi-sub">projetos concluídos</div></div></div><h3>Consistência</h3>${renderHeatmap()}<h3>Últimos 7 dias</h3><div class="bar-chart">${weekDays.map(x => `<div class="bar-col ${x.isToday?'today':''}"><div class="bar-val">${x.mins?fmtMin(x.mins):''}</div><div class="bar-fill" style="height:${(x.mins/maxWeekMin*100)}%"></div><div class="bar-label">${x.label}</div></div>`).join('')}</div>`;
 
   // v104: o que saiu do dashboard da Semana (Compromissos/Pessoal + energia)
   // continua visível aqui, sem perda de informação.
@@ -1250,7 +1254,7 @@ function viewStats() {
     const p = sectionProgress(arr);
     return `<span>${sectionIcon(s)} ${SECTION_META[s].n}: <b>${p.pct}%</b> <span class="wss-sub">(${arr.filter(t => isDoneThisWeek(t)).length}/${arr.length})</span></span>`;
   }).join(' · ');
-  const todayBlock = `<h3>Hoje</h3><div class="card"><div class="big" style="margin-bottom:6px">${fmtDate(td)}</div><div class="msg" style="display:flex;gap:10px;flex-wrap:wrap">${secToday}</div><div class="msg" style="margin-top:6px">Energia: Manhã <b>${esc(eLabel[energyToday.morning] || energyToday.morning)}</b> · Tarde <b>${esc(eLabel[energyToday.afternoon] || energyToday.afternoon)}</b> · Noite <b>${esc(eLabel[energyToday.evening] || energyToday.evening)}</b></div></div>`;
+  const todayBlock = `<h3>Hoje</h3><div class="card"><div class="big" style="margin-bottom:6px">${fmtDate(td)}</div><div class="msg" style="display:flex;gap:10px;flex-wrap:wrap">${secToday}</div><div class="msg" style="margin-top:6px">Foco hoje: <b>${fmtMin(todayMin)}</b> · manual <b>${fmtMin(manualTodayMin)}</b> · pomodoros <b>${pomodorosToday}</b></div><div class="msg" style="margin-top:6px">Energia: Manhã <b>${esc(eLabel[energyToday.morning] || energyToday.morning)}</b> · Tarde <b>${esc(eLabel[energyToday.afternoon] || energyToday.afternoon)}</b> · Noite <b>${esc(eLabel[energyToday.evening] || energyToday.evening)}</b></div></div>`;
 
   const calibBlock = calib.insufficient ? `<div class="card"><div class="calib-headline">Calibração de estimativas</div><div class="msg">Conclua ${calib.need - calib.count} tarefa${calib.need-calib.count>1?'s':''} mais com estimativa para ver a calibração.</div></div>` : `<div class="card calib-block"><div class="calib-headline">Nas últimas ${calib.count} tarefas com estimativa, você gasta <b style="color:${Math.abs(calib.pct)>30?'var(--wr)':'var(--ok)'}">${Math.abs(calib.pct)}% ${calib.pct>=0?'acima':'abaixo'}</b> do previsto.</div><div class="msg">${calib.pct > 30 ? 'Multiplique suas estimativas por ~' + ((100+calib.pct)/100).toFixed(1) + 'x.' : calib.pct < -20 ? 'Você tende a superestimar. Pode ser mais ousado.' : 'Boa calibração.'}</div></div>`;
 
@@ -1517,9 +1521,9 @@ function closeReportSheet() {document.getElementById('reportSheet')?.remove();}
 
 /* --- TIMER (widget do topo) --- */
 function renderTimer() {
-  const el = $('#timerWidget'), lbl = $('#tlabel'), time = $('#ttime'), stopBtn = $('#tstop');
+  const el = $('#timerWidget'), lbl = $('#tlabel'), time = $('#ttime'), stopBtn = $('#tstop'), bankEl = $('#tbank');
   if (!el) return;
-  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; return;}
+  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) bankEl.textContent = ''; return;}
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   el.classList.add('run');
   time.textContent = fmtClock(timerElapsedSec());
@@ -1529,6 +1533,11 @@ function renderTimer() {
   else if (S.timer.paused) prefix = ico('pause');
   if (S.timer.subId && t) {const sb = t.subs.find(x => x.id === S.timer.subId); if (sb) {label = sb.t; prefix = '';}}
   lbl.innerHTML = (prefix ? prefix + ' ' : '') + esc(label.slice(0, 40));
+  if (bankEl) {
+    const bank = ensureFocusBank();
+    const inBlock = Math.floor((focusBankSec() % (25 * 60)) / 60);
+    bankEl.textContent = S.timer.phase === 'rest' ? '🍅 ' + (bank.count || 0) + ' hoje' : '🍅 ' + (bank.count || 0) + ' · ' + inBlock + '/25';
+  }
   stopBtn.style.display = '';
 }
 
@@ -1613,26 +1622,25 @@ function renderFocus() {
   const isPaused = timerOnThisTask && S.timer.paused;
   const restPending = timerOnThisTask && phase === 'rest' && isPaused && (S.timer.accumulated || 0) === 0;
   const restDone = timerOnThisTask && phase === 'rest' && isPaused && (S.timer.accumulated || 0) > 0;
-  const hasTarget = timerOnThisTask && S.timer.targetMin;
+  const reviewPending = timerOnThisTask && phase === 'review' && isPaused;
+  const hasTarget = timerOnThisTask && S.timer.targetMin && !reviewPending;
   const elapsedSec = timerOnThisTask ? timerElapsedSec() : 0;
   const targetMin = hasTarget ? S.timer.targetMin : focusTargetMin;
   const remainingSec = hasTarget ? Math.max(0, targetMin * 60 - elapsedSec) : targetMin * 60;
   const progress = (hasTarget && !restPending && !restDone) ? Math.min(1, (elapsedSec/60) / targetMin) : 0;
   const circ = 2 * Math.PI * 100;
   const offset = circ * (1 - progress);
-  const timeStr = (restPending || restDone) ? '✓' : (!timerOnThisTask ? fmtClock(targetMin * 60) : (!hasTarget ? fmtClock(elapsedSec) : fmtClock(remainingSec)));
+  const timeStr = reviewPending ? fmtMin(S.timer.reviewMin || 0) : ((restPending || restDone) ? '✓' : (!timerOnThisTask ? fmtClock(targetMin * 60) : (!hasTarget ? fmtClock(elapsedSec) : fmtClock(remainingSec))));
   const spentMin = timerOnThisTask ? Math.floor(subElapsedSec() / 60) : 0;
   const durations = getFocusDurations();
   const runningSubId = timerOnThisTask ? S.timer.subId : null;
   const runningSub = runningSubId ? t.subs.find(s => s.id === runningSubId) : null;
   const firstPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
-  const shortRest = S.cfg.brk || 5;
-  const longRest = S.cfg.longBrk || 15;
-  const recommendLong = (cycleCount % 4) === 0;
 
   const ringColor = !timerOnThisTask ? 'var(--bu)' : (phase === 'rest' ? 'var(--ok)' : (isPaused ? 'var(--wr)' : 'var(--ac)'));
   let eyebrow;
   if (!timerOnThisTask) eyebrow = 'Pronto para focar';
+  else if (reviewPending) eyebrow = 'Bloco concluído';
   else if (restDone) eyebrow = 'Descanso concluído';
   else if (restPending) eyebrow = 'Foco concluído';
   else if (runningSub) eyebrow = (isPaused ? 'Pausado · ' : 'Sessão · ') + runningSub.t.slice(0, 30);
@@ -1653,12 +1661,18 @@ function renderFocus() {
   const cycleDots = timerRunning && cycleCount > 0 ? `<div style="font-size:14px;color:var(--mu);margin-top:4px;letter-spacing:2px">${ico('tomato').repeat(Math.min(cycleCount, 8))}</div>` : '';
 
   let phaseSubtitle;
-  if (restPending) phaseSubtitle = `Foco concluído · descanso ${recommendLong ? longRest : shortRest}min sugerido`;
+  const bankSec = focusBankSec();
+  const bankInBlock = Math.floor((bankSec % (25 * 60)) / 60);
+  const bankRemain = Math.max(0, Math.ceil((25 * 60 - (bankSec % (25 * 60))) / 60));
+  if (reviewPending) phaseSubtitle = `Bloco concluído · ${S.timer.reviewMin || 0}min · foco ${bankInBlock}/25 · faltam ${bankRemain}min para 1 pomodoro`;
+  else if (restPending) {
+    const poms = (S.timer.reviewPoms != null) ? S.timer.reviewPoms : 1;
+    phaseSubtitle = poms > 0 ? `${poms} pomodoro${poms > 1 ? 's' : ''} · pausa recomendada ${S.timer.restMin || S.cfg.brk || 5}min` : `Pausa escolhida · ${S.timer.restMin || S.cfg.brk || 5}min`;
+  }
   else if (restDone) phaseSubtitle = 'Descanso concluído';
   else if (!timerOnThisTask) phaseSubtitle = `Bloco de ${targetMin}min`;
-  else if (phase === 'rest' && S.timer.targetMin) phaseSubtitle = `Descanso · ${S.timer.targetMin}min`;
-  else if (S.timer.targetMin) phaseSubtitle = `Foco · ${S.timer.targetMin}min`;
-  else phaseSubtitle = 'Sessão livre';
+  else if (S.timer.targetMin) phaseSubtitle = `Foco · ${S.timer.targetMin}min · ${bankInBlock}/25`;
+  else phaseSubtitle = `Foco livre · ${bankInBlock}/25`;
 
   const hint = firstPending && !timerOnThisTask ? 'Iniciando na primeira subtarefa pendente' : '';
 
@@ -1705,13 +1719,23 @@ function renderFocus() {
   }
 
   let restChoiceHtml = '';
-  if (restPending) {
+  if (reviewPending) {
+    const short = S.cfg.brk || 5;
     restChoiceHtml = `<div class="focus-rest-choice">
-      <div class="focus-rest-choice-title">Fazer um descanso?</div>
-      <button data-a="focusRest" data-long="0" class="focus-btn ${recommendLong ? 'ghost' : 'start'}">${ico('timer')} Curto (${shortRest}min)</button>
-      <button data-a="focusRest" data-long="1" class="focus-btn ${recommendLong ? 'start' : 'ghost'}">${ico('timer')} Longo (${longRest}min)</button>
-      <button data-a="focusSkip" class="focus-btn ghost">${ico('chevron-down','ico--next')} Pular e focar</button>
-      <button data-a="focusStop" class="focus-btn ghost">${ico('stop')} Parar</button>
+      <div class="focus-rest-choice-title">Bloco concluído · ${S.timer.reviewMin || 0} min</div>
+      <div class="msg" style="font-size:12px;margin:0 0 6px">Foco ${bankInBlock}/25 · faltam ${bankRemain}min para 1 pomodoro. Pausa ainda não é recomendada.</div>
+      <button data-a="focusContinue" class="focus-btn start">${ico('play')} Continuar foco</button>
+      <button data-a="focusRest" data-min="${short}" class="focus-btn ghost" title="Disponível, mas não recomendada agora">${ico('timer')} Pausa de ${short}min (não recomendada)</button>
+      <button data-a="focusStop" class="focus-btn ghost">${ico('stop')} Encerrar</button>
+    </div>`;
+  } else if (restPending) {
+    const poms = (S.timer.reviewPoms != null) ? S.timer.reviewPoms : 1;
+    const recommended = S.timer.restMin || S.cfg.brk || 5;
+    restChoiceHtml = `<div class="focus-rest-choice">
+      <div class="focus-rest-choice-title">${poms > 0 ? poms + ' pomodoro' + (poms > 1 ? 's' : '') + ' batido' + (poms > 1 ? 's' : '') : 'Pausa escolhida'}</div>
+      <button data-a="focusRest" data-min="${recommended}" class="focus-btn ${poms > 0 ? 'start' : 'ghost'}">${ico('timer')} ${poms > 0 ? 'Pausa recomendada' : 'Pausa (não recomendada)'} (${recommended}min)</button>
+      <button data-a="focusSkip" class="focus-btn ghost">${ico('chevron-down','ico--next')} Continuar sem pausa</button>
+      <button data-a="focusStop" class="focus-btn ghost">${ico('stop')} Encerrar</button>
     </div>`;
   } else if (restDone) {
     restChoiceHtml = `<div class="focus-rest-choice">
@@ -1720,7 +1744,7 @@ function renderFocus() {
     </div>`;
   }
 
-  const actionsHtml = (restPending || restDone)
+  const actionsHtml = (restPending || restDone || reviewPending)
     ? restChoiceHtml
     : `<div class="focus-actions">
         ${primaryBtn}

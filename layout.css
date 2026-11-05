@@ -38,6 +38,7 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .timer b,
 .timer #tlabel{font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--mu)}
 .timer button{padding:2px 6px; font-size: 11px;}
+.timer-bank{font:10px/1 var(--font-mono);color:var(--mu);white-space:nowrap;letter-spacing:.02em}
 
 /* --- NAVEGAÇÃO PRINCIPAL (desktop) --- */
 #nav{display:flex;gap:2px;overflow-x:auto;margin-bottom:12px;border-bottom:1px solid var(--bd);scrollbar-width:none}
