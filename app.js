@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
 
 /* --- RASTREAR <details> ABERTOS (para persistir após render) --- */
 // 💡 Sem isso, cada re-render fecharia o painel "Editar" que o usuário abriu.
@@ -599,6 +599,8 @@ document.addEventListener('click', ev => {
     case 'jobAreaDel': {const v = btn.dataset.v || ''; S.cfg.jobAreas = jobAreas().filter(a => a !== v); save(); render(); return;}
     case 'jobSubareaAdd': {const v = V('jobSubareaNew').trim(); if (!v) break; const list = jobSubareas().slice(); if (!list.includes(v)) list.push(v); S.cfg.jobSubareas = list; save(); render(); return;}
     case 'jobSubareaDel': {const v = btn.dataset.v || ''; S.cfg.jobSubareas = jobSubareas().filter(a => a !== v); save(); render(); return;}
+    case 'jobPlatformAdd': {const v = V('jobPlatformNew').trim(); if (!v) break; const list = jobPlatforms().slice(); if (!list.includes(v)) list.push(v); S.cfg.jobPlatforms = list; save(); render(); return;}
+    case 'jobPlatformDel': {const v = btn.dataset.v || ''; S.cfg.jobPlatforms = jobPlatforms().filter(a => a !== v); save(); render(); return;}
     case 'jobAddFull': {const client = V('jClient'); if (!client) {toast('Cliente obrigatório', true); return;} S.applications.push(mkJob({client, role: V('jRole'), url: V('jUrl'), platform: V('jPlatform'), area: V('jArea'), subarea: V('jSubarea'), ticket: +V('jTicket') || 0, priority: +V('jPriority') || 1, contactName: V('jContact'), contactInfo: V('jContactInfo'), notes: V('jNotes')})); if (window.__atelierDraftClear) window.__atelierDraftClear('job:'); break;}
     case 'jobApply': {const app = S.applications.find(x => x.id === id); if (app && app.stage === 'prospect') {changeJobStage(app, 'applied'); toast('✓ Aplicada');} break;}
     case 'jobFollowUp': {const app = S.applications.find(x => x.id === id); if (app) recordJobInteraction(app); break;}
@@ -760,6 +762,8 @@ document.addEventListener('change', ev => {
   if (el.id === 'filterArea') {filterState.area = el.value; refreshTaskList(); return;}
   if (el.id === 'filterProj') {filterState.proj = el.value; refreshTaskList(); return;}
   if (el.id === 'jobFilterStage') {jobFilter.stage = el.value; render(); return;}
+  if (el.id === 'jobFilterPriority') {jobFilter.priority = el.value; render(); return;}
+  if (el.id === 'jobFilterPlatform') {jobFilter.platform = el.value; render(); return;}
   if (el.id === 'jobFilterArea') {jobFilter.area = el.value; render(); return;}
   if (el.id && el.id.startsWith('contactCatFilter_')) {const type = el.id.replace('contactCatFilter_',''); contactFilterState[type].cat = el.value; render(); return;}
   if (el.id && el.id.startsWith('contactStatusFilter_')) {const type = el.id.replace('contactStatusFilter_',''); contactFilterState[type].status = el.value; render(); return;}

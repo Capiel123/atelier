@@ -954,6 +954,14 @@
 [data-family="nordic"] .day-head-cycle .th-date{font-weight:400}
 [data-family="nordic"] .label-pill{color:var(--tx)}
 [data-family="nordic"] .tag-area,[data-family="nordic"] .tag-skill{color:var(--tx)}
+[data-palette-use="marker"] .tag-area,[data-palette-use="marker"] .tag-skill,[data-palette-use="marker"] .label-pill{color:var(--tx)}
+[data-family="herbario"]{--card-pad:16px;--card-gap:10px}
+[data-family="herbario"] .tag-area{position:relative;padding-left:15px}
+[data-family="herbario"] .tag-area::before{
+  content:"";position:absolute;left:5px;top:50%;width:6px;height:6px;border-radius:50%;
+  transform:translateY(-50%);background:var(--c,var(--ac));
+}
+[data-family="herbario"] .next-card{background:color-mix(in srgb,var(--ac) 8%,var(--surface-card,var(--s1)))}
 .section-ico{color:var(--c)}
 .section-title{color:var(--c)}
 [data-family="nordic"] .section-ico{color:var(--mu)}
@@ -1103,6 +1111,56 @@
 [data-family="herbario"][data-mode="dark"] .theme-preview-bar div{background:var(--bronze)}
 
 /* H2 — mini-barra de 4px: espectro no claro, bronze sólido no escuro. */
+[data-family="herbario"] .logo-text{font-family:var(--font-wordmark,'Atelier Herbario Display',Georgia,serif);font-weight:500;font-style:italic;letter-spacing:.02em;font-size:24px;color:var(--bu)}
+[data-family="herbario"][data-mode="dark"] .logo-text{color:var(--ac)}
+[data-family="herbario"] .day-head-cycle .th-day{font-family:var(--font-wordmark,'Atelier Herbario Display',Georgia,serif);font-style:italic;font-weight:500;font-size:23px;color:var(--bu)}
+[data-family="herbario"][data-mode="dark"] .day-head-cycle .th-day{color:var(--ac)}
+[data-family="herbario"] .week-controls-row button,
+[data-family="herbario"] .week-add-btn,
+[data-family="herbario"] .subs-count{font-family:var(--font-body)}
+@media(max-width:640px){
+  [data-family="herbario"] .day-head-cycle .th-day{font-size:20px}
+  [data-family="herbario"] .day-head[data-mode="min"] .day-head-cycle .th-day{font-family:var(--font-body);font-style:normal;font-size:12.5px}
+}
 [data-family="herbario"] .mini{background:var(--s3)}
+
+/* =========================================================
+   HERBÁRIO H5 — folhagens e cintilações de fundo
+   Tudo atrás do conteúdo, pointer-events:none e sem cobrir texto.
+   ========================================================= */
+.theme-bg{display:none}
+[data-family="herbario"] .theme-bg{
+  display:block;position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;
+}
+[data-family="herbario"] .wrap{position:relative;z-index:1}
+[data-family="herbario"] .theme-bg i{
+  position:absolute;width:110px;height:210px;background:var(--ac);opacity:.09;
+  border-radius:100% 0 100% 0;transform:rotate(24deg);
+}
+[data-family="herbario"] .theme-bg i:nth-child(1){left:-34px;top:24%}
+[data-family="herbario"] .theme-bg i:nth-child(2){right:-42px;top:52%;transform:rotate(-36deg);width:150px;height:260px;opacity:.07}
+[data-family="herbario"] .theme-bg i:nth-child(3){left:12%;bottom:-80px;transform:rotate(58deg);width:120px;height:180px;opacity:.06}
+[data-family="herbario"] .theme-bg b{
+  position:absolute;width:12px;height:12px;background:var(--detail);opacity:.22;
+  clip-path:polygon(50% 0%,59% 41%,100% 50%,59% 59%,50% 100%,41% 59%,0% 50%,41% 41%);
+}
+[data-family="herbario"] .theme-bg b:nth-of-type(1){left:14%;top:18%}
+[data-family="herbario"] .theme-bg b:nth-of-type(2){right:18%;top:28%;width:8px;height:8px;opacity:.16}
+[data-family="herbario"] .theme-bg b:nth-of-type(3){left:22%;top:68%;width:9px;height:9px;opacity:.14}
+[data-family="herbario"] .theme-bg b:nth-of-type(4){right:11%;bottom:16%;width:14px;height:14px;opacity:.18}
+[data-family="herbario"][data-mode="dark"] .theme-bg i{opacity:.07}
+[data-family="herbario"][data-mode="dark"] .theme-bg b{opacity:.13}
+[data-family="herbario"] .logo{position:relative}
+[data-family="herbario"] .logo::after{
+  content:"";width:9px;height:15px;margin-left:2px;align-self:center;flex:none;
+  background:var(--ac);opacity:.55;border-radius:100% 0 100% 0;transform:rotate(28deg);
+}
+[data-family="herbario"] .section-ico{position:relative;display:inline-flex;width:14px;height:14px;align-items:center;justify-content:center}
+[data-family="herbario"] .section-ico svg{display:none}
+[data-family="herbario"] .section-ico::before{
+  content:"";width:10px;height:14px;background:var(--ac);opacity:.75;
+  border-radius:100% 0 100% 0;transform:rotate(24deg);
+}
+@media(prefers-reduced-motion:reduce){[data-family="herbario"] .theme-bg{display:none}}
 [data-family="herbario"][data-mode="light"] .mini div{background:var(--progress-gradient,var(--ok))}
 [data-family="herbario"][data-mode="dark"] .mini div{background:var(--bronze)}

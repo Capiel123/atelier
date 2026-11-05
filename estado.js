@@ -70,8 +70,8 @@ const THEME_IDENTITY = {
   'deepbone-light': { dotShape:'square', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'block',   icoStroke:'2',    icoCap:'square', icoJoin:'miter' },
   'nordic-light': { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
   'nordic-dark':  { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
-  'herbario-light': { dotShape:'circle', chkShape:'circle', progressType:'iris', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'marker' },
-  'herbario-dark':  { dotShape:'circle', chkShape:'circle', progressType:'bronze', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'text' }
+  'herbario-light': { dotShape:'circle', chkShape:'circle', progressType:'iris', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'herbal', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'marker' },
+  'herbario-dark':  { dotShape:'circle', chkShape:'circle', progressType:'bronze', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'herbal', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'text' }
 };
 
 /* --- DIREÇÃO DE ARTE POR TEMA ---
@@ -265,7 +265,7 @@ let historyFilter = '30d';
 let reportWeekOffset = 0;
 let toastTmr = null;
 let filterState = {text:'', type:'', area:'', proj:'', labels:[], showLabels:false};
-let jobFilter = {stage:'active', area:'', text:''};
+let jobFilter = {stage:'active', area:'', priority:'all', platform:'', text:''};
 let contactFilterState = {pro: {text:'', cat:'', status:'all', tags:[], sort:'score'}, personal: {text:'', cat:'', status:'all', tags:[], sort:'score'}};
 let contactView = {pro:'list', personal:'list'};
 let lastSlot = null;

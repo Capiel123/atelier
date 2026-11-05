@@ -193,7 +193,7 @@ function jobScore(app) {const base = {prospect:20,applied:35,screening:55,interv
 function updateJobNextFollowUp(app) {const st = jobStage(app); if (!st.cadence) {app.nextFollowUp = ''; return;} const base = app.lastInteractionAt || app.stageHistory?.slice(-1)[0]?.at || Date.now(); const d = new Date(base); d.setDate(d.getDate() + st.cadence); app.nextFollowUp = iso(d);}
 function changeJobStage(app, newStage) {if (app.stage === newStage) return; app.stageHistory = app.stageHistory || []; app.stageHistory.push({stage: newStage, at: Date.now()}); app.stage = newStage; app.lastInteractionAt = Date.now(); if (newStage === 'applied' && !app.appliedAt) app.appliedAt = Date.now(); if (!app.firstResponseAt && ['screening','interview','challenge','offer','negotiation','accepted','rejected'].includes(newStage)) app.firstResponseAt = Date.now(); updateJobNextFollowUp(app); touch(app); toast('Estágio: ' + jobStage(app).n);}
 function recordJobInteraction(app) {app.lastInteractionAt = Date.now(); app.interactions = app.interactions || []; app.interactions.unshift({at: Date.now(), note: 'Interação'}); updateJobNextFollowUp(app); touch(app); toast('Follow-up atualizado');}
-function parseJobLine(s) {if (!s || !s.trim()) return null; let ticket = 0, priority = 1, platform = '', area = ''; s = s.replace(/~(\d+)/, (_,n) => {ticket = +n; return '';}); s = s.replace(/!(a|m|b)\b/i, (_,x) => {priority = {a:0,m:1,b:2}[x.toLowerCase()]; return '';}); s = s.replace(/@(\S+)/, (_,p) => {const f = JOB_PLATFORMS.find(x => x.toLowerCase().startsWith(p.toLowerCase())); if (f) platform = f; return '';}); s = s.replace(/#(\S+)/, (_,a) => {const f = jobAreas().find(x => x.toLowerCase().startsWith(a.toLowerCase())); if (f) area = f; return '';}); const parts = s.split(' - ').map(x => x.trim()).filter(Boolean); if (!parts.length) return null; return mkJob({client: parts[0], role: parts[1] || '', ticket, priority, platform, area});}
+function parseJobLine(s) {if (!s || !s.trim()) return null; let ticket = 0, priority = 1, platform = '', area = ''; s = s.replace(/~(\d+)/, (_,n) => {ticket = +n; return '';}); s = s.replace(/!(a|m|b)\b/i, (_,x) => {priority = {a:0,m:1,b:2}[x.toLowerCase()]; return '';}); s = s.replace(/@(\S+)/, (_,p) => {const f = jobPlatforms().find(x => x.toLowerCase().startsWith(p.toLowerCase())); if (f) platform = f; return '';}); s = s.replace(/#(\S+)/, (_,a) => {const f = jobAreas().find(x => x.toLowerCase().startsWith(a.toLowerCase())); if (f) area = f; return '';}); const parts = s.split(' - ').map(x => x.trim()).filter(Boolean); if (!parts.length) return null; return mkJob({client: parts[0], role: parts[1] || '', ticket, priority, platform, area});}
 /* v121 — taxonomia editável de Vagas. Sem cfg.jobAreas, deriva das habilidades;
    depois que o usuário edita, a lista dele manda (inclusive vazia). */
 function jobAreas() {
@@ -213,6 +213,23 @@ function jobSubareaOptions(current) {
   const list = jobSubareas();
   if (current && !list.includes(current)) list.push(current);
   return list;
+}
+function jobPlatforms() {
+  if (Array.isArray(S.cfg && S.cfg.jobPlatforms)) return S.cfg.jobPlatforms.slice();
+  return JOB_PLATFORMS.slice();
+}
+function jobPlatformOptions(current) {
+  const list = jobPlatforms();
+  if (current && !list.includes(current)) list.push(current);
+  return list;
+}
+/* Opções de filtro incluem valores em uso mesmo que tenham sido removidos da
+   taxonomia (ex.: vaga criada no PC com área que o mobile não tem). Não muda S. */
+function jobAreaFilterOptions() {
+  return [...new Set([...jobAreaOptions(), ...alive(S.applications).map(a => a.area).filter(Boolean)])];
+}
+function jobPlatformFilterOptions() {
+  return [...new Set([...jobPlatformOptions(), ...alive(S.applications).map(a => a.platform).filter(Boolean)])];
 }
 function createFollowUpTask(app) {const d = app.nextFollowUp ? (new Date(app.nextFollowUp).getDay() + 6) % 7 : todayI(); const skillId = app.area ? (S.skills.find(s => s.n === app.area)?.id || '') : ''; const t = mkTask(`Follow-up: ${app.role || app.client} @ ${app.client}`, {pr: app.priority, est: 15, area: 'Carreira', skills: skillId ? [skillId] : [], type: 'comunicacao', day: d, due: app.nextFollowUp || '', order: dayTasks(d).length, section:'work'}); S.tasks.push(t); app.linkedTaskId = t.id; touch(app); toast('Tarefa criada'); return t;}
 function jobStats() {const active = alive(S.applications).filter(a => !isJobTerminal(a)); const applied = alive(S.applications).filter(a => a.appliedAt); const responded = applied.filter(a => a.firstResponseAt); const responseRate = applied.length ? responded.length / applied.length : 0; const timeToResponse = responded.map(a => (a.firstResponseAt - a.appliedAt) / 86400000).filter(x => x >= 0).sort((a,b) => a-b); const medianTime = timeToResponse.length ? timeToResponse[Math.floor(timeToResponse.length/2)] : 0; const pipelineValue = active.reduce((sum, a) => sum + (a.ticket || 0) * (JOB_STAGE_PROB[a.stage] || 0), 0); const byStage = {}; JOB_STAGES.forEach(s => byStage[s.id] = 0); alive(S.applications).forEach(a => byStage[a.stage] = (byStage[a.stage] || 0) + 1); const byPlatform = {}; alive(S.applications).forEach(a => {if (!a.platform) return; if (!byPlatform[a.platform]) byPlatform[a.platform] = {applied:0, responded:0}; if (a.appliedAt) byPlatform[a.platform].applied++; if (a.firstResponseAt) byPlatform[a.platform].responded++;}); const byArea = {}; alive(S.applications).forEach(a => {if (!a.area) return; if (!byArea[a.area]) byArea[a.area] = {count:0, ticket:0}; byArea[a.area].count++; byArea[a.area].ticket += a.ticket || 0;}); return {active, applied, responded, responseRate, medianTime, pipelineValue, byStage, byPlatform, byArea};}

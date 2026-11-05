@@ -90,7 +90,7 @@
       '<div class="theme-grid">' + themeGrid(ctx.selectedTheme, !!state.showAllThemes) + '</div>' +
       '<div class="acts"><button type="button" data-ob="finish">Concluir</button>' +
       '<button type="button" data-ob="skip-theme">Pular</button>' +
-      '<button type="button" data-ob="toggle-themes">' + (state.showAllThemes ? 'Ver menos' : 'Ver todos os 16 temas') + '</button></div></div>';
+      '<button type="button" data-ob="toggle-themes">' + (state.showAllThemes ? 'Ver menos' : 'Ver todos os ' + Object.keys((typeof THEMES !== 'undefined') ? THEMES : {}).length + ' temas') + '</button></div></div>';
   }
 
   function render() {

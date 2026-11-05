@@ -1057,4 +1057,17 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .queue-days button{min-height:40px;padding:0 10px}
   .queue-body .acts{gap:10px}
   .queue-order{gap:6px}
+
+  /* v123 — Vagas no mobile: 1 card agregado no lugar dos 4 KPIs */
+  .job-kpis{display:none}
+  .job-kpis-mobile{display:block;margin-bottom:10px}
+  .job-kpi-mobile{padding:8px 10px}
+  .kpi-mobile-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--mu)}
+  .kpi-mobile-head b{font-size:20px;line-height:1;color:var(--tx)}
+  .kpi-mobile-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:5px;font-size:10.5px;color:var(--mu)}
+  .kpi-mobile-row span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi-mobile-row b{display:block;font-size:12px;color:var(--tx)}
+  .job-tax-pills .tag button{min-width:32px;min-height:32px}
+  .job-filter-bar input{flex:1 1 100%}
+  .job-filter-bar select{flex:1 1 calc(50% - 6px);max-width:none;min-height:36px}
 }

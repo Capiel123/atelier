@@ -171,11 +171,14 @@
     if (ld !== rd) {
       var doneSide = ld ? local : remote;
       var notDoneSide = ld ? remote : local;
-      var doneAt = num(doneSide.doneAt, 0);
+      var doneStamp = num(doneSide.updatedAt, 0) || num(doneSide.doneAt, 0);
       var notUpd = num(notDoneSide.updatedAt, 0);
-      var keepDone = doneAt >= notUpd;
+      // v124: usa o updatedAt da versão concluída (LWW), não o doneAt.
+      // Editar seção/cor depois de concluir atualiza updatedAt; comparar com doneAt
+      // reabria a tarefa em outro aparelho (K08).
+      var keepDone = doneStamp >= notUpd;
       merged.done = keepDone;
-      merged.doneAt = keepDone ? doneAt : null;
+      merged.doneAt = keepDone ? num(doneSide.doneAt, 0) : null;
     } else if (ld && rd) {
       merged.doneAt = Math.max(num(local.doneAt, 0), num(remote.doneAt, 0));
     }

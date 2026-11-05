@@ -9,7 +9,7 @@
 // o navegador de que existe algo novo para baixar.
 // 💡 Regra prática: use a data de hoje + um sufixo se publicar
 // mais de uma vez no mesmo dia.
-const CACHE_VERSION = 'atelier-2026-11-02-v122';
+const CACHE_VERSION = 'atelier-2026-11-02-v125';
 
 // Dois caches separados:
 // - SHELL: arquivos fixos do app (HTML, CSS, JS) baixados na instalação
@@ -35,6 +35,11 @@ const SHELL_ASSETS = [
   './fonts/OFL-HankenGrotesk.txt',
   './fonts/ibm-plex-mono-400-latin.woff2',
   './fonts/ibm-plex-mono-500-latin.woff2',
+  './fonts/dm-sans-400-latin.woff2',
+  './fonts/dm-sans-500-latin.woff2',
+  './fonts/cormorant-garamond-500-italic-latin.woff2',
+  './fonts/OFL-DMSans.txt',
+  './fonts/OFL-CormorantGaramond.txt',
   './fonts/OFL-GrenzeGotisch.txt',
   './fonts/OFL-IBMPlexMono.txt',
   './estado.js',
