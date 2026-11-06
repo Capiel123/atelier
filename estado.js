@@ -41,14 +41,15 @@ const THEMES = {
   'nordic-light': {n:'Nordic Claro', desc:'Linho, pedra e névoa', mode:'light', ac:'#4F5D64', bu:'#7C7870', bg:'#F2F0EA', s1:'#EAE6DD', s2:'#FAF9F5', s3:'#DFDAD0', bd:'#D3CDC2', chkBg:'#FAF9F5', chkBd:'#7B766C', chkDone:'#4F5D64', chkMark:'#F7F5EF', tx:'#1E1D19', mu:'#605C54', ok:'#486B58', wr:'#7A5B2E', er:'#8D4A44', onAc:'#F7F5EF', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#FAF9F5', surfacePanel:'#EAE6DD', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"},
   'nordic-dark':  {n:'Nordic Escuro', desc:'Pedra, carvão e névoa', mode:'dark', ac:'#B4C0C3', bu:'#8A857B', bg:'#181714', s1:'#201F1B', s2:'#282722', s3:'#312F2A', bd:'#3B3832', chkBg:'#201F1B', chkBd:'#6B675E', chkDone:'#B4C0C3', chkMark:'#181714', tx:'#ECE9E1', mu:'#AAA59B', ok:'#8FB8A4', wr:'#D8B47E', er:'#E59B93', onAc:'#181714', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#201F1B', surfacePanel:'#282722', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"},
   'herbario-light': {n:'Herbário Claro', desc:'Jardim encantado · verde e orquídea', mode:'light', ac:'#246A42', bu:'#7049A9', bg:'#F1EAE3', s1:'#E8DCD5', s2:'#E3D9D1', s3:'#CDDDCA', bd:'#BDCFB9', chkBg:'#FAF6F0', chkBd:'#6B7D6E', chkDone:'#2F7F57', chkMark:'#FAF6F0', tx:'#26332A', mu:'#546056', ok:'#296A3B', wr:'#7F5505', er:'#9A413D', onAc:'#FAF6F0', radius:'14px', radiusSm:'10px', surfaceCard:'#DFEFDC', surfacePanel:'#E8DCD5', fontBody:"'Atelier Herbario', system-ui, sans-serif", fontWordmark:"'Atelier Herbario Display', Georgia, serif"},
-  'herbario-dark':  {n:'Herbário Escuro', desc:'Musgo, sálvia e bronze', mode:'dark', ac:'#8BBEAA', bu:'#B499E4', bg:'#231F13', s1:'#2B281A', s2:'#343021', s3:'#3E3B2A', bd:'#4D4937', chkBg:'#231F13', chkBd:'#8D8972', chkDone:'#8BBEAA', chkMark:'#231F13', tx:'#EFE6D3', mu:'#ABA693', ok:'#88CA95', wr:'#E0B771', er:'#F4928A', onAc:'#231F13', radius:'14px', radiusSm:'10px', surfaceCard:'#2B281A', surfacePanel:'#343021', fontBody:"'Atelier Herbario', system-ui, sans-serif", fontWordmark:"'Atelier Herbario Display', Georgia, serif"}
+  'herbario-dark':  {n:'Herbário Escuro', desc:'Musgo, sálvia e bronze', mode:'dark', ac:'#8BBEAA', bu:'#B499E4', bg:'#231F13', s1:'#2B281A', s2:'#343021', s3:'#3E3B2A', bd:'#4D4937', chkBg:'#231F13', chkBd:'#8D8972', chkDone:'#8BBEAA', chkMark:'#231F13', tx:'#EFE6D3', mu:'#ABA693', ok:'#88CA95', wr:'#E0B771', er:'#F4928A', onAc:'#231F13', radius:'14px', radiusSm:'10px', surfaceCard:'#2B281A', surfacePanel:'#343021', fontBody:"'Atelier Herbario', system-ui, sans-serif", fontWordmark:"'Atelier Herbario Display', Georgia, serif"},
+  'neon-rain': {n:'Neon Rain', desc:'Chuva neon · cyberpunk', mode:'dark', ac:'#FF5DBF', bu:'#36D9E8', bg:'#16101F', s1:'#1B1B2B', s2:'#29243C', s3:'#342E4B', bd:'#3D3B5C', chkBg:'#1B1B2B', chkBd:'#66718F', chkDone:'#36D9E8', chkMark:'#101019', tx:'#E8E7F2', mu:'#B6B5D0', ok:'#56D1A3', wr:'#E4AC59', er:'#FD717C', onAc:'#101019', controlBd:'#66718F', fabBg:'#F02FAD', fontBody:"'Atelier Neon', system-ui, sans-serif", fontWordmark:"'Atelier Neon', system-ui, sans-serif"}
 };
 
 /* --- IDENTIDADE VISUAL (Fase Identidade v2) ---
    Tokens de arte e padrão visual por tema.
    bgPattern / bgPatternSize / bgPatternOpacity: padrão de fundo via CSS.
-   dotShape: 'circle' | 'square' | 'diamond' | 'ring'
-   chkShape: 'square' | 'circle' | 'hex'
+   dotShape: 'circle' | 'square' | 'diamond' | 'ring' | 'ticks' | 'pips'
+   chkShape: 'square' | 'circle' | 'hex' | 'chamfer'
    progressType: 'solid' | 'metal' | 'liquid' | 'glow'
    logoEffect: 'none' | 'metal' | 'glow' | 'serif'
    topOrnament: caractere decorativo (string) ou vazio
@@ -71,7 +72,8 @@ const THEME_IDENTITY = {
   'nordic-light': { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
   'nordic-dark':  { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
   'herbario-light': { dotShape:'circle', chkShape:'circle', progressType:'iris', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'herbal', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'marker' },
-  'herbario-dark':  { dotShape:'circle', chkShape:'circle', progressType:'bronze', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'herbal', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'text' }
+  'herbario-dark':  { dotShape:'circle', chkShape:'circle', progressType:'bronze', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'herbal', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'text' },
+  'neon-rain':      { dotShape:'pips', chkShape:'chamfer', progressType:'neon',  logoEffect:'none', topOrnament:'', isGlass:false, family:'neon', paletteUse:'text', iconSet:'tech', icoStroke:'1.5', icoCap:'round', icoJoin:'miter' }
 };
 
 /* --- DIREÇÃO DE ARTE POR TEMA ---
@@ -104,6 +106,16 @@ const THEME_ART = {
     controlBd: '#8D8972',
     detail: '#D98DC9',
     bronze: '#B9874F'
+  },
+  'neon-rain': {
+    prHigh: '#F02FAD',
+    prMed: '#AF84FF',
+    prLow: '#36D9E8',
+    progressGradient: 'linear-gradient(90deg,#36D9E8,#9A7DE3,#F02FAD)',
+    bgPattern: "radial-gradient(ellipse at 18% 88%, rgba(255,93,191,0.10) 0%, transparent 55%), radial-gradient(ellipse at 82% 12%, rgba(54,217,232,0.08) 0%, transparent 50%), repeating-linear-gradient(115deg, rgba(232,231,242,0.045) 0px, rgba(232,231,242,0.045) 1px, transparent 1px, transparent 17px), radial-gradient(circle at 12% 36%, rgba(255,93,191,0.08) 0 2px, transparent 2.5px), radial-gradient(circle at 76% 64%, rgba(54,217,232,0.07) 0 2px, transparent 2.5px)",
+    bgPatternSize: '100% 100%, 100% 100%, 18px 18px, 100% 100%, 100% 100%',
+    bgPatternOpacity: 1,
+    noise: 0.04
   }
 };
 // v102 (Etapa 2): paleta de 9 papéis por tema (ordem fixa: vermelho, laranja,
@@ -128,7 +140,8 @@ const THEME_PALETTES = {
   'nordic-light': ['#A66A57','#9A7548','#857848','#647D68','#4F777A','#5A7182','#756C85','#8A6872','#7A766D'],
   'nordic-dark':  ['#CFA08E','#D8BB91','#C9C098','#94B29C','#93C0C0','#9DB4C4','#B7AAC5','#D4AEB8','#B2ADA3'],
   'herbario-light': ['#B55F44','#9B6923','#707124','#448551','#2F7E78','#3E7DAC','#844AC7','#AC3A8E','#757975'],
-  'herbario-dark':  ['#FA9B7D','#EAB26D','#D1D485','#7EC289','#89D8D1','#76B9EC','#B8A9F5','#F6A9CE','#B0B4B1']
+  'herbario-dark':  ['#FA9B7D','#EAB26D','#D1D485','#7EC289','#89D8D1','#76B9EC','#B8A9F5','#F6A9CE','#B0B4B1'],
+  'neon-rain':      ['#FF7E82','#FEAA74','#F4CD4F','#7AC863','#5DE0EF','#75A7FF','#D396FF','#FEA5E7','#A9A6A9']
 };
 Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
 Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });
@@ -317,7 +330,7 @@ function applyTheme() {
     surfaceCard: '--surface-card', surfacePanel: '--surface-panel',
     surfaceSummary: '--surface-summary',
     controlBd: '--control-bd', detail: '--detail', bronze: '--bronze',
-    progressGradient: '--progress-gradient',
+    fabBg: '--fab-bg', progressGradient: '--progress-gradient',
     fontDisplay: '--font-display', fontMono: '--font-mono', titleTrack: '--title-track',
     fontBody: '--font-body', fontWordmark: '--font-wordmark',
     titleTransform: '--title-transform', titleSpacing: '--title-spacing',
@@ -451,7 +464,7 @@ function seed() {
   const p1 = mkProject({id:'p1', n:'Prospecção internacional', area:'Carreira', reward:'Jantar fora'});
   return {
     v: VERSION,
-    cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, themePalette:true, reviewChecks:{}, weekPriority:{}, theme:defaultThemeId(), accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
+    cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, themePalette:true, reviewChecks:{}, weekPriority:{}, theme:defaultThemeId(), accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, focusSwitchHidden:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
     areas: AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()})),
     projects: [p1], skills, labels: defaultLabels(),
     tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
@@ -611,6 +624,7 @@ function migrate(raw) {
   s.cfg.lastBackupAt = s.cfg.lastBackupAt ?? null;
   s.cfg.backupReminderDismissedAt = s.cfg.backupReminderDismissedAt ?? 0;
   s.cfg.focusNoStop = s.cfg.focusNoStop ?? false;
+  s.cfg.focusSwitchHidden = s.cfg.focusSwitchHidden ?? false;
   s.cfg.taskDensity = s.cfg.taskDensity ?? 'auto';
   ['projects','clients','contacts','applications','skills','goals'].forEach(k => {
     (s[k]||[]).forEach(o => {if (o.deletedAt === undefined) o.deletedAt = null;});

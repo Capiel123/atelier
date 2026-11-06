@@ -737,7 +737,7 @@ function cardTask(t, score) {
       </div>
       <div class="tm" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
         <div class="tm-time"><b>${fmtMin(spent)}</b><span class="tm-sep">/</span><button type="button" class="tm-est" data-a="editInline" data-kind="est" data-id="${t.id}" title="Editar tempo estimado" aria-label="Editar tempo estimado">${t.est ? fmtMin(t.est) : '—'}</button><span class="tm-chev" aria-hidden="true">${ico('chevron-up')}</span></div>
-        <div class="mini"><div style="width:${pctT}%"></div></div>
+        <div class="mini"><div style="width:${pctT}%;--bar-span:${pctT>0?(10000/pctT).toFixed(2):100}%"></div></div>
       </div>
     </div>
 
@@ -1523,7 +1523,7 @@ function closeReportSheet() {document.getElementById('reportSheet')?.remove();}
 function renderTimer() {
   const el = $('#timerWidget'), lbl = $('#tlabel'), time = $('#ttime'), stopBtn = $('#tstop'), bankEl = $('#tbank');
   if (!el) return;
-  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) bankEl.textContent = ''; return;}
+  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) {const b = ensureFocusBank(); const inBlock = Math.floor((b.sec || 0) % (25 * 60) / 60); bankEl.textContent = '🍅 ' + (b.count || 0) + ' hoje' + ((b.sec || 0) > 0 ? ' · ' + inBlock + '/25' : '');} return;}
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   el.classList.add('run');
   time.textContent = fmtClock(timerElapsedSec());
@@ -1617,7 +1617,8 @@ function renderFocus() {
   const timerRunning = S.timer && !S.timer.paused;
   // v97: "Pular" também aparece com o timer PAUSADO (só exige fase de foco com alvo).
   const isPomodoro = !!(S.timer && S.timer.phase === 'focus' && S.timer.targetMin);
-  const cycleCount = (timerRunning && S.timer.cycleCount) || 0;
+  const bankNow = ensureFocusBank();
+  const bankCount = bankNow.count || 0;
   const phase = (timerOnThisTask && S.timer.phase) ? S.timer.phase : 'focus';
   const isPaused = timerOnThisTask && S.timer.paused;
   const restPending = timerOnThisTask && phase === 'rest' && isPaused && (S.timer.accumulated || 0) === 0;
@@ -1636,6 +1637,14 @@ function renderFocus() {
   const runningSubId = timerOnThisTask ? S.timer.subId : null;
   const runningSub = runningSubId ? t.subs.find(s => s.id === runningSubId) : null;
   const firstPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
+  const switchTasks = S.tasks.filter(x => !x.deletedAt && !isDone(x) && x.id !== t.id).sort((a,b) => (a.day??99)-(b.day??99) || (a.order||0)-(b.order||0)).slice(0, 40);
+  const switchHidden = !!S.cfg.focusSwitchHidden;
+  const switchHtml = (timerOnThisTask && phase === 'focus' && switchTasks.length && !switchHidden)
+    ? `<div class="focus-switch-row"><select class="focus-switch" data-a="focusSwitch" aria-label="Trocar tarefa no modo foco" title="Trocar tarefa (atalhos [ e ])"><option value="">⇄ Trocar tarefa</option>${switchTasks.map(x => `<option value="${esc(x.id)}">${esc(x.t.slice(0, 48))}</option>`).join('')}</select><button type="button" class="focus-switch-hide" data-a="focusSwitchToggle" aria-label="Ocultar troca de tarefa" title="Ocultar troca de tarefa">×</button></div>`
+    : '';
+  const switchReveal = (timerOnThisTask && phase === 'focus' && switchTasks.length && switchHidden)
+    ? `<button type="button" data-a="focusSwitchToggle" class="focus-btn ghost" title="Mostrar troca de tarefa">⇄ Trocar</button>`
+    : '';
 
   const ringColor = !timerOnThisTask ? 'var(--bu)' : (phase === 'rest' ? 'var(--ok)' : (isPaused ? 'var(--wr)' : 'var(--ac)'));
   let eyebrow;
@@ -1645,8 +1654,8 @@ function renderFocus() {
   else if (restPending) eyebrow = 'Foco concluído';
   else if (runningSub) eyebrow = (isPaused ? 'Pausado · ' : 'Sessão · ') + runningSub.t.slice(0, 30);
   else if (isPaused) eyebrow = 'Pausado';
-  else if (phase === 'rest') eyebrow = 'Descanso · ciclo ' + cycleCount;
-  else eyebrow = 'Foco · ciclo ' + (cycleCount + 1);
+  else if (phase === 'rest') eyebrow = 'Descanso · ' + bankCount + ' hoje';
+  else eyebrow = 'Foco · ' + bankCount + ' hoje';
 
   let primaryBtn;
   if (!timerOnThisTask) {
@@ -1658,7 +1667,7 @@ function renderFocus() {
 
   const skipBtn = (timerOnThisTask && isPomodoro) ? `<button data-a="focusSkip" class="focus-btn ghost">${ico('chevron-down','ico--next')} Pular</button>` : '';
   const durationsHtml = !timerOnThisTask ? `<div class="focus-durations">${durations.map(m => `<button data-a="focusSetTarget" data-m="${m}" class="${focusTargetMin===m?'on':''}">${m}min</button>`).join('')}</div>` : '';
-  const cycleDots = timerRunning && cycleCount > 0 ? `<div style="font-size:14px;color:var(--mu);margin-top:4px;letter-spacing:2px">${ico('tomato').repeat(Math.min(cycleCount, 8))}</div>` : '';
+  const cycleDots = bankCount > 0 ? `<div style="font-size:14px;color:var(--mu);margin-top:4px;letter-spacing:2px">${ico('tomato').repeat(Math.min(bankCount, 8))}</div>` : '';
 
   let phaseSubtitle;
   const bankSec = focusBankSec();
@@ -1738,9 +1747,14 @@ function renderFocus() {
       <button data-a="focusStop" class="focus-btn ghost">${ico('stop')} Encerrar</button>
     </div>`;
   } else if (restDone) {
+    const choices = getFocusDurations();
+    const last = choices.includes(focusTargetMin) ? focusTargetMin : choices[0];
     restChoiceHtml = `<div class="focus-rest-choice">
-      <button data-a="focusSkip" class="focus-btn start">${ico('play')} Voltar ao foco</button>
-      <button data-a="focusStop" class="focus-btn ghost">${ico('stop')} Parar</button>
+      <div class="focus-rest-choice-title">Descanso concluído</div>
+      <div class="msg" style="font-size:12px;margin:0 0 6px">Escolha o próximo bloco — o banco de foco continua em ${bankInBlock}/25.</div>
+      <div class="focus-durations">${choices.map(m => `<button data-a="focusStartFromRest" data-m="${m}" class="${m === last ? 'on' : ''}">${m}min</button>`).join('')}</div>
+      <button data-a="focusStartFromRest" data-m="${last}" class="focus-btn start">${ico('play')} Iniciar ${last}min</button>
+      <button data-a="focusStop" class="focus-btn ghost">${ico('stop')} Encerrar</button>
     </div>`;
   }
 
@@ -1749,6 +1763,7 @@ function renderFocus() {
     : `<div class="focus-actions">
         ${primaryBtn}
         ${skipBtn}
+        ${switchReveal}
         <button data-a="log" data-id="${t.id}" data-m="5" class="focus-btn ghost">+5m</button>
         <button data-a="log" data-id="${t.id}" data-m="-5" class="focus-btn ghost">-5m</button>
         <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
@@ -1760,6 +1775,7 @@ function renderFocus() {
       <div class="focus-eyebrow" data-phase="${phase}">${esc(eyebrow)}</div>
       ${elsewhereHtml}
       <h1 class="focus-title">${esc(t.t)}</h1>
+      ${switchHtml}
       <div class="focus-timer-wrap">
         <svg class="focus-circle" viewBox="0 0 240 240">
           <circle cx="120" cy="120" r="100" fill="none" stroke="var(--bd)" stroke-width="6"/>

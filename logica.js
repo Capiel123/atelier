@@ -464,6 +464,43 @@ function advancePhase(isNatural = true) {
   save(); renderTimer();
   if (focusTaskId) {renderFocus(); const overlay = document.getElementById('focusOverlay'); if (overlay) {overlay.classList.remove('flash'); void overlay.offsetWidth; overlay.classList.add('flash'); setTimeout(() => overlay.classList.remove('flash'), 1250);}}
 }
+// Escolhe o próximo timebox depois do descanso, preservando o banco.
+function startFocusFromRest(min) {
+  if (!S.timer || S.timer.phase !== 'rest' || !S.timer.paused) return;
+  const target = Math.max(1, Math.round(+min || 0));
+  const bank = ensureFocusBank();
+  S.timer.phase = 'focus'; S.timer.targetMin = target; S.timer.focusMin = target;
+  S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
+  S.timer.subAccumulated = 0; S.timer.subStartedAt = Date.now();
+  S.timer.blockPoms = 0; S.timer.bankBaseSec = bank.sec || 0;
+  S.timer.restFromReview = false; S.timer.updatedAt = Date.now();
+  focusTargetMin = target;
+  save(); renderTimer();
+  if (focusTaskId) renderFocus();
+  toast('▶ Bloco de ' + target + 'min iniciado');
+}
+// Troca de tarefa no foco sem perder banco nem o segmento já trabalhado.
+function switchTimerTask(nextTaskId) {
+  if (!S.timer || S.timer.phase !== 'focus' || !nextTaskId) return false;
+  if (S.timer.taskId === nextTaskId) return false;
+  const next = S.tasks.find(x => x.id === nextTaskId && !isDone(x) && !x.deletedAt);
+  if (!next) return false;
+  const cur = S.tasks.find(x => x.id === S.timer.taskId);
+  const elapsed = Math.round(subElapsedSec() / 60);
+  if (cur && elapsed > 0) recordTimerMinutes(cur, elapsed, S.timer.subId, '', S.timer);
+  const firstPending = activeSubs(next).filter(s => !s.d)[0];
+  S.timer.taskId = next.id;
+  S.timer.subId = firstPending ? firstPending.id : null;
+  S.timer.subAccumulated = 0;
+  S.timer.subStartedAt = S.timer.paused ? null : Date.now();
+  S.timer.updatedAt = Date.now();
+  if (typeof focusTaskId !== 'undefined') focusTaskId = next.id;
+  save(); renderTimer();
+  if (typeof renderFocus === 'function' && document.getElementById('focusOverlay')) renderFocus();
+  toast('⇄ ' + next.t.slice(0, 32));
+  return true;
+}
+
 // Continua o foco depois de um bloco encerrado, mantendo o banco de 25 min.
 function continueFocus() {
   if (!S.timer || S.timer.phase !== 'review') return;

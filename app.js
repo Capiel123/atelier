@@ -561,6 +561,8 @@ document.addEventListener('click', ev => {
     }
     case 'focusSkip': advancePhase(false); return;
     case 'focusContinue': continueFocus(); return;
+    case 'focusStartFromRest': startFocusFromRest(+btn.dataset.m || 25); return;
+    case 'focusSwitchToggle': S.cfg.focusSwitchHidden = !S.cfg.focusSwitchHidden; save(); if (focusTaskId) renderFocus(); return;
     case 'focusRest': startRest(btn.dataset.long === '1', +btn.dataset.min || 0); return;
     case 'focusStop': stopTimer(); if (focusTaskId) renderFocus(); return;
     case 'focusCompleteYes': {
@@ -771,6 +773,7 @@ document.addEventListener('change', ev => {
   if (el.id && el.id.startsWith('contactSortFilter_')) {const type = el.id.replace('contactSortFilter_',''); contactFilterState[type].sort = el.value; render(); return;}
   if (el.dataset.a === 'postpone') {const t = T(el.dataset.id); if (t && el.value) postponeTask(t, el.value); el.value = ''; return;}
   if (el.dataset.a === 'jobStage') {const app = S.applications.find(x => x.id === el.dataset.id); if (app && el.value) {snapshot(); changeJobStage(app, el.value); save(); render();} el.value = ''; return;}
+  if (el.dataset.a === 'focusSwitch') {const nextId = el.value; el.value = ''; if (nextId) switchTimerTask(nextId); return;}
   if (el.dataset.a === 'focusSub') {
     const t = S.tasks.find(x => x.id === focusTaskId);
     if (t) {
@@ -942,6 +945,18 @@ document.addEventListener('keydown', ev => {
     if (ae && ae.closest && ae.closest('.sub, .subs, [data-eid], [contenteditable="true"]')) return;
     const nt = firstPendingTaskInList();
     if (nt) openFocus(nt.id); else toast('Sem tarefa pendente');
+    return;
+  }
+  if ((ev.key === '[' || ev.key === ']') && focusTaskId && !isTyping && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+    ev.preventDefault();
+    const list = S.tasks.filter(x => !x.deletedAt && !isDone(x));
+    const at = list.findIndex(x => x.id === focusTaskId);
+    if (at < 0 || !list.length) return;
+    const next = list[(at + (ev.key === ']' ? 1 : -1) + list.length) % list.length];
+    if (!next || next.id === focusTaskId) return;
+    if (S.timer && S.timer.phase !== 'focus') {toast('Conclua ou pule o descanso para trocar de tarefa', true); return;}
+    if (S.timer) switchTimerTask(next.id);
+    if (!S.timer || S.timer.taskId === next.id) {focusTaskId = next.id; renderFocus();}
     return;
   }
   if (ev.key === 'Escape') {

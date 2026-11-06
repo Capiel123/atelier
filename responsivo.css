@@ -1070,4 +1070,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .job-tax-pills .tag button{min-width:32px;min-height:32px}
   .job-filter-bar input{flex:1 1 100%}
   .job-filter-bar select{flex:1 1 calc(50% - 6px);max-width:none;min-height:36px}
+
+  /* v128 - Neon: FAB em magenta, canto chamfrado e glow; ícone no token escuro. */
+  [data-family="neon"] .fab{
+    width:52px;height:52px;
+    border:0;
+    border-radius:10px;
+    background:var(--fab-bg);
+    color:var(--on-ac);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb,var(--on-ac) 18%,transparent),
+      0 0 16px color-mix(in srgb,var(--fab-bg) 45%,transparent);
+  }
+  @supports (corner-shape:bevel){
+    [data-family="neon"] .fab{border-radius:0 10px 0 10px;corner-shape:bevel}
+  }
+  [data-family="neon"] .fab:hover{border:0}
 }

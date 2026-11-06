@@ -861,6 +861,22 @@
   }
 }
 
+/* Chamfer (Neon): quadrado com o canto superior direito cortado.
+   Fallback sem corner-shape: raio pequeno, como nos temas brutal. */
+[data-chk-shape="chamfer"] .chk{
+  border-radius:2px !important;
+  clip-path:none;
+}
+@supports (corner-shape:bevel){
+  [data-chk-shape="chamfer"] .chk{
+    border-radius:0 5px 0 0 !important;
+    corner-shape:bevel;
+  }
+}
+[data-family="neon"] .card.done>.row>.chk{
+  box-shadow:0 0 6px color-mix(in srgb,var(--chk-done) 60%,transparent);
+}
+
 /* -----------------------------------------------------------
    2.3 BARRAS DE PROGRESSO â€” TIPOS ESPECIAIS
    --progress-type: solid | metal | liquid | glow
@@ -1056,6 +1072,32 @@
     linear-gradient(var(--bd),var(--bd)) 10px 0/2px 100% no-repeat;
 }
 
+/* v127 — Neon: prioridade em pips (3, 2 ou 1 traços acesos).
+   Aceso = --pr-c (prHigh/prMed/prLow do tema); apagado = --bd.
+   Sobrescreve a gramática genérica de forma (scale/mask/anel) e o dot de 8px. */
+:root[data-dot-shape="pips"] .dot{
+  --pip-w:4px; --pip-gap:4px;
+  --pip-on:var(--pr-c,var(--mu)); --pip-off:var(--bd);
+  --pip-1:var(--pip-on); --pip-2:var(--pip-on); --pip-3:var(--pip-on);
+  width:calc(var(--pip-w)*3 + var(--pip-gap)*2); height:11px;
+  border-radius:0; background:transparent; transform:none; clip-path:none;
+  -webkit-mask:none; mask:none; position:relative;
+}
+:root[data-dot-shape="pips"] .dot::before{
+  content:""; position:absolute; inset:0;
+  background:
+    linear-gradient(var(--pip-1),var(--pip-1)) 0 0/var(--pip-w) 100% no-repeat,
+    linear-gradient(var(--pip-2),var(--pip-2)) calc(var(--pip-w) + var(--pip-gap)) 0/var(--pip-w) 100% no-repeat,
+    linear-gradient(var(--pip-3),var(--pip-3)) calc(var(--pip-w)*2 + var(--pip-gap)*2) 0/var(--pip-w) 100% no-repeat;
+}
+:root[data-dot-shape="pips"] .dot[data-pr="1"]{--pip-3:var(--pip-off);transform:none}
+:root[data-dot-shape="pips"] .dot[data-pr="2"]{--pip-2:var(--pip-off);--pip-3:var(--pip-off);-webkit-mask:none;mask:none}
+:root[data-dot-shape="pips"] .dot[data-pr="0"]::after{display:none}
+/* Resumo semanal: bloco compacto para não empurrar o cabeçalho no mobile. */
+:root[data-dot-shape="pips"] .pr-ind .dot{--pip-w:3px;--pip-gap:2px;height:9px}
+/* Neon: halo curto nos traços. */
+:root[data-family="neon"] .dot::before{filter:drop-shadow(0 0 1.5px color-mix(in srgb,var(--pr-c,var(--mu)) 25%,transparent))}
+
 
 /* =========================================================
    HERBÁRIO (H1+H2) — superfícies, moldura e barras
@@ -1164,3 +1206,137 @@
 @media(prefers-reduced-motion:reduce){[data-family="herbario"] .theme-bg{display:none}}
 [data-family="herbario"][data-mode="light"] .mini div{background:var(--progress-gradient,var(--ok))}
 [data-family="herbario"][data-mode="dark"] .mini div{background:var(--bronze)}
+
+
+/* =========================================================
+   NEON RAIN — C3 (progresso) e C4 (geometria)
+   ========================================================= */
+
+/* C3 — trilho s3 + gradiente ancorado no trilho (--bar-span já vem de bar()) */
+[data-progress-type="neon"] .bar{
+  background:var(--s3);
+  border-color:color-mix(in srgb,var(--bd) 78%,var(--ac));
+}
+[data-progress-type="neon"] .bar i{display:none}
+[data-progress-type="neon"] .fill{
+  position:relative;
+  background:var(--progress-gradient,linear-gradient(90deg,#36D9E8,#9A7DE3,#F02FAD));
+  background-size:var(--bar-span,100%) 100%;
+  background-repeat:no-repeat;
+  box-shadow:none;
+}
+/* Ponta luminosa: núcleo branco de 2,6 px + halo magenta (cortado pelo overflow do trilho). */
+[data-progress-type="neon"] .bar:not([data-p="0"]) .fill::after{
+  content:"";position:absolute;right:0;top:0;bottom:0;width:2.6px;
+  background:#fff;border-radius:1px;pointer-events:none;
+  box-shadow:0 0 6px 1px color-mix(in srgb,var(--ac) 70%,transparent);
+}
+/* Barra do card (4 px): mesmo gradiente, sem ponta. */
+[data-family="neon"] .mini{background:var(--s3)}
+[data-family="neon"] .mini div{
+  background:var(--progress-gradient,linear-gradient(90deg,#36D9E8,#9A7DE3,#F02FAD));
+  background-size:var(--bar-span,100%) 100%;
+  background-repeat:no-repeat;
+}
+/* Prévia da Config acompanha a barra real. */
+[data-family="neon"] .theme-preview-bar{background:var(--s3)}
+[data-family="neon"] .theme-preview-bar div{
+  background:var(--progress-gradient,linear-gradient(90deg,#36D9E8,#9A7DE3,#F02FAD));
+}
+
+/* C4 — chanfro assimétrico: canto superior direito + inferior esquerdo.
+   Fora de @supports, raio pequeno (mesma degradação dos temas brutal). */
+[data-family="neon"] .card,
+[data-family="neon"] .next-card,
+[data-family="neon"] .job-card,
+[data-family="neon"] .contact-card,
+[data-family="neon"] .network-card,
+[data-family="neon"] .orbit-wrap,
+[data-family="neon"] .xp-hero,
+[data-family="neon"] .today-hero,
+[data-family="neon"] .section-group,
+[data-family="neon"] .done-section-header,
+[data-family="neon"] .day-head,
+[data-family="neon"] .theme-preview{border-radius:2px}
+
+@supports (corner-shape:bevel){
+  [data-family="neon"] .card,
+  [data-family="neon"] .next-card,
+  [data-family="neon"] .job-card,
+  [data-family="neon"] .contact-card,
+  [data-family="neon"] .network-card,
+  [data-family="neon"] .orbit-wrap,
+  [data-family="neon"] .xp-hero,
+  [data-family="neon"] .today-hero,
+  [data-family="neon"] .section-group,
+  [data-family="neon"] .done-section-header,
+  [data-family="neon"] .day-head,
+  [data-family="neon"] .theme-preview{
+    border-radius:0 8px 0 8px;
+    corner-shape:bevel;
+  }
+  /* Painel de ações: chanfro de 6 px nos quatro cantos. */
+  [data-family="neon"] .act-menu-panel{border-radius:6px;corner-shape:bevel}
+  [data-family="neon"] .act-menu-panel button{border-radius:4px;corner-shape:bevel}
+}
+
+/* Brilho magenta suave: ~35% no limite do card, sem tocar no texto. */
+[data-family="neon"] .card{
+  box-shadow:
+    0 0 0 1px color-mix(in srgb,var(--ac) 20%,transparent),
+    0 0 12px color-mix(in srgb,var(--ac) 20%,transparent);
+}
+/* Resumo do dia: borda luminosa magenta. */
+[data-family="neon"] .day-head{
+  border-color:color-mix(in srgb,var(--ac) 55%,var(--bd));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb,var(--ac) 35%,transparent),
+    0 0 16px color-mix(in srgb,var(--ac) 22%,transparent);
+}
+/* C4 — colchetes HUD nos quatro cantos do resumo, em magenta. */
+[data-family="neon"] .day-head{position:relative}
+[data-family="neon"] .day-head::before{
+  content:"";position:absolute;inset:7px;pointer-events:none;opacity:.55;z-index:1;
+  background:
+    linear-gradient(var(--ac),var(--ac)) left top/10px 1px no-repeat,
+    linear-gradient(var(--ac),var(--ac)) left top/1px 10px no-repeat,
+    linear-gradient(var(--ac),var(--ac)) right top/10px 1px no-repeat,
+    linear-gradient(var(--ac),var(--ac)) right top/1px 10px no-repeat,
+    linear-gradient(var(--ac),var(--ac)) left bottom/10px 1px no-repeat,
+    linear-gradient(var(--ac),var(--ac)) left bottom/1px 10px no-repeat,
+    linear-gradient(var(--ac),var(--ac)) right bottom/10px 1px no-repeat,
+    linear-gradient(var(--ac),var(--ac)) right bottom/1px 10px no-repeat;
+}
+
+/* C7 — ícones: ciano no contexto, ação principal em magenta claro. */
+[data-family="neon"] .section-ico{color:var(--bu)}
+[data-family="neon"] .act-main{color:var(--ac)}
+[data-family="neon"] .focus-play{color:var(--ac)}
+
+/* =========================================================
+   NEON RAIN — C6 (tipografia e letreiro)
+   Chakra Petch no corpo/títulos; Plex Mono no microtexto.
+   Efeito de texto só no .logo-text (regra do FONTES.md).
+   ========================================================= */
+[data-family="neon"] .logo-text{
+  font-family:var(--font-wordmark,'Atelier Neon',system-ui,sans-serif);
+  font-weight:600;letter-spacing:3px;text-transform:uppercase;
+  color:var(--ac);
+  text-shadow:0 0 10px color-mix(in srgb,var(--ac) 55%,transparent);
+}
+[data-family="neon"] .day-head-cycle .th-day{
+  font-family:var(--font-body);font-size:22px;font-weight:500;color:var(--bu);letter-spacing:.02em;
+}
+[data-family="neon"] .tt,[data-family="neon"] .compact-tt{
+  font-size:15.5px;font-weight:500;letter-spacing:.01em;
+}
+[data-family="neon"] .tag-area,[data-family="neon"] .tag-skill,
+[data-family="neon"] .kpi-label,[data-family="neon"] .section-title,
+[data-family="neon"] .focus-eyebrow,[data-family="neon"] .day-head-meta{
+  font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em;
+}
+@media(max-width:640px){
+  [data-family="neon"] .day-head[data-mode="min"] .day-head-cycle .th-day{font-size:17px}
+}
+[data-family="neon"]{--card-gap:10px}
+
