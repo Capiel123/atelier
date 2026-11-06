@@ -1523,7 +1523,7 @@ function closeReportSheet() {document.getElementById('reportSheet')?.remove();}
 function renderTimer() {
   const el = $('#timerWidget'), lbl = $('#tlabel'), time = $('#ttime'), stopBtn = $('#tstop'), bankEl = $('#tbank');
   if (!el) return;
-  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) {const b = ensureFocusBank(); const inBlock = Math.floor((b.sec || 0) % (25 * 60) / 60); bankEl.textContent = '🍅 ' + (b.count || 0) + ' hoje' + ((b.sec || 0) > 0 ? ' · ' + inBlock + '/25' : '');} return;}
+  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) {const b = ensureFocusBank(); const inBlock = Math.floor((b.sec || 0) % (25 * 60) / 60); bankEl.innerHTML = ico('tomato') + ' ' + (b.count || 0) + ' hoje' + ((b.sec || 0) > 0 ? ' · ' + inBlock + '/25' : '');} return;}
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   el.classList.add('run');
   time.textContent = fmtClock(timerElapsedSec());
@@ -1536,7 +1536,7 @@ function renderTimer() {
   if (bankEl) {
     const bank = ensureFocusBank();
     const inBlock = Math.floor((focusBankSec() % (25 * 60)) / 60);
-    bankEl.textContent = S.timer.phase === 'rest' ? '🍅 ' + (bank.count || 0) + ' hoje' : '🍅 ' + (bank.count || 0) + ' · ' + inBlock + '/25';
+    bankEl.innerHTML = (S.timer.phase === 'rest' ? ico('tomato') + ' ' + (bank.count || 0) + ' hoje' : ico('tomato') + ' ' + (bank.count || 0) + ' · ' + inBlock + '/25');
   }
   stopBtn.style.display = '';
 }
@@ -1637,12 +1637,13 @@ function renderFocus() {
   const runningSubId = timerOnThisTask ? S.timer.subId : null;
   const runningSub = runningSubId ? t.subs.find(s => s.id === runningSubId) : null;
   const firstPending = (t.subs||[]).filter(s => !s.d && !s.deletedAt).sort((a,b) => (a.order||0)-(b.order||0))[0];
-  const switchTasks = S.tasks.filter(x => !x.deletedAt && !isDone(x) && x.id !== t.id).sort((a,b) => (a.day??99)-(b.day??99) || (a.order||0)-(b.order||0)).slice(0, 40);
+  const switchTasks = S.tasks.filter(x => !x.deletedAt && !isDone(x) && x.id !== t.id && x.day === t.day).sort((a,b) => (a.order||0)-(b.order||0)).slice(0, 40);
   const switchHidden = !!S.cfg.focusSwitchHidden;
-  const switchHtml = (timerOnThisTask && phase === 'focus' && switchTasks.length && !switchHidden)
+  const canSwitch = (!S.timer || timerOnThisTask) && phase === 'focus' && switchTasks.length > 0;
+  const switchHtml = (canSwitch && !switchHidden)
     ? `<div class="focus-switch-row"><select class="focus-switch" data-a="focusSwitch" aria-label="Trocar tarefa no modo foco" title="Trocar tarefa (atalhos [ e ])"><option value="">⇄ Trocar tarefa</option>${switchTasks.map(x => `<option value="${esc(x.id)}">${esc(x.t.slice(0, 48))}</option>`).join('')}</select><button type="button" class="focus-switch-hide" data-a="focusSwitchToggle" aria-label="Ocultar troca de tarefa" title="Ocultar troca de tarefa">×</button></div>`
     : '';
-  const switchReveal = (timerOnThisTask && phase === 'focus' && switchTasks.length && switchHidden)
+  const switchReveal = (canSwitch && switchHidden)
     ? `<button type="button" data-a="focusSwitchToggle" class="focus-btn ghost" title="Mostrar troca de tarefa">⇄ Trocar</button>`
     : '';
 

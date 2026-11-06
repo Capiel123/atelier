@@ -476,7 +476,14 @@ document.addEventListener('click', ev => {
       touch(t);
       break;
     }
-    case 'log': if (!t) break; t.logs.push({id: uid(), minutes: +btn.dataset.m, start: Date.now(), end: Date.now(), subId: null, note: 'manual'}); t.spent = taskMinutes(t); touch(t); break;
+    case 'log': if (!t) break; {
+      const delta = +btn.dataset.m;
+      const lastSub = delta < 0 ? [...(t.logs || [])].reverse().find(l => l.subId) : null;
+      const sid = (S.timer && S.timer.taskId === t.id) ? S.timer.subId : (lastSub ? lastSub.subId : null);
+      t.logs.push({id: uid(), minutes: delta, start: Date.now(), end: Date.now(), subId: sid || null, note: 'manual'});
+      t.spent = taskMinutes(t); touch(t);
+      break;
+    }
     case 'startTimer': if (!t) break; startTimer(t.id, null); return;
     case 'startSubTimer': startTimer(t.id, btn.dataset.sub, S.cfg.defaultFocus || 25); return;
     case 'stopTimer': stopTimer(); return;
@@ -773,7 +780,7 @@ document.addEventListener('change', ev => {
   if (el.id && el.id.startsWith('contactSortFilter_')) {const type = el.id.replace('contactSortFilter_',''); contactFilterState[type].sort = el.value; render(); return;}
   if (el.dataset.a === 'postpone') {const t = T(el.dataset.id); if (t && el.value) postponeTask(t, el.value); el.value = ''; return;}
   if (el.dataset.a === 'jobStage') {const app = S.applications.find(x => x.id === el.dataset.id); if (app && el.value) {snapshot(); changeJobStage(app, el.value); save(); render();} el.value = ''; return;}
-  if (el.dataset.a === 'focusSwitch') {const nextId = el.value; el.value = ''; if (nextId) switchTimerTask(nextId); return;}
+  if (el.dataset.a === 'focusSwitch') {const nextId = el.value; el.value = ''; if (!nextId) return; if (S.timer) switchTimerTask(nextId); else {focusTaskId = nextId; renderFocus();} return;}
   if (el.dataset.a === 'focusSub') {
     const t = S.tasks.find(x => x.id === focusTaskId);
     if (t) {
@@ -949,7 +956,8 @@ document.addEventListener('keydown', ev => {
   }
   if ((ev.key === '[' || ev.key === ']') && focusTaskId && !isTyping && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
     ev.preventDefault();
-    const list = S.tasks.filter(x => !x.deletedAt && !isDone(x));
+    const current = S.tasks.find(x => x.id === focusTaskId);
+    const list = S.tasks.filter(x => !x.deletedAt && !isDone(x) && current && x.day === current.day);
     const at = list.findIndex(x => x.id === focusTaskId);
     if (at < 0 || !list.length) return;
     const next = list[(at + (ev.key === ']' ? 1 : -1) + list.length) % list.length];
