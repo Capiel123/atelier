@@ -1,4 +1,4 @@
-// =========================================================
+﻿// =========================================================
 // APP.JS — Maestro do app
 // Liga eventos de clique/tecla/input, inicializa o app,
 // registra o Service Worker, cria o FAB e o window.__atelier.
@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
 
 /* --- RASTREAR <details> ABERTOS (para persistir após render) --- */
 // 💡 Sem isso, cada re-render fecharia o painel "Editar" que o usuário abriu.
@@ -45,7 +45,24 @@ document.addEventListener('click', ev => {
   if (MUTATING_ACTIONS.has(a)) snapshot();
 
   switch (a) {
-    case 'tab': tab = btn.dataset.t; selectedTaskId = null; hideMoreSheet(); break;
+    case 'tab': tab = btn.dataset.t; selectedTaskId = null; revealedContacts.clear(); hideMoreSheet(); break;
+    case 'peopleSeg': peopleMode = btn.dataset.type === 'personal' ? 'personal' : 'pro'; revealedContacts.clear(); render(); return;
+    case 'toggleDiscreet': setDiscreet(!discreet); revealedContacts.clear(); render(); return;
+    case 'contactReveal': {
+      if (!id) break;
+      if (revealedContacts.has(id)) revealedContacts.delete(id); else revealedContacts.add(id);
+      render(); return;
+    }
+    case 'contactOrbitMore': {contactView[btn.dataset.type] = 'list'; saveContactView(); render(); return;}
+    case 'contactsCompact': {
+      const total = (S.contacts || []).reduce((n, c) => n + (c.interactions || []).length, 0);
+      if (!total) {toast('Nada para compactar'); return;}
+      if (!confirm('Remover os registros de interação mais antigos? Notas recentes, datas e contadores continuam. Baixe um backup antes.')) return;
+      let removed = 0;
+      (S.contacts || []).forEach(c => {removed += trimInteractions(c);});
+      toast(removed ? removed + ' registro' + (removed > 1 ? 's' : '') + ' antigo' + (removed > 1 ? 's' : '') + ' compactado' + (removed > 1 ? 's' : '') : 'Nada para compactar');
+      break;
+    }
     case 'day': day = +i; if (S && S.cfg && S.cfg.sectionsCollapsed) S.cfg.sectionsCollapsed.done = true; break;
     case 'showShortcuts': showShortcutsHelp(); return;
     case 'closeShortcuts': document.getElementById('shortcutsModal')?.remove(); return;
@@ -54,6 +71,9 @@ document.addEventListener('click', ev => {
     case 'toggleQuickAdd': showQuickAdd = !showQuickAdd; render(); if (showQuickAdd) focusQuickAdd(); return;
     case 'openQuickAdd': showQuickAdd = true; setDayHeadMode('full'); render(); focusQuickAdd(); return;
     case 'toggleFilters': showFilters = !showFilters; render(); return;
+    case 'toggleContactFilters': showContactFilters = !showContactFilters; render(); return;
+    case 'contactKpi': {const tp = btn.dataset.type, st = btn.dataset.status; const f = contactFilterState[tp]; f.status = (f.status === st) ? 'all' : st; render(); return;}
+    case 'toggleJobFilters': showJobFilters = !showJobFilters; render(); return;
     case 'toggleEnergy': setEnergyCollapsed(!getEnergyCollapsed()); render(); return;
     case 'toggleTools': setToolsCollapsed(!getToolsCollapsed()); render(); return;
     case 'dayHeadCycle': {
@@ -244,7 +264,7 @@ document.addEventListener('click', ev => {
       return;
     }
     case 'openSearch': openSearch(); return;
-    case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target); return;
+    case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target, btn.dataset.seg); return;
     case 'toggleQueueCard': {
       if (!id) break;
       selectedTaskId = id;
@@ -604,7 +624,53 @@ document.addEventListener('click', ev => {
       }
       return;
     }
-    case 'qaJob': {const el = $('#qaJob'); if (el && el.value.trim()) {const job = parseJobLine(el.value); if (job) S.applications.push(job); el.value = '';} break;}
+    case 'qaJob': {
+      const el = $('#qaJob'); if (!el || !el.value.trim()) break;
+      const res = addJobFromInput(el.value);
+      if (!res.ok) {
+        if (res.reason === 'dupe') toast('Essa vaga já está na lista', true);
+        else if (res.reason === 'urlOnly') {el.value = ''; openJobFormWithUrl(res.url); toast('Link guardado — falta cliente e vaga'); return;}
+        break;
+      }
+      el.value = '';
+      toast(res.warnings.length ? res.warnings[0] : 'Vaga adicionada' + (res.job.url ? ' · link ✓' : ''), res.warnings.length > 0);
+      break;
+    }
+    case 'jobAddLink': {
+      if (!id) break;
+      openEdits.add(id);
+      render();
+      const el = document.querySelector('[data-p="applications:' + id + ':url"]');
+      if (el) {
+        try {el.focus({preventScroll: true});} catch (e) {el.focus();}
+        if (el.scrollIntoView) el.scrollIntoView({block: 'center', behavior: 'smooth'});
+      }
+      return;
+    }
+    case 'jobOpenApply': {
+      const app = S.applications.find(x => x.id === id);
+      if (!app || !app.url) break;
+      try { window.open(app.url, '_blank', 'noopener'); } catch (e) {}
+      if (app.stage === 'prospect') {changeJobStage(app, 'applied');}
+      else toast('Vaga aberta');
+      break;
+    }
+    case 'jobBulkAnalyze': {
+      jobBulkPreview = parseJobLines(V('jobBulkText'));
+      if (!jobBulkPreview.length) {toast('Cole uma vaga por linha', true); jobBulkPreview = null;}
+      render(); return;
+    }
+    case 'jobBulkAdd': {
+      if (!jobBulkPreview) jobBulkPreview = parseJobLines(V('jobBulkText'));
+      const add = jobBulkPreview.filter(r => r.job && !r.dupe && !r.error);
+      const skipped = jobBulkPreview.length - add.length;
+      if (!add.length) {toast('Nada para adicionar', true); break;}
+      add.forEach(r => S.applications.push(r.job));
+      if (window.__atelierDraftClear) window.__atelierDraftClear('job:bulk');
+      jobBulkPreview = null;
+      toast(add.length + ' vaga' + (add.length > 1 ? 's' : '') + ' adicionada' + (add.length > 1 ? 's' : '') + (skipped ? ' · ' + skipped + ' ignorada' + (skipped > 1 ? 's' : '') : ''));
+      break;
+    }
     case 'jobAreaAdd': {const v = V('jobAreaNew').trim(); if (!v) break; const list = jobAreas().slice(); if (!list.includes(v)) list.push(v); S.cfg.jobAreas = list; save(); render(); return;}
     case 'jobAreaDel': {const v = btn.dataset.v || ''; S.cfg.jobAreas = jobAreas().filter(a => a !== v); save(); render(); return;}
     case 'jobSubareaAdd': {const v = V('jobSubareaNew').trim(); if (!v) break; const list = jobSubareas().slice(); if (!list.includes(v)) list.push(v); S.cfg.jobSubareas = list; save(); render(); return;}
@@ -626,10 +692,10 @@ document.addEventListener('click', ev => {
     case 'jobDel': if (!confirm('Excluir vaga? Ela vai para o lixo.')) return; softDelete('applications', id); break;
     case 'reviewJobFollowUp': {const app = S.applications.find(x => x.id === id); if (app) recordJobInteraction(app); break;}
     case 'reviewJobSnooze': {const app = S.applications.find(x => x.id === id); if (app) {const d = new Date(); d.setDate(d.getDate()+7); app.nextFollowUp = iso(d); touch(app);} break;}
-    case 'contactView': contactView[btn.dataset.type] = btn.dataset.mode; render(); return;
+    case 'contactView': contactView[btn.dataset.type] = btn.dataset.mode; saveContactView(); render(); return;
     case 'toggleTagFilter': {const tp = btn.dataset.type, tag = btn.dataset.tag; const arr = contactFilterState[tp].tags; if (arr.includes(tag)) contactFilterState[tp].tags = arr.filter(x => x !== tag); else contactFilterState[tp].tags.push(tag); render(); return;}
     case 'clearTagFilter': contactFilterState[btn.dataset.type].tags = []; render(); return;
-    case 'cAdd': {const type = btn.dataset.type; const n = V('cN_' + type); if (!n) {toast('Nome obrigatório', true); return;} const cad = +V('cCadence_' + type) || (type === 'pro' ? 30 : 21); const tagsStr = V('cTags_' + type) || ''; const tags = tagsStr.split(',').map(x => x.trim()).filter(Boolean); S.contacts.push(mkContact({n, type, cat: V('cCat_' + type) || (type === 'pro' ? 'Prospect' : 'Conhecido'), where: V('cWhere_' + type), url: V('cUrl_' + type), role: V('cRole_' + type), context: V('cContext_' + type), notes: V('cNotes_' + type), lastConversation: V('cLastConv_' + type), cadence: cad, tags})); if (window.__atelierDraftClear) window.__atelierDraftClear('contact:' + type + ':'); break;}
+    case 'cAdd': {const type = btn.dataset.type; const n = V('cN_' + type); if (!n) {toast('Nome obrigatório', true); return;} const cad = +V('cCadence_' + type) || (type === 'pro' ? 30 : 21); const tags = tagList(V('cTags_' + type) || ''); S.contacts.push(mkContact({n, type, cat: V('cCat_' + type) || (type === 'pro' ? 'Prospect' : 'Conhecido'), where: V('cWhere_' + type), url: V('cUrl_' + type), role: V('cRole_' + type), context: V('cContext_' + type), notes: V('cNotes_' + type), lastConversation: V('cLastConv_' + type), nextAction: V('cNextAction_' + type), cadence: cad, tags})); if (window.__atelierDraftClear) window.__atelierDraftClear('contact:' + type + ':'); break;}
     case 'contactSend': {if (!c) break; logInteraction(c, 'out', 'msg', ''); toast('Enviei · +' + (c.cadence || 30) + 'd'); break;}
     case 'contactReceive': {if (!c) break; logInteraction(c, 'in', 'msg', ''); toast('Resposta registrada'); break;}
     case 'contactConvert': {
@@ -647,7 +713,21 @@ document.addEventListener('click', ev => {
     case 'contactUnsnooze': {if (!c) break; c.snoozedUntil = ''; c.snoozeReason = ''; touch(c); toast('Adiamento cancelado'); break;}
     case 'contactClearWaiting': {if (!c) break; c.waitingFor = false; c.waitingSince = null; touch(c); toast('Cancelado'); break;}
     case 'contactLog': {if (!c) break; openInteractionSheet(c.id); return;}
-    case 'contactOrbitClick': {if (!c) break; const card = document.querySelector(`[data-p="contacts:${c.id}:n"]`)?.closest('.contact-card'); if (card) {card.scrollIntoView({behavior:'smooth', block:'center'}); card.classList.add('highlight'); setTimeout(() => card.classList.remove('highlight'), 2100);} break;}
+    case 'contactOrbitClick': {
+      if (!c) break;
+      // v139: o nó abre o contato na lista (a órbita não tem cards para rolar).
+      contactView[c.type] = 'list';
+      saveContactView();
+      render();
+      setTimeout(() => {
+        const card = document.querySelector('[data-cid="' + c.id + '"]');
+        if (!card) return;
+        card.scrollIntoView({behavior: 'smooth', block: 'center'});
+        card.classList.add('highlight');
+        setTimeout(() => card.classList.remove('highlight'), 2100);
+      }, 80);
+      return;
+    }
     case 'cDel': if (!confirm('Excluir contato? Ele vai para o lixo.')) return; softDelete('contacts', id); break;
     case 'cArchive': {if (!c) break; c.archived = !c.archived; touch(c); break;}
     case 'padd': {const n = V('pn'); if (!n) break; S.projects.push(mkProject({n, area: V('pa') || 'Carreira', due: V('pdu'), reward: V('prw'), clientId: V('pclient') || ''})); break;}
@@ -834,7 +914,7 @@ document.addEventListener('change', ev => {
   if (key === 'day') v = dv(v);
   if (key === 'time') v = v || '';
   if (key === 'section') v = v || '';
-  if (col === 'contacts' && key === 'tagsStr') {obj.tags = v.split(',').map(x => x.trim()).filter(Boolean);} else {obj[key] = v;}
+  if (col === 'contacts' && key === 'tagsStr') {obj.tags = tagList(v);} else {obj[key] = v;}
   touch(obj);
   save(); render();
 });
@@ -869,7 +949,7 @@ document.addEventListener('keydown', ev => {
   const el = ev.target;
   if (el.id === 'searchInput') {
     const first = document.querySelector('.search-result[data-first="1"]');
-    if (first) goToSearchResult(first.dataset.tab, first.dataset.target);
+    if (first) goToSearchResult(first.dataset.tab, first.dataset.target, first.dataset.seg);
     ev.preventDefault();
     return;
   }
@@ -882,10 +962,16 @@ document.addEventListener('keydown', ev => {
     if (next) next.focus();                // continua no campo (e mantém o teclado no mobile)
   }
   else if (el.id === 'qaJob') {
-    const job = el.value.trim() ? parseJobLine(el.value) : null;
     ev.preventDefault();
-    if (!job) return;
-    S.applications.push(job); el.value = ''; save(); render();
+    if (!el.value.trim()) return;
+    const res = addJobFromInput(el.value);
+    if (!res.ok) {
+      if (res.reason === 'dupe') toast('Essa vaga já está na lista', true);
+      else if (res.reason === 'urlOnly') {el.value = ''; openJobFormWithUrl(res.url); toast('Link guardado — falta cliente e vaga');}
+      return;
+    }
+    el.value = ''; save(); render();
+    if (res.warnings.length) toast(res.warnings[0], true);
     const next = document.getElementById('qaJob');
     if (next) next.focus();
   }
@@ -1197,7 +1283,7 @@ document.addEventListener('click', ev => {
   const dir = (document.getElementById('iaDir') || {}).value || 'out';
   const type = (document.getElementById('iaType') || {}).value || 'msg';
   const note = (document.getElementById('iaNote') || {}).value || '';
-  logInteraction(c, dir, type, note);
+  logInteraction(c, dir, type, note, true);
   closeInteractionSheet();
   save(); render();
   toast('Registrada');
@@ -1259,9 +1345,25 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
   f.setAttribute('aria-label', 'Nova tarefa');
   document.body.appendChild(f);
   const find = () => document.getElementById('qa') || document.getElementById('qaJob');
-  const canAdd = () => tab === 'week' || tab === 'q' || !!find();
-  const sync = () => { f.hidden = !canAdd(); };
+  // v135 — Pessoas (Rede/Amizades) também tem captura rápida: o FAB abre o form de contato.
+  const isPeople = () => tab === 'rede' || tab === 'friends' || tab === 'people';
+  const canAdd = () => tab === 'week' || tab === 'q' || isPeople() || !!find();
+  const sync = () => {
+    f.hidden = !canAdd();
+    f.setAttribute('aria-label', tab === 'jobs' ? 'Nova vaga' : isPeople() ? 'Novo contato' : 'Nova tarefa');
+  };
   f.addEventListener('click', () => {
+    if (isPeople()) {
+      const ptype = (tab === 'friends' || (tab === 'people' && peopleMode === 'personal')) ? 'personal' : 'pro';
+      openEdits.add('contactForm_' + ptype);
+      render();
+      const inp = document.getElementById('cN_' + ptype);
+      if (inp) {
+        try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); }
+        if (inp.scrollIntoView) inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+      return;
+    }
     if (tab === 'week') {
       let needRender = false;
       if (!showQuickAdd) { showQuickAdd = true; needRender = true; }
@@ -1431,6 +1533,17 @@ window.__atelier = {get S(){return S}, save, render, migrate, seed, undo, contac
 })();
 
 /* --- TICKS DE FUNDO (atualizações periódicas) --- */
+// v138 — colou só o link? Abre "+ detalhes" com o link já preenchido e o foco no Cliente.
+// Sem isso o texto sumia sem feedback (o parser exige cliente).
+function openJobFormWithUrl(url) {
+  if (url) draftSet('job:jUrl', url);
+  openEdits.add('jobAdd');
+  render();
+  const el = document.getElementById('jClient');
+  if (!el) return;
+  try {el.focus({preventScroll: true});} catch (e) {el.focus();}
+  if (el.scrollIntoView) el.scrollIntoView({block: 'center', behavior: 'smooth'});
+}
 // v93: abre e FOCA o campo "Nova tarefa rápida" (Semana/Fila). Antes, o clique em
 // "+ Adicionar Tarefa" só renderizava o campo, sem foco — digitar não ia a lugar algum.
 function focusQuickAdd() {

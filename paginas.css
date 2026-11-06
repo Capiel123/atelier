@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    PAGINAS.CSS
    Estilos específicos de telas/features: Modo Foco, busca,
    atalhos, Jobs, Contatos, Network, XP, Temas, Histórico,
@@ -159,6 +159,13 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .contact-add{margin-bottom:12px}
 .contact-add>summary{font-size:13px;font-weight:600;color:var(--ac);padding:8px 12px;background:var(--s1);border:1px solid var(--bd);border-radius:10px;transition:.15s}
 .contact-add>summary:hover{border-color:var(--ac)}
+/* v137 — Pessoas: segmento Rede|Pessoal, próximo passo visível e nome que não parece formulário. */
+.people-seg{margin-bottom:10px}
+.people-seg button{display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.people-seg .count{opacity:.6;font-size:11px;font-variant-numeric:tabular-nums}
+.contact-next{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ac);margin:6px 0;padding:5px 8px;border-left:2px solid var(--ac);background:color-mix(in srgb,var(--ac) 8%,transparent);border-radius:0 6px 6px 0}
+.contact-card .big > input[data-p]{background:transparent;border-color:transparent;padding:2px 0;box-shadow:none}
+.contact-card .big > input[data-p]:focus{background:var(--s2);border-color:var(--ac);padding:2px 6px}
 
 /* Visualização "órbita" (rede de contatos) */
 .orbit-wrap{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:12px;margin-bottom:12px;display:flex;flex-direction:column;align-items:center}
@@ -175,6 +182,21 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .orbit-legend span{display:flex;align-items:center;gap:4px}
 .orbit-legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
 .orbit-labels{font-size:10px;color:var(--mu);fill:var(--mu)}
+/* v139 — modo discreto (tela compartilhada) e órbita com teto por anel. */
+.contact-reveal{background:transparent;border:1px solid var(--bd);color:var(--mu);padding:3px 6px;border-radius:6px;font-size:11px;line-height:1;flex:none;min-height:26px}
+.contact-reveal:hover{color:var(--ac);border-color:var(--ac)}
+.contact-card.discreet .meta .tag-extra,
+.contact-card.discreet .response-rate,
+.contact-card.discreet .contact-tags,
+.contact-card.discreet .contact-last-conv,
+.contact-card.discreet .contact-inter,
+.contact-card.discreet .contact-url,
+.contact-card.discreet .contact-client,
+.contact-card.discreet .contact-next{display:none!important}
+.orbit-count{font-size:10.5px;color:var(--mu);margin-top:6px;text-align:center;letter-spacing:.02em}
+.orbit-over{color:var(--ac);font-weight:600}
+.orbit-more{margin-top:8px;font-size:11.5px;padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--ac);cursor:pointer}
+.orbit-more:hover{border-color:var(--ac)}
 
 /* Histórico de interações */
 .interaction-row{display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:11.5px;border-bottom:1px solid var(--bd)}

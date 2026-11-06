@@ -193,7 +193,148 @@ function jobScore(app) {const base = {prospect:20,applied:35,screening:55,interv
 function updateJobNextFollowUp(app) {const st = jobStage(app); if (!st.cadence) {app.nextFollowUp = ''; return;} const base = app.lastInteractionAt || app.stageHistory?.slice(-1)[0]?.at || Date.now(); const d = new Date(base); d.setDate(d.getDate() + st.cadence); app.nextFollowUp = iso(d);}
 function changeJobStage(app, newStage) {if (app.stage === newStage) return; app.stageHistory = app.stageHistory || []; app.stageHistory.push({stage: newStage, at: Date.now()}); app.stage = newStage; app.lastInteractionAt = Date.now(); if (newStage === 'applied' && !app.appliedAt) app.appliedAt = Date.now(); if (!app.firstResponseAt && ['screening','interview','challenge','offer','negotiation','accepted','rejected'].includes(newStage)) app.firstResponseAt = Date.now(); updateJobNextFollowUp(app); touch(app); toast('Estágio: ' + jobStage(app).n);}
 function recordJobInteraction(app) {app.lastInteractionAt = Date.now(); app.interactions = app.interactions || []; app.interactions.unshift({at: Date.now(), note: 'Interação'}); updateJobNextFollowUp(app); touch(app); toast('Follow-up atualizado');}
-function parseJobLine(s) {if (!s || !s.trim()) return null; let ticket = 0, priority = 1, platform = '', area = ''; s = s.replace(/~(\d+)/, (_,n) => {ticket = +n; return '';}); s = s.replace(/!(a|m|b)\b/i, (_,x) => {priority = {a:0,m:1,b:2}[x.toLowerCase()]; return '';}); s = s.replace(/@(\S+)/, (_,p) => {const f = jobPlatforms().find(x => x.toLowerCase().startsWith(p.toLowerCase())); if (f) platform = f; return '';}); s = s.replace(/#(\S+)/, (_,a) => {const f = jobAreas().find(x => x.toLowerCase().startsWith(a.toLowerCase())); if (f) area = f; return '';}); const parts = s.split(' - ').map(x => x.trim()).filter(Boolean); if (!parts.length) return null; return mkJob({client: parts[0], role: parts[1] || '', ticket, priority, platform, area});}
+/* v136 — captura de vaga tolerante. Aceita, em qualquer ordem:
+   `Cliente - Vaga` (ou `–`/`|`), URL em qualquer posição, `~ticket` (3.5k/R$ 3.500),
+   `!a|!m|!b`, `@plataforma`, `#área` e `+estágio`. Nunca mais injeta "undefined". */
+const JOB_STAGE_ALIASES = {
+  prospecto:'prospect', prospect:'prospect', prospectivo:'prospect',
+  aplicada:'applied', aplicado:'applied', applied:'applied',
+  triagem:'screening', screening:'screening',
+  entrevista:'interview', interview:'interview',
+  teste:'challenge', challenge:'challenge', desafio:'challenge',
+  oferta:'offer', offer:'offer',
+  negociacao:'negotiation', negotiation:'negotiation',
+  aceito:'accepted', aceita:'accepted', accepted:'accepted',
+  rejeitado:'rejected', rejeitada:'rejected', rejected:'rejected',
+  semresposta:'ghosted', ghosted:'ghosted', fantasma:'ghosted',
+  desisti:'withdrawn', desistiu:'withdrawn', withdrawn:'withdrawn'
+};
+function normLoose(s) {return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');}
+function jobStageFromToken(tok) {
+  const k = normLoose(tok);
+  if (!k) return null;
+  if (JOB_STAGE_ALIASES[k]) return JOB_STAGE_ALIASES[k];
+  const byName = JOB_STAGES.find(s => normLoose(s.n) === k);
+  if (byName) return byName.id;
+  return JOB_STAGES.find(s => s.id === k)?.id || null;
+}
+function cleanJobUrl(raw) {
+  let u = String(raw || '').trim().replace(/[),.;]+$/, '');
+  if (!u) return '';
+  if (/^www\./i.test(u)) u = 'https://' + u;
+  if (!/^https?:\/\//i.test(u)) return '';
+  try {
+    const url = new URL(u);
+    ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id','fbclid','gclid','ref','ref_src','trackingId'].forEach(k => url.searchParams.delete(k));
+    return url.toString();
+  } catch (e) { return u; }
+}
+function jobTicketFromToken(tok) {
+  let s = String(tok || '').toLowerCase().replace(/[^\dk.,]/g, '');
+  if (!s) return 0;
+  const thousands = /k$/.test(s);
+  if (thousands) {
+    s = s.replace(/k$/, '').replace(',', '.');
+    const nk = parseFloat(s);
+    return isFinite(nk) ? Math.round(nk * 1000) : 0;
+  }
+  s = s.replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return isFinite(n) ? Math.round(n) : 0;
+}
+function parseJobInput(s) {
+  if (s == null || !String(s).trim()) return null;
+  let rest = String(s);
+  const warnings = [];
+  let url = '', ticket = 0, priority = 1, platform = '', area = '', stage = '';
+
+  const urlMatch = rest.match(/(https?:\/\/|www\.)[^\s|]+/i);
+  if (urlMatch) {
+    const cleaned = cleanJobUrl(urlMatch[0]);
+    if (cleaned) { url = cleaned; rest = rest.replace(urlMatch[0], ' '); }
+    else warnings.push('link inválido ignorado');
+  }
+  rest = rest.replace(/~\s*([^\s]+)/g, (m, tok) => {
+    const v = jobTicketFromToken(tok);
+    if (v) { ticket = v; return ' '; }
+    return m;
+  });
+  rest = rest.replace(/!\s*([amb])\b/gi, (m, x) => {priority = {a:0, m:1, b:2}[x.toLowerCase()]; return ' ';});
+  rest = rest.replace(/\+\s*([^\s]+)/g, (m, tok) => {
+    const st = jobStageFromToken(tok);
+    if (st) { stage = st; return ' '; }
+    warnings.push('estágio "' + tok + '" não reconhecido');
+    return m;
+  });
+  rest = rest.replace(/@([^\s]+)/g, (m, tok) => {
+    const k = normLoose(tok);
+    const f = jobPlatforms().find(x => normLoose(x).startsWith(k) || k.startsWith(normLoose(x)));
+    if (f) { platform = f; }
+    else { platform = tok; warnings.push('plataforma "' + tok + '" não está na lista (salva como está)'); }
+    return ' ';
+  });
+  rest = rest.replace(/#([^\s]+)/g, (m, tok) => {
+    const k = normLoose(tok);
+    const f = jobAreas().find(x => normLoose(x).startsWith(k));
+    if (f) { area = f; }
+    else { area = tok; warnings.push('área "' + tok + '" não está na lista (salva como está)'); }
+    return ' ';
+  });
+
+  const parts = rest.replace(/\s+/g, ' ').trim()
+    .split(/\s*[|–—]\s*|\s+-\s+/)
+    .map(x => x.replace(/^[\s:]+|[\s:]+$/g, '').trim()).filter(Boolean);
+  const client = parts[0] || '';
+  if (!client) return null;
+  const role = parts.slice(1).join(' - ');
+  return {job: mkJob({client, role, url, platform, area, ticket, priority, stage: stage || 'prospect'}), warnings};
+}
+function parseJobLine(s) {const r = parseJobInput(s); return r ? r.job : null;}
+function jobFeedbackText(r) {
+  if (!r || !r.job) return '';
+  const j = r.job;
+  const bits = [j.client, j.role, j.platform, jobStage(j).n, j.ticket ? fmtBRL(j.ticket) : '', j.url ? 'link ✓' : ''].filter(Boolean);
+  const warn = (r.warnings && r.warnings.length) ? ' · ' + r.warnings[0] : '';
+  return bits.join(' · ') + warn;
+}
+/* Identidade para detectar duplicata: URL normalizada ou (cliente + cargo). */
+function jobUrlKey(u) {return String(u || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/+$/, '');}
+function jobDupeKey(j) {
+  if (!j) return '';
+  const u = jobUrlKey(j.url);
+  if (u) return 'u:' + u;
+  return 'n:' + normLoose(j.client) + '|' + normLoose(j.role);
+}
+function findDupeJob(job, pool) {
+  const key = jobDupeKey(job);
+  if (!key || key === 'n:|') return null;
+  return (pool || alive(S.applications)).find(a => jobDupeKey(a) === key) || null;
+}
+/* Lote: uma vaga por linha. Devolve o status de cada linha para a prévia.
+   Marca duplicata contra o que já existe e também contra uma linha anterior do mesmo lote. */
+function parseJobLines(text) {
+  const seen = new Set();
+  return String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+    const r = parseJobInput(line);
+    if (!r) return {line, job: null, warnings: [], error: 'não deu para ler', dupe: null};
+    const key = jobDupeKey(r.job);
+    const existing = findDupeJob(r.job);
+    const sameInBatch = !existing && seen.has(key);
+    seen.add(key);
+    return {line, job: r.job, warnings: r.warnings, error: '', dupe: existing || (sameInBatch ? {sameInBatch: true} : null)};
+  });
+}
+function addJobFromInput(text) {
+  // v138 — colou só o link? Não some: avisa e abre o formulário com o link preenchido.
+  if (/^\s*(https?:\/\/|www\.)\S*\s*$/i.test(String(text || ''))) {
+    return {ok: false, reason: 'urlOnly', url: cleanJobUrl(String(text).trim())};
+  }
+  const r = parseJobInput(text);
+  if (!r) return {ok: false, reason: 'empty'};
+  if (findDupeJob(r.job)) return {ok: false, reason: 'dupe', job: r.job};
+  S.applications.push(r.job);
+  return {ok: true, job: r.job, warnings: r.warnings};
+}
 /* v121 — taxonomia editável de Vagas. Sem cfg.jobAreas, deriva das habilidades;
    depois que o usuário edita, a lista dele manda (inclusive vazia). */
 function jobAreas() {
@@ -239,9 +380,52 @@ function contactStatus(c) {const today = iso(new Date()); if (c.archived) return
 function contactScore(c) {if (c.archived || c.deletedAt) return -1000; const today = iso(new Date()); if (c.snoozedUntil && c.snoozedUntil > today) return -500; const last = c.lastContact ? new Date(c.lastContact) : null; const days = last ? (Date.now() - last.getTime()) / 86400000 : 999; const cadence = c.cadence || 30; const ratio = days / cadence; let score = 0; if (ratio >= 2) score += 60; else if (ratio >= 1.5) score += 45; else if (ratio >= 1) score += 28; else if (ratio >= 0.7) score += 12; score += [15, 8, 0][c.priority] ?? 0; if (c.waitingFor && c.waitingSince) {const waitDays = (Date.now() - c.waitingSince) / 86400000; if (waitDays < 5) score *= 0.3; else if (waitDays >= 10) score += 12;} if ((c.sentCount || 0) >= 3) {const rate = (c.receivedCount || 0) / c.sentCount; if (rate >= 0.6) score += 10; else if (rate < 0.2) score -= 15;} if (c.type === 'personal') score *= 0.75; return Math.max(0, Math.round(score));}
 function contactScoreBreakdown(c) {if (c.archived) return 'Arquivado'; const today = iso(new Date()); if (c.snoozedUntil && c.snoozedUntil > today) return 'Adiado até ' + fmtDate(c.snoozedUntil); const parts = []; const last = c.lastContact ? new Date(c.lastContact) : null; const days = last ? (Date.now() - last.getTime()) / 86400000 : 999; const cadence = c.cadence || 30; const ratio = days / cadence; if (ratio >= 2) parts.push('atrasado ' + (Math.round(ratio * 10) / 10) + 'x cadência'); else if (ratio >= 1) parts.push('cadência vencida'); else if (ratio >= 0.7) parts.push('em dia'); else parts.push('recente'); parts.push('prioridade ' + PR[c.priority].toLowerCase()); if (c.waitingFor) parts.push('aguardando'); if ((c.sentCount || 0) >= 3) {const rate = (c.receivedCount || 0) / c.sentCount; if (rate >= 0.6) parts.push('responde bem'); else if (rate < 0.2) parts.push('raramente responde');} if (c.type === 'personal') parts.push('pessoal × 0.75'); return parts.join(' · ');}
 function connectionDepth(c) {const days = c.lastContact ? (Date.now() - new Date(c.lastContact).getTime()) / 86400000 : 999; const int90 = (c.interactions || []).filter(i => i.at > Date.now() - 90 * 86400000).length; if (days < 14 && int90 >= 3) return 1; if (days < 60 || int90 >= 2) return 2; return 3;}
-function logInteraction(c, direction, type = 'msg', note = '') {const d = new Date(); c.lastContact = iso(d); const nd = new Date(d); nd.setDate(nd.getDate() + (c.cadence || 30)); c.nextContact = iso(nd); c.interactions = c.interactions || []; c.interactions.unshift({at: Date.now(), type, direction, outcome: direction === 'out' ? 'sent' : 'responded', note}); if (c.interactions.length > 100) c.interactions = c.interactions.slice(0, 100); if (direction === 'out') {c.waitingFor = true; c.waitingSince = Date.now(); c.sentCount = (c.sentCount || 0) + 1;} else {c.waitingFor = false; c.waitingSince = null; c.receivedCount = (c.receivedCount || 0) + 1;} touch(c);}
+/* v139 — retenção do histórico de contatos. Tocar "Enviei/Recebi" sem nota não cria
+   registro (só contadores + datas); notas e interações tipadas ficam, com teto.
+   Os últimos 120 dias são preservados mesmo acima do teto — connectionDepth (90d) não muda. */
+const MAX_INTERACTIONS = 25;
+const INTERACTION_KEEP_DAYS = 120;
+function trimInteractions(c) {
+  const arr = Array.isArray(c.interactions) ? c.interactions.slice() : [];
+  const sorted = arr.sort((a, b) => (b.at || 0) - (a.at || 0));
+  const cutoff = Date.now() - INTERACTION_KEEP_DAYS * 86400000;
+  const recent = sorted.filter(i => (i.at || 0) >= cutoff);
+  const older = sorted.filter(i => (i.at || 0) < cutoff);
+  const out = recent.slice(0, MAX_INTERACTIONS);
+  if (out.length < MAX_INTERACTIONS) out.push(...older.slice(0, MAX_INTERACTIONS - out.length));
+  const removed = sorted.length - out.length;
+  c.interactions = out;
+  return removed;
+}
+function logInteraction(c, direction, type = 'msg', note = '', force = false) {
+  const d = new Date();
+  c.lastContact = iso(d);
+  const nd = new Date(d);
+  nd.setDate(nd.getDate() + (c.cadence || 30));
+  c.nextContact = iso(nd);
+  // v139: só guarda objeto quando há algo a lembrar (nota, tipo explícito ou log manual).
+  if (force || String(note || '').trim() !== '' || type !== 'msg') {
+    c.interactions = c.interactions || [];
+    c.interactions.unshift({at: Date.now(), type, direction, outcome: direction === 'out' ? 'sent' : 'responded', note});
+    trimInteractions(c);
+  } else {
+    c.interactions = c.interactions || [];
+  }
+  if (direction === 'out') {c.waitingFor = true; c.waitingSince = Date.now(); c.sentCount = (c.sentCount || 0) + 1;}
+  else {c.waitingFor = false; c.waitingSince = null; c.receivedCount = (c.receivedCount || 0) + 1;}
+  touch(c);
+}
 function snoozeContact(c, days, reason) {const d = new Date(); d.setDate(d.getDate() + days); c.snoozedUntil = iso(d); c.snoozeReason = reason; c.waitingFor = false; c.waitingSince = null; touch(c);}
-function contactAllTags() {const set = new Set(); alive(S.contacts).forEach(c => (c.tags || []).forEach(t => set.add(t))); return [...set].sort();}
+/* v134 — tag canônica: minúscula, sem vírgula interna e com espaços colapsados.
+   Um único funil para criar, editar, agrupar e filtrar (PLANO-REDE-AMIZADES-VAGAS §3.1). */
+function tagKey(t) {return String(t == null ? '' : t).replace(/,/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();}
+function tagList(v) {
+  const arr = Array.isArray(v) ? v : String(v == null ? '' : v).split(',');
+  const out = [];
+  arr.forEach(t => {const k = tagKey(t); if (k && out.indexOf(k) < 0) out.push(k);});
+  return out;
+}
+function contactAllTags() {const set = new Set(); alive(S.contacts).forEach(c => tagList(c.tags).forEach(t => set.add(t))); return [...set].sort((a,b) => a.localeCompare(b, 'pt-BR'));}
 function contactResponseRate(c) {if (!c.sentCount) return null; return c.receivedCount / c.sentCount;}
 function upcomingBirthdays(withinDays = 14) {const out = []; const today = new Date(); const todayIso = iso(today); alive(S.contacts).forEach(c => {if (!c.birthday || c.archived) return; const parts = c.birthday.split('-'); if (parts.length < 2) return; const mm = +parts[parts.length - 2], dd = +parts[parts.length - 1]; if (!mm || !dd) return; const y = today.getFullYear(); let next = new Date(y, mm - 1, dd); if (iso(next) < todayIso) next = new Date(y + 1, mm - 1, dd); const days = Math.round((next - today) / 86400000); if (days <= withinDays) out.push({contact: c, days, date: iso(next)});}); return out.sort((a,b) => a.days - b.days);}
 

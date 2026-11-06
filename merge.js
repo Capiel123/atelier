@@ -11,6 +11,17 @@
   function nullStr(v) { return (v == null || v === '') ? null : String(v); }
   function arr(v) { return Array.isArray(v) ? v : []; }
   function fnv(s) { var h = 0x811c9dc5; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; } return h.toString(36); }
+  // v134 — tags canônicas (minúsculas, sem vírgula interna, sem duplicata).
+  // Cópia local de `tagList` (logica.js) para este arquivo seguir autônomo nos testes.
+  function normTagList(v) {
+    var arr = Array.isArray(v) ? v : String(v == null ? '' : v).split(',');
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var k = String(arr[i] == null ? '' : arr[i]).replace(/,/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (k && out.indexOf(k) < 0) out.push(k);
+    }
+    return out;
+  }
 
   // LWW determinístico: vence o maior client_updated_at; empate → updated_at (servidor);
   // empate final → 0 (o chamador decide, normalmente o remoto vence).
@@ -70,7 +81,7 @@
       interests: str(r.interests), notes: str(r.notes), priority: num(r.priority, 1),
       lastContact: nullStr(r.last_contact) || '', nextContact: nullStr(r.next_contact) || '', nextAction: str(r.next_action),
       cadence: num(r.cadence, 30), archived: !!r.archived, lastConversation: str(r.last_conversation),
-      waitingFor: !!r.waiting_for, waitingSince: isoMs(r.waiting_since), tags: arr(r.tags),
+      waitingFor: !!r.waiting_for, waitingSince: isoMs(r.waiting_since), tags: normTagList(r.tags),
       birthday: str(r.birthday), importantDates: arr(r.important_dates),
       snoozedUntil: nullStr(r.snoozed_until) || '', snoozeReason: str(r.snooze_reason),
       interactions: arr(r.interactions), sentCount: num(r.sent_count, 0), receivedCount: num(r.received_count, 0),
@@ -188,6 +199,19 @@
     return merged;
   }
 
+  // v139 — mesmo teto de `trimInteractions` (logica.js): a união não ressuscita histórico antigo.
+  function trimInteractions(c) {
+    var arr = Array.isArray(c.interactions) ? c.interactions.slice() : [];
+    var sorted = arr.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+    var cutoff = Date.now() - 120 * 86400000;
+    var recent = [], older = [];
+    for (var i = 0; i < sorted.length; i++) { ((sorted[i].at || 0) >= cutoff ? recent : older).push(sorted[i]); }
+    var out = recent.slice(0, 25);
+    if (out.length < 25) out = out.concat(older.slice(0, 25 - out.length));
+    c.interactions = out;
+    return sorted.length - out.length;
+  }
+
   function mergeContact(local, remoteRow) {
     var remote = fromContact(remoteRow);
     if (!local) return remote;
@@ -195,6 +219,8 @@
     var base = (d >= 0) ? local : remote;
     var merged = Object.assign({}, base);
     merged.interactions = unionById(local.interactions, remote.interactions, interactionKey);
+    merged.tags = normTagList(merged.tags); // v134 — "Motion" do local × "motion" do remoto = 1 tag
+    trimInteractions(merged);               // v139 — teto/poda também depois da união
     return merged;
   }
 

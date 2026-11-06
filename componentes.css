@@ -449,6 +449,17 @@
 .filter-bar select{flex:none;width:auto;font-size:12px;padding:5px 6px;max-width:140px}
 .filter-bar button{padding:5px 10px;font-size:12px;background:var(--s2);border:1px solid var(--bd)}
 .filter-bar button.on{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac)}
+/* v135 — filtros retráteis (mobile) em Pessoas e Vagas. Base = desktop: barra sempre visível,
+   botão escondido; o bloco ≤640px inverte (ver responsivo.css). */
+.contact-controls{display:flex;gap:6px;align-items:stretch;margin-bottom:10px}
+.contact-controls .view-toggle{flex:1;margin-bottom:0}
+.filter-toggle{display:none;align-items:center;gap:5px;flex:none;font-size:12.5px;padding:6px 12px;background:var(--s1);border:1px solid var(--bd);border-radius:8px;color:var(--tx);cursor:pointer}
+.filter-toggle.on{border-color:var(--ac);color:var(--ac)}
+.filter-count{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--ac);color:var(--on-ac,#000);font-size:10px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.contact-filters,.job-filters{display:block}
+.contact-kpis .kpi{display:block;width:100%;text-align:left;cursor:pointer;color:var(--tx)}
+.contact-kpis .kpi.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--s1))}
+.contact-kpis .kpi[aria-pressed="true"] .kpi-label{color:var(--ac)}
 .filter-ico{display:inline-flex;align-items:center;flex:none;color:var(--mu)}
 .rank-badge{font-weight:700;color:var(--mu);font-variant-numeric:tabular-nums}
 
@@ -461,6 +472,7 @@
 .tag-pill{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--bd);color:var(--mu);cursor:pointer;user-select:none;transition:.15s}
 .tag-pill:hover{color:var(--tx);border-color:var(--ac)}
 .tag-pill.on{background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac);font-weight:600}
+.tag-pill .tag-n{opacity:.55;font-size:9.5px;margin-left:4px;font-variant-numeric:tabular-nums}
 
 /* Ícones de tipo de tarefa (cores fixas por categoria) */
 .type-icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;font-size:12px;background:var(--s2);flex:none}
@@ -989,6 +1001,41 @@
 .queue-dup{display:inline-flex;align-items:center;gap:4px}
 .queue-body > textarea{margin-top:10px}
 .job-taxonomy{margin:6px 0 12px}
+/* v136 — Vagas: captura como ação principal, secundários em chips e lote com prévia. */
+.job-add{margin-bottom:8px}
+.job-add input{font-size:13.5px}
+.job-controls{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;margin-bottom:10px}
+.job-controls>details{flex:0 0 auto;max-width:100%;margin:0}
+.job-controls>details[open]{flex:1 1 100%}
+.job-controls>details>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:6px 12px;background:var(--s1);border:1px solid var(--bd);border-radius:8px;color:var(--tx);min-height:34px}
+.job-controls>details>summary::-webkit-details-marker{display:none}
+.job-controls>details>summary:hover{border-color:var(--ac)}
+.job-controls>details[open]>summary{border-color:var(--ac);color:var(--ac)}
+.job-controls>button{flex:0 0 auto}
+.job-controls .filter-toggle{display:inline-flex}
+.job-bulk-body{margin-top:8px}
+.job-bulk-body textarea{width:100%;font-size:13px}
+.job-bulk-preview{display:flex;flex-direction:column;gap:2px;margin-top:8px;border-top:1px solid var(--bd);padding-top:8px}
+.jb-row{display:flex;gap:8px;align-items:baseline;font-size:12px;padding:2px 0}
+.jb-ico{flex:none;width:12px;text-align:center;color:var(--ok);font-weight:700}
+.jb-row.dupe .jb-ico{color:var(--wr)}
+.jb-row.err .jb-ico{color:var(--er)}
+.jb-txt{flex:1;min-width:0;overflow-wrap:anywhere}
+.jb-meta{flex:none;color:var(--mu);font-size:11px;text-align:right;max-width:45%}
+/* v138 — a dica do link fica visível logo abaixo da captura (não some com o render). */
+.job-hint{display:flex;gap:5px;align-items:baseline;flex-wrap:wrap;font-size:11px;color:var(--mu);margin:-2px 0 8px 2px}
+.job-hint svg{flex:none;opacity:.75}
+.job-hint code{font-size:10.5px;background:var(--s2);border:1px solid var(--bd);padding:1px 5px;border-radius:5px;color:var(--tx);overflow-wrap:anywhere}
+/* KPI agregado do mobile: 4 números numa linha, sem o "cartão dentro do cartão". */
+.job-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px 10px}
+.job-stats .js{min-width:0}
+.job-stats .js-k{display:block;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mu)}
+.job-stats .js b{display:block;font-size:15px;line-height:1.2;margin-top:2px;font-variant-numeric:tabular-nums;color:var(--tx)}
+.job-stats .js i{display:block;font-size:9.5px;color:var(--ok);font-style:normal;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job-stats .js i.late{color:var(--er)}
+/* Hierarquia do card: o cargo manda, o cliente é contexto. */
+.job-title{color:var(--tx)}
+.job-title .job-client{color:var(--tx);opacity:.82;font-weight:500}
 .job-tax{padding:8px 0;border-bottom:1px solid var(--bd)}
 .job-tax:last-child{border-bottom:0}
 .job-tax-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;color:var(--mu);margin-bottom:4px}

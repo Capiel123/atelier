@@ -172,7 +172,7 @@ const TASK_TYPES = [
   {id:'manutencao',n:'Manutenção',icon:'↻',energy:'low'}
 ];
 const ENERGY_LEVELS = [{id:'low',n:'Baixa',icon:'☾'},{id:'med',n:'Média',icon:'◐'},{id:'high',n:'Alta',icon:'☀'}];
-const CAT_PRO = ['Prospect','Cliente','Mentor','Colega','Parceiro','Indicação'];
+const CAT_PRO = ['Prospect','Cliente','Mentor','Colega','Parceiro','Indicação','Estúdio','Empresa'];
 const CAT_PERSONAL = ['Amigo próximo','Date','Amigo casual','Conhecido'];
 const CADENCE_DEFAULT = {'pro':30,'Amigo próximo':7,'Date':5,'Amigo casual':21,'Conhecido':45};
 const POMODORO_OPTIONS = [5,15,25,45,50,60];
@@ -280,7 +280,9 @@ let toastTmr = null;
 let filterState = {text:'', type:'', area:'', proj:'', labels:[], showLabels:false};
 let jobFilter = {stage:'active', area:'', priority:'all', platform:'', text:''};
 let contactFilterState = {pro: {text:'', cat:'', status:'all', tags:[], sort:'score'}, personal: {text:'', cat:'', status:'all', tags:[], sort:'score'}};
-let contactView = {pro:'list', personal:'list'};
+let contactView = loadContactView();
+// v137 — aba única "Pessoas": o segmento decide qual tipo é exibido (não persiste).
+let peopleMode = 'pro';
 let lastSlot = null;
 let undoStack = [];
 let focusTaskId = null;
@@ -298,6 +300,24 @@ let selectedTaskId = null;
 let mobileFiltersOpen = false;
 let showQuickAdd = false;
 let showFilters = false;
+// v135 — filtros retráteis no mobile (Rede/Amizades e Vagas). Não persistem, como contactView.
+// v138 — o painel é único (não por tipo): abrir em Rede e trocar para Pessoal mantém aberto.
+let showContactFilters = false;
+// v139 — modo discreto (tela compartilhada) e cards revelados até o próximo render.
+let discreet = (function () { try { return localStorage.getItem('atelier_discreet_v1') === '1'; } catch (e) { return false; } })();
+let revealedContacts = new Set();
+function setDiscreet(v) {discreet = !!v; try {localStorage.setItem('atelier_discreet_v1', v ? '1' : '0');} catch (e) {} }
+function loadContactView() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('atelier_contact_view_v1') || 'null');
+    if (raw && typeof raw === 'object') return {pro: raw.pro === 'orbit' ? 'orbit' : 'list', personal: raw.personal === 'orbit' ? 'orbit' : 'list'};
+  } catch (e) {}
+  return {pro: 'list', personal: 'list'};
+}
+function saveContactView() {try {localStorage.setItem('atelier_contact_view_v1', JSON.stringify(contactView));} catch (e) {}}
+let showJobFilters = false;
+// v136 — prévia do lote de vagas (efêmera: some ao adicionar ou recarregar).
+let jobBulkPreview = null;
 // v104: o recolhimento antigo foi absorvido pelos 3 modos do cabeçalho do dia.
 const openEdits = new Set();
 
@@ -634,6 +654,9 @@ function migrate(raw) {
   });
   s.projects.forEach(p => {if (!p.currency) p.currency = 'BRL';});
   s.contacts.forEach(c => {if (c.clientId === undefined) c.clientId = null;});
+  // v134 — tags canônicas (minúsculas, sem duplicata). Não mexe em updatedAt:
+  // a convergência entre aparelhos vem do merge, que normaliza dos dois lados.
+  s.contacts.forEach(c => {c.tags = (typeof tagList === 'function') ? tagList(c.tags) : (Array.isArray(c.tags) ? c.tags : []);});
   s.applications.forEach(a => {if (a.projectId === undefined) a.projectId = null;});
 
   s.cfg.sectionsCollapsed = s.cfg.sectionsCollapsed || {commitment:false, work:false, personal:false, done:true};

@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    RESPONSIVO.CSS
    Camada final: media queries (celular/desktop), polimento
    de UX (v14.1 / v15 / v16), acessibilidade. É o ÚLTIMO
@@ -1086,4 +1086,49 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
     [data-family="neon"] .fab{border-radius:0 10px 0 10px;corner-shape:bevel}
   }
   [data-family="neon"] .fab:hover{border:0}
+
+  /* ---- v135 — Pessoas e Vagas no mobile ----
+     Filtros retráteis (2 níveis: botão → barra), KPIs em uma linha só e alvos de 44px.
+     Nada muda no desktop: componentes.css deixa a barra visível e esconde o botão. */
+  .contact-controls{gap:6px}
+  .filter-toggle{display:inline-flex;min-height:38px}
+  .contact-filters{display:none}
+  .contact-filters.open{display:block}
+  .job-filters{display:none}
+  .job-filters.open{display:block}
+  .contact-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .contact-kpis .kpi{padding:6px;text-align:center}
+  .contact-kpis .kpi-label{font-size:9px;letter-spacing:.02em}
+  .contact-kpis .kpi-value{font-size:16px;margin-top:2px}
+  .contact-kpis .kpi-sub{display:none}
+  .quick-actions button{min-height:44px}
+
+  /* ---- v136 — Vagas no mobile: KPI → captura → chips → lista ----
+     Três níveis visuais: o número informa, o campo captura, os chips organizam.
+     O ruído do card (rótulo de prioridade, subárea e tempo) sai do caminho. */
+  .job-stats{padding:6px;gap:4px}
+  .job-stats .js b{font-size:14px}
+  .job-stats .js i{font-size:9px}
+  .job-add{margin-bottom:8px}
+  .job-hint{font-size:10.5px;margin-bottom:8px}
+  .job-controls{gap:4px}
+  .job-controls>details>summary{min-height:34px;padding:5px 10px;font-size:12px}
+  .job-controls .sum-long{display:none}
+  .job-card .pr-lbl,
+  .job-card .tag-sub,
+  .job-card .tag-time{display:none}
+  .job-bulk-preview .jb-meta{max-width:38%}
+
+  /* ---- v137 — Pessoas no mobile: o card volta a mostrar o essencial ----
+     Categoria, status e "Nd atrás" ficam; onde/cargo/profundidade/taxa continuam
+     no "Editar" (e no desktop). */
+  .contact-card .meta .tag-extra,
+  .contact-card .response-rate.tag-extra{display:none}
+  .contact-next{font-size:11.5px;margin:6px 0 4px}
+  .people-seg{margin-bottom:8px}
+  .people-seg button{min-height:36px}
+
+  /* v139 — modo discreto e órbita com "+N" também no celular */
+  .contact-reveal{min-height:32px;padding:4px 8px}
+  .orbit-more{min-height:38px;width:100%}
 }
