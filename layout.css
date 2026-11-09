@@ -299,3 +299,6 @@ body.more-open{overflow:hidden}
   .contact-kpis{margin-bottom:10px}
 }
 
+
+/* v144 — o sheet é menu, não formulário: o painel recebe o foco sem abrir teclado. */
+.more-sheet-panel:focus,.more-sheet-panel:focus-visible{outline:none}

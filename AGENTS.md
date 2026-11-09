@@ -1,4 +1,4 @@
-﻿# Ateliê — Diretrizes de Engenharia e Gerenciamento de Contexto para Agentes de Código
+# Ateliê — Diretrizes de Engenharia e Gerenciamento de Contexto para Agentes de Código
 
 ---
 
@@ -72,6 +72,7 @@ Antes de efetuar qualquer alteração no repositório, execute sequencialmente:
 - **Preservação de Escopo de Efeitos:** Efeitos visuais avançados como `background-clip: text`, gradientes metálicos e `text-shadow` intensos são **estritamente restritos** ao elemento `.logo-text`. Nunca aplique essas propriedades a títulos de leitura (`.tt`, `h2`, `inputs`).
 - **Validação de tema:** valide a alteração na família que você mudou (`data-family`) e em Obsidiana. São 19 temas; a contagem viva está em `THEMES` (`estado.js`).
 - **Sem redundância (§1.7 do design system):** não renderize informação que o usuário já vê — se o título da view nomeia a tela, a navegação não repete; se o número já está no KPI, o card não repete; se a cor já indica o estado, não duplique em texto. Antes de acrescentar rótulo/breadcrumb/legenda, pergunte o que ele acrescenta. Vale especialmente no mobile. O teste `_nav_r1_test` guarda a ausência da linha de contexto.
+- **Sem teclado automático (§1.8 do design system):** `autofocus`/`.focus()` em campo de texto só quando a ação do usuário é "digitar aqui". Ao abrir menu, sheet ou diálogo, foque o contêiner (`tabindex="-1"`) ou um botão — nunca um `input`: no celular isso levanta o teclado e estraga a navegação por toque.
 
 ---
 

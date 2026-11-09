@@ -638,9 +638,9 @@ function showMoreSheet() {
   if (!el) return;
   moreSheetOpener = document.activeElement;
   const recents = recentTabs.filter(id => TAB_META[id] && BOTTOM_TABS.indexOf(id) < 0).slice(0, 3);
-  el.innerHTML = `<div class="more-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
+  el.innerHTML = `<div class="more-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="moreTitle" tabindex="-1">
     <div class="more-head"><span id="moreTitle" class="more-title">Mais telas</span><button class="more-close" data-a="closeMore" aria-label="Fechar menu" title="Fechar menu">${ico('x')}</button></div>
-    <input id="moreSearch" class="more-search" type="search" placeholder="Buscar tela…" aria-label="Buscar tela" autocomplete="off">
+    <input id="moreSearch" class="more-search" type="search" placeholder="Buscar tela…" aria-label="Buscar tela" autocomplete="off" enterkeyhint="search">
     ${recents.length ? `<div class="more-recents"><span class="more-label">Recentes</span>${recents.map(id => `<button class="more-chip" data-a="tab" data-t="${id}">${esc(TAB_META[id].n)}</button>`).join('')}</div>` : ''}
     <div id="moreBody">${moreGroupsHtml('')}</div>
   </div>`;
@@ -676,7 +676,13 @@ function showMoreSheet() {
     panel.addEventListener('pointerup', finishDrag);
     panel.addEventListener('pointercancel', finishDrag);
   }
-  setTimeout(() => document.getElementById('moreSearch')?.focus(), 30);
+  // v144 — o foco vai para o PAINEL, não para o campo de busca: o sheet é menu,
+  // e focar um input abria o teclado do celular, anulando o ganho de toques.
+  // O teclado só aparece se a pessoa tocar no campo.
+  const panelEl = el.querySelector('.more-sheet-panel');
+  if (panelEl) {
+    try {panelEl.focus({preventScroll: true});} catch (e) {try {panelEl.focus();} catch (e2) {}}
+  }
 }
 function hideMoreSheet() {
   const el = document.getElementById('moreSheet');
