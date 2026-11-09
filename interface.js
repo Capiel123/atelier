@@ -2068,7 +2068,30 @@ function renderTimer() {
 }
 
 /* --- MODO FOCO (overlay fullscreen) --- */
-function openFocus(taskId) {const t = S.tasks.find(x => x.id === taskId); if (!t || isDone(t)) return toast('Escolha uma tarefa pendente', true); focusTaskId = taskId; renderFocus();}
+/* v145 — abrir o foco em OUTRA tarefa com o timer rodando precisa mover o timer junto.
+   Antes, `openFocus` só trocava o overlay: o overlay mostrava B, o timer continuava em A
+   e, ao terminar o bloco, os minutos iam para A (o "tempo foi para a tarefa anterior"). */
+function openFocus(taskId) {
+  const t = S.tasks.find(x => x.id === taskId);
+  if (!t || isDone(t)) return toast('Escolha uma tarefa pendente', true);
+  if (S.timer && S.timer.taskId !== taskId) {
+    if (S.timer.phase === 'focus') {
+      // Registra o segmento já trabalhado na tarefa antiga e move o bloco para esta.
+      switchTimerTask(taskId);
+    } else {
+      // Descanso/revisão: o bloco anterior já foi gravado. O próximo bloco é desta tarefa.
+      const sub = activeSubs(t).filter(s => !s.d)[0];
+      S.timer.taskId = t.id;
+      S.timer.subId = sub ? sub.id : null;
+      S.timer.subAccumulated = 0;
+      S.timer.subStartedAt = S.timer.paused ? null : Date.now();
+      S.timer.updatedAt = Date.now();
+      save(); renderTimer();
+    }
+  }
+  focusTaskId = taskId;
+  renderFocus();
+}
 function closeFocus() {
   if (S.timer && S.timer.taskId === focusTaskId) {
     // Se configurado "nunca parar", mantém o timer rodando e só fecha o overlay

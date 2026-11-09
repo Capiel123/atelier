@@ -1,4 +1,4 @@
-// =========================================================
+﻿// =========================================================
 // LOGICA.JS — Regras de negócio
 // XP, scores, contatos, projetos, vagas, timer, filtros.
 // Nada aqui gera HTML — apenas cálculos e mutações em S.
@@ -480,7 +480,7 @@ function awardFocusPomodoros() {
     b.sec = Math.max(0, focusBankSec());
     n++;
     if (typeof toast === 'function') toast('🍅 Pomodoro ' + seq + ' batido!');
-    if (typeof beep === 'function') beep();
+    if (typeof beep === 'function') beep('pomo');
   }
   if (n) save();
   return n;
@@ -604,7 +604,7 @@ function advancePhase(isNatural = true) {
     S.timer.blockPoms = 0;
     S.timer.restFromReview = false;
     S.timer.bankBaseSec = ensureFocusBank().sec || 0;
-    beep();
+    beep('restEnd');
     toast('☀ De volta ao foco');
   } else {
     // v126: o alvo é só um timebox. O Pomodoro é o banco global de 25 min.
@@ -619,6 +619,7 @@ function advancePhase(isNatural = true) {
       toast('+' + el + 'min de foco registrados');
     }
     commitFocusBank();
+    beep('focusEnd');
     S.timer.cycleCount = (S.timer.cycleCount || 0) + blockPoms;
     if (blockPoms > 0) {
       const breakMin = breakMinutesFor(blockPoms);
@@ -710,7 +711,7 @@ function startRest(long, minutes) {
   S.timer.accumulated = 0; S.timer.startedAt = Date.now(); S.timer.paused = false;
   S.timer.subAccumulated = 0; S.timer.subStartedAt = null;
   S.timer.updatedAt = Date.now();
-  beep(); save(); renderTimer();
+  beep('restStart'); save(); renderTimer();
   if (focusTaskId) renderFocus();
   toast('☕ Descanso de ' + S.timer.targetMin + 'min');
 }
@@ -720,7 +721,7 @@ function completeRest() {
   S.timer.accumulated = (S.timer.targetMin || 0) * 60;
   S.timer.startedAt = null; S.timer.paused = true;
   S.timer.updatedAt = Date.now();
-  beep(); save(); renderTimer();
+  beep('restEnd'); save(); renderTimer();
   if (focusTaskId) renderFocus();
   toast('☀ Descanso concluído');
 }
@@ -798,7 +799,44 @@ function completeTaskInFocus(t) {
   try { closeFocus(); } catch (e) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); }
   save(); render();
 }
-function beep() {try {const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 720; g.gain.setValueAtTime(0.15, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.5); o.start(); o.stop(a.currentTime + 0.5);} catch(e) {}}
+/* v145 — som do timer. Antes: um único tom 720 Hz em ganho 0.15 por 0.5 s, fácil de
+   perder no celular. Agora: padrões distintos, três notas e pico 0.5 (triângulo,
+   mais audível que senoide em volume baixo). Um único AudioContext é reaproveitado. */
+let _audioCtx = null;
+function audioCtx() {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    if (!_audioCtx) _audioCtx = new C();
+    if (_audioCtx.state === 'suspended' && _audioCtx.resume) _audioCtx.resume();
+    return _audioCtx;
+  } catch (e) { return null; }
+}
+const BEEP_PATTERNS = {
+  pomo:      [[659.25, 0, 0.22], [880.0, 0.17, 0.22], [1174.66, 0.34, 0.50]],
+  focusEnd:  [[880.0, 0, 0.18], [1174.66, 0.18, 0.18], [1567.98, 0.36, 0.52]],
+  restStart: [[783.99, 0, 0.16], [587.33, 0.16, 0.34]],
+  restEnd:   [[987.77, 0, 0.16], [783.99, 0.16, 0.16], [659.25, 0.32, 0.46]],
+  done:      [[1046.5, 0, 0.14], [1318.51, 0.13, 0.34]]
+};
+function beep(kind) {
+  const ctx = audioCtx();
+  if (!ctx) return;
+  const seq = BEEP_PATTERNS[kind] || BEEP_PATTERNS.pomo;
+  const t0 = ctx.currentTime + 0.02;
+  seq.forEach(function (s) {
+    const freq = s[0], at = s[1], dur = s[2];
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.value = freq;
+    const start = t0 + at;
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(0.5, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(start); o.stop(start + dur + 0.03);
+  });
+}
 
 /* --- HELPERS DE TAREFA --- */
 const T = id => S.tasks.find(t => t.id === id);

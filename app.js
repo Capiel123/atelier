@@ -595,7 +595,7 @@ document.addEventListener('click', ev => {
       renderFocus();
       // Feedback de início: 1 beep + pulso curto (CSS desativa sob reduced-motion).
       if (!hadTimer && S.timer && S.timer.targetMin > 0) {
-        beep();
+        beep('done');
         const ft = document.getElementById('focusTime');
         if (ft) {
           ft.classList.remove('focus-starting');
@@ -617,7 +617,7 @@ document.addEventListener('click', ev => {
       startTimer(task.id, firstPending ? firstPending.id : null, focusTargetMin);
       renderFocus();
       if (S.timer && S.timer.targetMin > 0) {
-        beep();
+        beep('done');
         const ft = document.getElementById('focusTime');
         if (ft) {
           ft.classList.remove('focus-starting');
