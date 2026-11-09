@@ -95,8 +95,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(min-width:1024px){
   .wrap{max-width:1080px;padding:20px 28px 48px}
   header{margin-bottom:14px}.logo-text{font-size:28px}
-  #nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);padding-top:6px;-webkit-mask-image:linear-gradient(90deg,#000 94%,transparent);mask-image:linear-gradient(90deg,#000 94%,transparent)}
-  #nav button{padding:10px 14px;font-size:13.5px}#nav button:hover{color:var(--tx)}
+  #nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);padding-top:6px}
+  .nav-area{padding:10px 14px;font-size:13.5px}
+  #subnav{margin-bottom:14px}
+  .nav-subitem{padding:8px 12px;font-size:13px}
+  /* O segmento de Pessoas vive na subnav; no conteúdo fica só o título. */
+  .people-seg{display:none}
+  .people-desktop-heading{display:block;margin-top:0}
   .card{padding:14px 16px}
   .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
   h3{font-size:15px;margin-top:20px}
@@ -1131,4 +1136,63 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   /* v139 — modo discreto e órbita com "+N" também no celular */
   .contact-reveal{min-height:32px;padding:4px 8px}
   .orbit-more{min-height:38px;width:100%}
+  .more-sheet-panel{padding:12px}
+  .more-item{min-height:46px;font-size:12.5px}
 }
+
+/* =========================================================
+   R2/R3 — NAVEGAÇÃO ADAPTATIVA
+   R2: tablet 641–1023 com duas fileiras e alvos ≥44 px.
+   R3: desktop com 6 áreas + subnav; primeira fileira sticky.
+   Mobile continua com a bottomNav (R4 muda os 4 fixos).
+   ========================================================= */
+@media(max-width:640px){
+  #subnav{display:none}
+}
+
+/* v142.1 — as duas fileiras já mostram área + destino; a linha de contexto
+   ("Hoje › Hoje", "Pessoas › Pessoas · Rede") só acrescenta no mobile. */
+@media(min-width:641px){
+}
+
+@media(min-width:641px) and (max-width:1023px){
+  #nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);padding-top:4px}
+  .nav-area{min-height:44px;padding:10px 9px;font-size:13px;text-align:center}
+  #subnav{min-height:44px;margin-bottom:10px}
+  .nav-subitem{min-height:44px;padding:10px 10px;font-size:13px}
+  /* O segmento de Pessoas vive na subnav; no conteúdo fica só o título. */
+  .people-seg{display:none}
+  .people-desktop-heading{display:block;margin-top:0}
+}
+
+/* =========================================================
+   R3.1 (v143) — DESKTOP ≥1024: dropdown no hover/foco
+   A segunda fileira deixa de ocupar espaço fixo: ela vira um painel
+   flutuante ancorado na área. O clique na área continua indo para a
+   última tela do grupo (D9). Tablet 641–1023 mantém as duas fileiras.
+   ========================================================= */
+@media(min-width:1024px){
+  #subnav{
+    position:fixed;
+    z-index:70;
+    display:none;
+    margin:0;
+    padding:6px;
+    width:max-content;
+    max-width:min(92vw,560px);
+    min-height:0;
+    background:var(--surface-panel,var(--s1));
+    border:1px solid var(--bd);
+    border-radius:12px;
+    box-shadow:var(--sh);
+    backdrop-filter:blur(12px);
+  }
+  #subnav.nav-dropdown-open{display:flex;animation:v143drop .14s var(--ease)}
+  #subnav .nav-sub{gap:2px}
+  #subnav .nav-subitem{min-height:38px;padding:8px 12px;border-bottom:none;border-radius:8px;font-size:13px}
+  #subnav .nav-subitem:hover{background:var(--s2);color:var(--tx)}
+  #subnav .nav-subitem.on{background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac)}
+  .nav-area[aria-expanded="true"]{background:color-mix(in srgb,var(--s2) 72%,transparent);border-radius:8px 8px 0 0}
+}
+@keyframes v143drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#subnav.nav-dropdown-open{animation:none}}

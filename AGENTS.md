@@ -1,4 +1,4 @@
-# Ateliê — Diretrizes de Engenharia e Gerenciamento de Contexto para Agentes de Código
+﻿# Ateliê — Diretrizes de Engenharia e Gerenciamento de Contexto para Agentes de Código
 
 ---
 
@@ -70,7 +70,8 @@ Antes de efetuar qualquer alteração no repositório, execute sequencialmente:
 ### Sistema de Temas e Tokens Coloridos
 - Utilize exclusivamente tokens CSS de tema (`var(--bg)`, `var(--s1..3)`, `var(--bd)`, `var(--tx)`, `var(--mu)`, `var(--ac)`, `var(--bu)`, `var(--ok)`, `var(--wr)`, `var(--er)`). Evite cores hexadecimais fixas inline.
 - **Preservação de Escopo de Efeitos:** Efeitos visuais avançados como `background-clip: text`, gradientes metálicos e `text-shadow` intensos são **estritamente restritos** ao elemento `.logo-text`. Nunca aplique essas propriedades a títulos de leitura (`.tt`, `h2`, `inputs`).
-- **Validação de tema:** valide a alteração na família que você mudou (`data-family`) e em Obsidiana. São 18 temas; a contagem viva está em `THEMES` (`estado.js`).
+- **Validação de tema:** valide a alteração na família que você mudou (`data-family`) e em Obsidiana. São 19 temas; a contagem viva está em `THEMES` (`estado.js`).
+- **Sem redundância (§1.7 do design system):** não renderize informação que o usuário já vê — se o título da view nomeia a tela, a navegação não repete; se o número já está no KPI, o card não repete; se a cor já indica o estado, não duplique em texto. Antes de acrescentar rótulo/breadcrumb/legenda, pergunte o que ele acrescenta. Vale especialmente no mobile. O teste `_nav_r1_test` guarda a ausência da linha de contexto.
 
 ---
 

@@ -40,11 +40,22 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .timer button{padding:2px 6px; font-size: 11px;}
 .timer-bank{font:10px/1 var(--font-mono);color:var(--mu);white-space:nowrap;letter-spacing:.02em}
 
-/* --- NAVEGAÇÃO PRINCIPAL (desktop) --- */
-#nav{display:flex;gap:2px;overflow-x:auto;margin-bottom:12px;border-bottom:1px solid var(--bd);scrollbar-width:none}
+/* --- NAVEGAÇÃO PRINCIPAL (desktop/tablet) ---
+   R3: primeira fileira = 6 áreas; segunda = destinos do grupo ativo.
+   Config não entra: fica na engrenagem do header. Mobile usa a bottomNav. */
+#nav{display:flex;gap:2px;overflow-x:auto;margin-bottom:0;border-bottom:1px solid var(--bd);scrollbar-width:none}
 #nav::-webkit-scrollbar{display:none}
-#nav button{white-space:nowrap;background:none;border:none;color:var(--mu);font-weight:500;padding:8px 10px;border-bottom:2px solid transparent;border-radius:0}
-#nav button.on{color:var(--ac);border-bottom-color:var(--ac)}
+.nav-area{white-space:nowrap;background:none;border:none;color:var(--mu);font-weight:500;padding:8px 10px;border-bottom:2px solid transparent;border-radius:0}
+.nav-area:hover{color:var(--tx)}
+.nav-area.on{color:var(--ac);border-bottom-color:var(--ac);font-weight:600}
+#subnav{display:flex;gap:2px;overflow-x:auto;margin-bottom:12px;border-bottom:1px solid var(--bd);scrollbar-width:none;min-height:38px;align-items:stretch}
+#subnav[hidden]{display:none}
+#subnav::-webkit-scrollbar{display:none}
+.nav-sub{display:flex;gap:2px;align-items:stretch}
+.nav-subitem{white-space:nowrap;background:none;border:none;color:var(--mu);font-weight:500;padding:7px 10px;font-size:12.5px;border-bottom:2px solid transparent;border-radius:0}
+.nav-subitem:hover{color:var(--tx)}
+.nav-subitem.on{color:var(--ac);border-bottom-color:var(--ac);font-weight:600}
+.people-desktop-heading{display:none}
 
 /* --- CABEÇALHO DO DIA (compacto) --- */
 .today-hero{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap; background: var(--surface-card,var(--s1)); padding: 10px 12px; border-radius: var(--radius,12px); border: 1px solid var(--bd);}
@@ -242,3 +253,49 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
   .day-head-toggles .energy-toggle{display:none}
   .day-head-toggles .tools-toggle{min-height:36px}
 }
+
+/* =========================================================
+   R1 — NAVEGAÇÃO: contexto, "Mais telas" agrupado e busca de telas
+   Fonte: docs/ui/PLANO-NAVEGACAO-ADAPTATIVA.md §3 e §5.1
+   ========================================================= */
+body.more-open{overflow:hidden}
+.more-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;touch-action:none;cursor:grab}
+.more-head:active{cursor:grabbing}
+.more-title{font-size:14px;font-weight:700;letter-spacing:.02em}
+.more-close{width:44px;height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:0;border-radius:10px;background:var(--s2);border:1px solid var(--bd);color:var(--tx);flex:none}
+.more-close:hover{border-color:var(--ac);color:var(--ac)}
+.more-search{width:100%;margin-bottom:10px}
+.more-group{margin-bottom:10px}
+.more-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:0 0 5px;font-weight:600}
+.more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.more-item{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px;text-align:left}
+.more-item.on{border-color:var(--ac);color:var(--ac)}
+.more-ico{display:inline-flex;flex:none;opacity:.85}
+.more-lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.more-recents{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px}
+.more-recents .more-label{margin:0}
+.more-chip{font-size:12px;padding:5px 10px;border-radius:999px;background:var(--s2);border:1px solid var(--bd);color:var(--tx)}
+.more-chip:hover{border-color:var(--ac)}
+.more-empty{font-size:12px;color:var(--mu);padding:6px 2px}
+.search-tab-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.search-tab-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:6px 10px;border-radius:999px;background:var(--s2);border:1px solid var(--bd);color:var(--tx);cursor:pointer}
+.search-tab-chip:hover{border-color:var(--ac)}
+/* =========================================================
+   v143 — densidade de desktop (≥1024 px)
+   Pessoas e Vagas: o card informa muito em pouco espaço; no desktop
+   ele pode ser mais baixo sem perder leitura. Mobile/tablet intactos.
+   ========================================================= */
+@media(min-width:1024px){
+  .contact-card,.job-card{padding:7px 9px;margin-bottom:6px}
+  .contact-card .meta,.job-card .meta{gap:5px;margin-top:4px}
+  .contact-card .tag,.job-card .tag{font-size:10.5px;padding:1px 5px}
+  .contact-card .contact-score,.job-card .score-badge{font-size:10px;padding:1px 5px}
+  .contact-last-conv{font-size:11.5px;padding:4px 8px;margin:4px 0}
+  .quick-actions{margin-top:6px}
+  .quick-actions button{font-size:11px;padding:3px 8px}
+  .job-title{font-size:13.5px}
+  .job-followup-row{margin-top:2px}
+  .contact-card .big>input[data-p]{font-size:14px}
+  .contact-kpis{margin-bottom:10px}
+}
+

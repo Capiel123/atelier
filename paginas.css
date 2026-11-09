@@ -355,4 +355,4 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
    Os aliases genéricos ficam para componentes futuros; os seletores reais
    cobrem dropdown, busca, atalhos, folha "Mais" e onboarding. */
 .dropdown-menu,.modal-panel,.search-box,
-.act-menu-panel,.search-content,.shortcuts-content,.more-sheet-panel,.ob-card{border-style:var(--panel-border-style,solid)}
+.act-menu-panel,.search-content,.shortcuts-content,.more-sheet-panel,.ob-card{border-style:var(--panel-border-style,solid)}.search-result.sel{background:var(--s2);box-shadow:inset 0 0 0 1px var(--ac)}

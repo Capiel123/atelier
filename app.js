@@ -8,6 +8,29 @@
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
 const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
 
+/* --- NAVEGAÇÃO POR ÁREA (R3) ---
+   A área não é um destino novo: abre a última tela usada do grupo (D9) ou o padrão.
+   Usada pelo clique na primeira fileira e por Alt+1..6. */
+function goToNavGroup(gid, restoreFocus) {
+  const g = GROUP_BY_ID[gid];
+  if (!g) return;
+  const next = lastTabForGroup(g);
+  if (!next) return;
+  goToTab(next);
+  hideMoreSheet();
+  render();
+  // Enter/Espaço na área recria a fileira; devolve o foco à nova área ativa.
+  // O setTimeout deixa o clique terminar antes: o botão antigo saiu do DOM.
+  if (restoreFocus) focusNavSelector('#nav .nav-area[data-group="' + gid + '"]');
+}
+
+function focusNavSelector(selector) {
+  setTimeout(() => {
+    const el = document.querySelector(selector);
+    if (el) el.focus();
+  }, 0);
+}
+
 /* --- RASTREAR <details> ABERTOS (para persistir após render) --- */
 // 💡 Sem isso, cada re-render fecharia o painel "Editar" que o usuário abriu.
 document.addEventListener('toggle', ev => {
@@ -36,6 +59,9 @@ document.addEventListener('click', ev => {
   const btn = ev.target.closest('[data-a]');
   if (!btn || btn.tagName === 'INPUT' || btn.tagName === 'SELECT') return;
   const a = btn.dataset.a; const id = btn.dataset.id; const i = btn.dataset.i; const sub = btn.dataset.sub;
+  // detail 0 = clique gerado por teclado (Enter/Espaço): as fileiras são recriadas
+  // pelo render, então devolvemos o foco ao item ativo equivalente.
+  const keyboardNav = ev.detail === 0 && !!btn.closest('#nav, #subnav');
   const t = id && T(id); const c = id && S.contacts.find(x => x.id === id);
 
   // Card da Fila: alterna só quando o clique não é em controle interno nem no corpo expandido
@@ -45,8 +71,15 @@ document.addEventListener('click', ev => {
   if (MUTATING_ACTIONS.has(a)) snapshot();
 
   switch (a) {
-    case 'tab': tab = btn.dataset.t; selectedTaskId = null; revealedContacts.clear(); hideMoreSheet(); break;
-    case 'peopleSeg': peopleMode = btn.dataset.type === 'personal' ? 'personal' : 'pro'; revealedContacts.clear(); render(); return;
+    case 'tab': if (btn.dataset.t === 'people' && btn.dataset.seg) peopleMode = btn.dataset.seg === 'personal' ? 'personal' : 'pro'; goToTab(btn.dataset.t); hideMoreSheet(); hideAreaMenu(); break;
+    case 'navArea': hideAreaMenu(); goToNavGroup(btn.dataset.group, keyboardNav); return;
+    case 'peopleSeg': {
+      peopleMode = btn.dataset.type === 'personal' ? 'personal' : 'pro';
+      revealedContacts.clear();
+      render();
+      if (keyboardNav) focusNavSelector('#subnav .nav-subitem.on');
+      return;
+    }
     case 'toggleDiscreet': setDiscreet(!discreet); revealedContacts.clear(); render(); return;
     case 'contactReveal': {
       if (!id) break;
@@ -265,6 +298,15 @@ document.addEventListener('click', ev => {
     }
     case 'openSearch': openSearch(); return;
     case 'searchGo': goToSearchResult(btn.dataset.tab, btn.dataset.target, btn.dataset.seg); return;
+    case 'searchAction': {
+      const act = btn.dataset.act;
+      closeSearch();
+      if (act === 'newTask') {showQuickAdd = true; setDayHeadMode('full'); goToTab('week'); render(); focusQuickAdd(); return;}
+      if (act === 'newJob') {goToTab('jobs'); render(); const q = document.getElementById('qaJob'); if (q) {q.focus(); if (q.scrollIntoView) q.scrollIntoView({block: 'center'});} return;}
+      if (act === 'newContact') {const pt = peopleMode === 'personal' ? 'personal' : 'pro'; goToTab('people'); openEdits.add('contactForm_' + pt); render(); const inp = document.getElementById('cN_' + pt); if (inp) {inp.focus(); if (inp.scrollIntoView) inp.scrollIntoView({block: 'center'});} return;}
+      if (act === 'openReview') {goToTab('review'); render(); return;}
+      return;
+    }
     case 'toggleQueueCard': {
       if (!id) break;
       selectedTaskId = id;
@@ -820,6 +862,7 @@ document.addEventListener('click', ev => {
     default: return;
   }
   save(); render();
+  if (keyboardNav) focusNavSelector('#subnav .nav-subitem.on');
 });
 
 /* --- MUDANÇA EM INPUTS/SELECTS (inclusive os data-p) --- */
@@ -942,14 +985,29 @@ document.addEventListener('toggle', ev => {
   if (d.open) openPillGroups.add(key); else openPillGroups.delete(key);
 }, true);
 
+/* R5 — setas navegam a paleta de busca; Enter abre a linha destacada. */
+document.addEventListener('keydown', ev => {
+  const el = ev.target;
+  if (!el || el.id !== 'searchInput') return;
+  if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
+  const rows = [...document.querySelectorAll('#searchResults .search-result')];
+  if (!rows.length) return;
+  ev.preventDefault();
+  const dir = ev.key === 'ArrowDown' ? 1 : -1;
+  if (searchIndex < 0) searchIndex = dir > 0 ? 0 : rows.length - 1;
+  else searchIndex = (searchIndex + dir + rows.length) % rows.length;
+  rows.forEach((r, i) => r.classList.toggle('sel', i === searchIndex));
+  if (rows[searchIndex].scrollIntoView) rows[searchIndex].scrollIntoView({block: 'nearest'});
+}, true);
 /* --- ENTER (adicionar rápido) --- */
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Enter') return;
   if (ev.isComposing || ev.keyCode === 229) return; // composição/IME (teclado do celular)
   const el = ev.target;
   if (el.id === 'searchInput') {
-    const first = document.querySelector('.search-result[data-first="1"]');
-    if (first) goToSearchResult(first.dataset.tab, first.dataset.target, first.dataset.seg);
+    const rows = [...document.querySelectorAll('#searchResults .search-result')];
+    const pick = rows[searchIndex >= 0 && searchIndex < rows.length ? searchIndex : 0];
+    if (pick) pick.click();
     ev.preventDefault();
     return;
   }
@@ -1025,6 +1083,41 @@ document.addEventListener('keydown', ev => {
   // Esc fecha a busca mesmo com o foco no input (o overlay abre com autofocus).
   if (ev.key === 'Escape' && document.getElementById('searchModal')) {ev.preventDefault(); closeSearch(); return;}
   if (isTyping) return;
+  // R3 — Alt+1..6 salta para as 6 áreas (abre a última tela do grupo ou o padrão).
+  if (ev.altKey && !ev.ctrlKey && !ev.metaKey) {
+    const dm = /^(?:Digit|Numpad)([1-6])$/.exec(ev.code || '') || /^([1-6])$/.exec(ev.key || '');
+    if (dm && NAV_GROUPS[+dm[1] - 1]) {ev.preventDefault(); goToNavGroup(NAV_GROUPS[+dm[1] - 1].id); return;}
+  }
+  // Setas movem o foco dentro da fileira de áreas ou da subnav.
+  if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key) && tgt && tgt.closest) {
+    const row = tgt.closest('#nav, #subnav');
+    const buttons = row ? [...row.querySelectorAll('button:not([disabled])')] : [];
+    const at = buttons.indexOf(tgt.closest('button'));
+    if (at >= 0) {
+      ev.preventDefault();
+      const next = ev.key === 'Home' ? 0 : ev.key === 'End' ? buttons.length - 1
+        : (at + (ev.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+      buttons[next].focus();
+      return;
+    }
+  }
+  // v143 — dropdown de área no desktop: ↓ entra nos destinos, ↑/Esc volta.
+  if (ev.key === 'ArrowDown' && tgt && tgt.closest && tgt.closest('#nav .nav-area')) {
+    const sub = document.getElementById('subnav');
+    if (sub && !sub.hidden) {
+      const first = sub.querySelector('button');
+      if (first) {ev.preventDefault(); first.focus(); return;}
+    }
+  }
+  if ((ev.key === 'Escape' || ev.key === 'ArrowUp') && tgt && tgt.closest && tgt.closest('#subnav') && typeof areaMenuIsOpen === 'function' && areaMenuIsOpen()) {
+    const sub = document.getElementById('subnav');
+    const gid = sub && sub.dataset.group;
+    ev.preventDefault();
+    hideAreaMenu();
+    const area = gid ? document.querySelector('#nav .nav-area[data-group="' + gid + '"]') : null;
+    if (area) area.focus();
+    return;
+  }
   if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('.section-header[data-a]')) {
     ev.preventDefault();
     ev.target.click();
@@ -1318,7 +1411,11 @@ function doImport(text) {
   lastSlot = currentEnergySlot();
   focusTargetMin = S.cfg.defaultFocus || 25;
   applyLogo();
+  // R5 — retoma a tela do hash (link) ou a última usada neste aparelho.
+  const bootTab = tabFromHash() || (function () { try { const v = localStorage.getItem('atelier_last_tab_v1'); return (v && typeof TAB_META !== 'undefined' && TAB_META[v]) ? v : ''; } catch (e) { return ''; } })();
+  if (bootTab) tab = bootTab;
   render();
+  try { if (typeof history !== 'undefined' && history.replaceState) history.replaceState(null, '', '#/' + tab); } catch (e) {}
   // Se havia um timer em andamento antes do reload, retoma e avisa
   if (S.timer) {const elapsed = Math.round(timerElapsedSec() / 60); toast('Timer retomado: ' + elapsed + 'min'); renderTimer();}
   // Sincronização remota opcional (Claude DB) — degrada silenciosamente se indisponível

@@ -158,14 +158,45 @@ function openSearch() {
   renderSearchResults('');
 }
 function closeSearch() {document.getElementById('searchModal')?.remove(); searchQuery = '';}
+/* Ações da paleta (R5): só verbos que já existem no app. */
+const SEARCH_ACTIONS = [
+  {id: 'newTask', n: 'Nova tarefa', icon: 'plus', alias: 'criar adicionar tarefa nova'},
+  {id: 'newJob', n: 'Nova vaga', icon: 'briefcase', alias: 'adicionar vaga candidatura colar'},
+  {id: 'newContact', n: 'Novo contato', icon: 'user', alias: 'adicionar pessoa contato rede'},
+  {id: 'openReview', n: 'Abrir revisão', icon: 'check', alias: 'revisao semanal ritual'}
+];
+function matchActions(q) {
+  const s = String(q || '').trim().toLowerCase();
+  if (s.length < 2) return [];
+  return SEARCH_ACTIONS.filter(a => (a.n + ' ' + a.alias).toLowerCase().includes(s)).slice(0, 4);
+}
+
+/* Estado vazio da busca (R1): telas recentes + atalhos, em vez de só uma instrução. */
+function searchEmptyHtml() {
+  const chip = id => {
+    const m = TAB_META[id]; if (!m) return '';
+    return `<button class="search-tab-chip" data-a="searchGo" data-tab="${id}" data-target="">${ico(m.icon)} <span>${esc(m.n)}</span></button>`;
+  };
+  const quick = ['week', 'q', 'jobs', 'proj', 'people', 'config'];
+  const rec = recentTabs.filter(id => TAB_META[id]).slice(0, 4);
+  return `<div class="search-empty">
+    ${rec.length ? `<div class="search-group-label">Recentes</div><div class="search-tab-chips">${rec.map(chip).join('')}</div>` : ''}
+    <div class="search-group-label">Ir para</div><div class="search-tab-chips">${quick.map(chip).join('')}</div>
+    <div class="search-group-label">Ações</div><div class="search-tab-chips">${['newTask', 'newJob', 'newContact'].map(id => {const a = SEARCH_ACTIONS.find(x => x.id === id); return a ? `<button class="search-tab-chip" data-a="searchAction" data-act="${a.id}">${ico(a.icon)} <span>${esc(a.n)}</span></button>` : '';}).join('')}</div>
+    <div class="msg center">Digite para buscar tarefas, projetos, contatos e vagas.</div>
+  </div>`;
+}
 function renderSearchResults(q) {
   searchQuery = q;
   const box = document.getElementById('searchResults');
   if (!box) return;
-  if (!q.trim()) {box.innerHTML = '<div class="msg center">Digite para buscar.</div>'; return;}
+  searchIndex = -1;
+  if (!String(q || '').trim()) {box.innerHTML = searchEmptyHtml(); return;}
   const r = globalSearch(q);
   if (!r) return;
-  const total = Object.values(r).reduce((a,arr) => a + arr.length, 0);
+  const tabHits = matchTabs(q);
+  const actHits = matchActions(q);
+  const total = Object.values(r).reduce((a,arr) => a + arr.length, 0) + tabHits.length + actHits.length;
   if (!total) {box.innerHTML = '<div class="msg center">Nada encontrado.</div>'; return;}
   const groups = [
     ['tasks','Tarefas','check','var(--ac)', t => ({title: t.t, sub: `${areaLabel(t.area)} · ${t.est?t.est+'min':'sem est.'}`, tab:'week', target:`[data-p="tasks:${t.id}:t"]`})],
@@ -176,8 +207,29 @@ function renderSearchResults(q) {
     ['skills','Habilidades','sparkle','#a374d4', s => ({title: s.n, sub: '', tab:'skills', target:`[data-p="skills:${s.id}:n"]`})],
     ['goals','Metas','flag','#b8a9c4', g => ({title: g.t, sub: '', tab:'goal', target:`[data-p="goals:${g.id}:t"]`})]
   ];
-  let html = '<div class="search-counter">' + groups.filter(([k]) => r[k].length).map(([k,l]) => `${r[k].length} ${l.toLowerCase()}`).join(' · ') + '</div>';
+  let html = '<div class="search-counter">' + [
+    tabHits.length ? tabHits.length + ' tela' + (tabHits.length > 1 ? 's' : '') : '',
+    actHits.length ? actHits.length + ' ação' + (actHits.length > 1 ? 'ões' : '') : '',
+    groups.filter(([k]) => r[k].length).map(([k,l]) => `${r[k].length} ${l.toLowerCase()}`).join(' · ')
+  ].filter(Boolean).join(' · ') + '</div>';
   let first = true;
+  if (tabHits.length) {
+    html += '<div class="search-group"><div class="search-group-label">Telas</div>';
+    tabHits.forEach(id => {
+      const m = TAB_META[id]; const g = GROUP_BY_ID[m.group];
+      html += `<div class="search-result" data-a="searchGo" data-tab="${id}" data-target="" data-first="${first?'1':'0'}"><span class="search-icon" style="color:var(--ac)" aria-hidden="true">${ico(m.icon)}</span><div class="search-body"><div class="search-title">${esc(m.n)}</div><div class="search-sub">${esc((g ? g.n : 'Utilitário') + ' › ' + m.n)}</div></div></div>`;
+      first = false;
+    });
+    html += '</div>';
+  }
+  if (actHits.length) {
+    html += '<div class="search-group"><div class="search-group-label">Ações</div>';
+    actHits.forEach(a => {
+      html += `<div class="search-result" data-a="searchAction" data-act="${a.id}" data-first="${first?'1':'0'}"><span class="search-icon" style="color:var(--bu)" aria-hidden="true">${ico(a.icon)}</span><div class="search-body"><div class="search-title">${esc(a.n)}</div><div class="search-sub">Ação</div></div></div>`;
+      first = false;
+    });
+    html += '</div>';
+  }
   groups.forEach(([k, label, icon, color, fmt]) => {
     if (!r[k].length) return;
     html += `<div class="search-group"><div class="search-group-label">${label}</div>`;
@@ -196,8 +248,9 @@ function renderSearchResults(q) {
 function goToSearchResult(tabName, target, seg) {
   closeSearch();
   if (seg === 'pro' || seg === 'personal') peopleMode = seg;
-  tab = tabName;
+  goToTab(tabName);
   render();
+  if (!target) return;
   // Scroll + highlight após render (pequeno delay para o HTML existir no DOM)
   setTimeout(() => {
     const el = document.querySelector(target)?.closest('.card, .client-card, .contact-card, .job-card');
@@ -266,34 +319,404 @@ function reviewHintHTML(now = new Date()) {
   return '';
 }
 
-/* --- MENU "MAIS" (mobile) --- */
+/* --- NAVEGAÇÃO: fonte única (R1 — plano §4) ---
+   Grupos, rótulos, ícones e aliases vivem aqui. A faixa plana do desktop ainda usa a
+   ordem atual (R3 troca por 6 áreas); o sheet, a busca e a linha de contexto derivam daqui. */
+const NAV_GROUPS = [
+  {id: 'today',    n: 'Hoje',      icon: 'calendar',  def: 'week',   tabs: ['week']},
+  {id: 'plan',     n: 'Planejar',  icon: 'inbox',     def: 'q',      tabs: ['q', 'cal', 'goal']},
+  {id: 'work',     n: 'Trabalho',  icon: 'briefcase', def: 'proj',   tabs: ['proj', 'clients', 'jobs', 'earn', 'skills']},
+  {id: 'people',   n: 'Pessoas',   icon: 'user',      def: 'people', tabs: ['people']},
+  {id: 'progress', n: 'Progresso', icon: 'clock',     def: 'stats',  tabs: ['stats', 'history']},
+  {id: 'review',   n: 'Revisar',   icon: 'check',     def: 'review', tabs: ['review', 'cmds']}
+];
+const TAB_META = {
+  week:    {n: 'Hoje',        group: 'today',    icon: 'calendar',  aliases: ['hoje', 'dia', 'semana', 'tarefas', 'week']},
+  q:       {n: 'Fila',        group: 'plan',     icon: 'inbox',     aliases: ['fila', 'backlog', 'inbox', 'queue']},
+  cal:     {n: 'Prazos',      group: 'plan',     icon: 'calendar',  aliases: ['prazos', 'calendario', 'datas', 'cal']},
+  goal:    {n: 'Metas',       group: 'plan',     icon: 'flag',      aliases: ['metas', 'objetivos', 'goals']},
+  proj:    {n: 'Projetos',    group: 'work',     icon: 'briefcase', aliases: ['projetos', 'projeto', 'proj']},
+  clients: {n: 'Clientes',    group: 'work',     icon: 'user',      aliases: ['clientes', 'cliente', 'clients']},
+  jobs:    {n: 'Vagas',       group: 'work',     icon: 'briefcase', aliases: ['vagas', 'vaga', 'candidaturas', 'jobs']},
+  earn:    {n: 'Rendimento',  group: 'work',     icon: 'star',      aliases: ['rendimento', 'ganhos', 'receita', 'dinheiro', 'earn']},
+  skills:  {n: 'Habilidades', group: 'work',     icon: 'sparkle',   aliases: ['habilidades', 'skill', 'skills', 'xp']},
+  people:  {n: 'Pessoas',     group: 'people',   icon: 'user',      aliases: ['pessoas', 'rede', 'pessoal', 'amizades', 'contatos', 'people']},
+  stats:   {n: 'Stats',       group: 'progress', icon: 'clock',     aliases: ['stats', 'estatisticas', 'numeros']},
+  history: {n: 'Histórico',   group: 'progress', icon: 'repeat',    aliases: ['historico', 'concluidas', 'logs', 'history']},
+  review:  {n: 'Revisão',     group: 'review',   icon: 'check',     aliases: ['revisao', 'semanal', 'review']},
+  cmds:    {n: 'Comandos',    group: 'review',   icon: 'menu',      aliases: ['comandos', 'atalhos', 'referencia', 'cmds']},
+  config:  {n: 'Config',      group: 'util',     icon: 'sliders',   aliases: ['config', 'configuracoes', 'ajustes', 'tema', 'backup']}
+};
+const GROUP_BY_ID = {};
+NAV_GROUPS.forEach(g => {GROUP_BY_ID[g.id] = g;});
+const GROUP_OF_TAB = {};
+NAV_GROUPS.forEach(g => g.tabs.forEach(t => {GROUP_OF_TAB[t] = g.id;}));
+// Ordem histórica dos 15 IDs (R1). Desde o R3 a navegação não usa esta lista: a faixa
+// virou 6 áreas + subnav. Mantida para testes, compatibilidade e leitura do inventário.
+const TAB_ORDER = ['week', 'q', 'jobs', 'proj', 'clients', 'earn', 'cal', 'goal', 'skills', 'stats', 'review', 'people', 'history', 'cmds', 'config'];
+const TABS = TAB_ORDER.map(id => [id, TAB_META[id].n]);
+const BOTTOM_TABS = ['week', 'q', 'proj', 'people', 'more'];
+const BOTTOM_LABELS = {week: 'Hoje', q: 'Fila', proj: 'Projetos', people: 'Pessoas', more: 'Mais'};
+const BOTTOM_ICONS = {week: 'calendar', q: 'inbox', proj: 'briefcase', people: 'user', more: 'menu'};
+
+/* D9 — clique na área abre a última tela usada do grupo; na primeira vez, o padrão. */
+function lastTabForGroup(g) {
+  if (typeof g === 'string') g = GROUP_BY_ID[g];
+  if (!g) return '';
+  const last = lastTabByGroup[g.id];
+  return (last && g.tabs.includes(last)) ? last : g.def;
+}
+
+/* R5 — toda troca de tela passa por aqui: hash, recentes, último grupo e aba. */
+function tabFromHash() {
+  const loc = (typeof location !== 'undefined') ? location : null;
+  if (!loc) return '';
+  const h = String(loc.hash || '').replace(/^#\/?/, '');
+  return TAB_META[h] ? h : '';
+}
+function goToTab(id, opts) {
+  if (!TAB_META[id]) return false;
+  opts = opts || {};
+  tab = id;
+  selectedTaskId = null;
+  if (typeof revealedContacts !== 'undefined') revealedContacts.clear();
+  pushRecentTab(id);
+  rememberTabGroup(id);
+  try { localStorage.setItem('atelier_last_tab_v1', id); } catch (e) {}
+  if (!opts.fromHash) {
+    const h = '#/' + id;
+    try {
+      if (typeof location !== 'undefined' && location.hash !== h) {
+        if (opts.replace && history.replaceState) history.replaceState(null, '', h);
+        else location.hash = h;
+      }
+    } catch (e) { try { location.hash = h; } catch (e2) {} }
+  }
+  return true;
+}
+/* Voltar/avançar do navegador e PWA reaberto. */
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('hashchange', () => {
+    const id = tabFromHash();
+    if (!id || id === tab) return;
+    goToTab(id, {fromHash: true});
+    render();
+  });
+}
+
+/* Um grupo tem menu quando oferece mais de um destino (ou os segmentos de
+   Pessoas). Hoje e Config não abrem dropdown: são destinos únicos. */
+function groupHasMenu(g) {
+  return !!g && (g.id === 'people' || g.tabs.length > 1);
+}
+
+/* Primeira fileira (≥641 px): 6 áreas. Config fica na engrenagem do header. */
+function navAreasHtml() {
+  const active = GROUP_OF_TAB[tab] || '';
+  return NAV_GROUPS.map(g => {
+    const on = g.id === active;
+    const menu = groupHasMenu(g);
+    return `<button class="nav-area${on ? ' on' : ''}" data-a="navArea" data-group="${g.id}"${on ? ' aria-current="true"' : ''}${menu ? ' aria-haspopup="true" aria-expanded="false"' : ''}>${esc(g.n)}</button>`;
+  }).join('');
+}
+
+/* Segunda fileira: destinos do grupo ativo. Hoje não tem subnav; Pessoas usa o segmento. */
+function navSubHtml() {
+  const m = TAB_META[tab];
+  if (!m) return '';
+  const g = GROUP_BY_ID[m.group];
+  if (!g) return '';
+  if (g.id === 'people') {
+    const seg = peopleMode === 'personal' ? 'personal' : 'pro';
+    return `<div class="nav-sub" role="group" aria-label="Pessoas: segmento"><button class="nav-subitem${seg === 'pro' ? ' on' : ''}" data-a="peopleSeg" data-type="pro" aria-pressed="${seg === 'pro'}">Rede</button><button class="nav-subitem${seg === 'personal' ? ' on' : ''}" data-a="peopleSeg" data-type="personal" aria-pressed="${seg === 'personal'}">Pessoal</button></div>`;
+  }
+  if (g.tabs.length <= 1) return '';
+  return `<div class="nav-sub" role="group" aria-label="${esc(g.n)}">${g.tabs.map(id => {
+    const on = id === tab;
+    return `<button class="nav-subitem${on ? ' on' : ''}" data-a="tab" data-t="${id}"${on ? ' aria-current="page"' : ''}>${esc(TAB_META[id].n)}</button>`;
+  }).join('')}</div>`;
+}
+
+/* Dropdown de desktop (≥1024): mesma lista da subnav, mas navega por `tab`.
+   Usado no hover/foco da área; no tablet/telefone a segunda fileira continua. */
+function navDropdownHtml(gid) {
+  const g = GROUP_BY_ID[gid];
+  if (!g) return '';
+  if (g.id === 'people') {
+    const seg = peopleMode === 'personal' ? 'personal' : 'pro';
+    return `<div class="nav-sub" role="group" aria-label="Pessoas: ir para"><button class="nav-subitem${seg === 'pro' ? ' on' : ''}" data-a="tab" data-t="people" data-seg="pro"${tab === 'people' && seg === 'pro' ? ' aria-current="page"' : ''}>Rede</button><button class="nav-subitem${seg === 'personal' ? ' on' : ''}" data-a="tab" data-t="people" data-seg="personal"${tab === 'people' && seg === 'personal' ? ' aria-current="page"' : ''}>Pessoal</button></div>`;
+  }
+  if (g.tabs.length <= 1) return '';
+  return `<div class="nav-sub" role="group" aria-label="${esc(g.n)}">${g.tabs.map(id => {
+    const on = id === tab;
+    return `<button class="nav-subitem${on ? ' on' : ''}" data-a="tab" data-t="${id}"${on ? ' aria-current="page"' : ''}>${esc(TAB_META[id].n)}</button>`;
+  }).join('')}</div>`;
+}
+
+/* --- Dropdown de área no desktop (v143) ---
+   Só ≥1024 px e só com ponteiro fino; no tablet a segunda fileira é fixa.
+   A área continua abrindo a última tela do grupo (D9); o painel flutua por
+   cima do conteúdo, sem empurrar a página. Teclado: foco abre, ↓ entra,
+   Esc fecha e devolve o foco à área. */
+let areaMenuGroup = '';
+let areaMenuTimer = null;
+function desktopNav() {
+  try { return window.matchMedia('(min-width:1024px)').matches; } catch (e) { return false; }
+}
+function areaMenuIsOpen() {
+  const sub = document.getElementById('subnav');
+  return !!(sub && sub.classList && sub.classList.contains('nav-dropdown-open'));
+}
+function positionAreaMenu(anchor) {
+  const sub = document.getElementById('subnav');
+  if (!sub || !anchor || !anchor.getBoundingClientRect) return;
+  const r = anchor.getBoundingClientRect();
+  const vw = window.innerWidth || 1024;
+  const w = sub.offsetWidth || 0;
+  sub.style.left = Math.max(12, Math.min(Math.round(r.left), vw - w - 12)) + 'px';
+  sub.style.top = Math.round(r.bottom + 6) + 'px';
+}
+function showAreaMenu(gid, anchor) {
+  if (!desktopNav() || !anchor) return;
+  const sub = document.getElementById('subnav');
+  if (!sub) return;
+  const html = navDropdownHtml(gid);
+  if (!html) { hideAreaMenu(); return; }
+  clearTimeout(areaMenuTimer);
+  areaMenuGroup = gid;
+  if (sub.innerHTML !== html) sub.innerHTML = html;
+  sub.hidden = false;
+  sub.classList.add('nav-dropdown-open');
+  sub.dataset.group = gid;
+  document.querySelectorAll('#nav .nav-area').forEach(b => b.setAttribute('aria-expanded', b.dataset.group === gid ? 'true' : 'false'));
+  positionAreaMenu(anchor);
+}
+function hideAreaMenu() {
+  clearTimeout(areaMenuTimer);
+  areaMenuTimer = null;
+  areaMenuGroup = '';
+  document.querySelectorAll('#nav .nav-area').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  const sub = document.getElementById('subnav');
+  if (!sub || !sub.classList || !sub.classList.contains('nav-dropdown-open')) return;
+  sub.classList.remove('nav-dropdown-open');
+  sub.style.left = ''; sub.style.top = '';
+  delete sub.dataset.group;
+  const html = navSubHtml();
+  sub.innerHTML = html;
+  sub.hidden = !html;
+}
+function scheduleHideAreaMenu(delay) {
+  clearTimeout(areaMenuTimer);
+  areaMenuTimer = setTimeout(() => {
+    const ae = document.activeElement;
+    if (ae && ae.closest && (ae.closest('#nav') || ae.closest('#subnav'))) return;
+    hideAreaMenu();
+  }, delay == null ? 160 : delay);
+}
+
+/* Hover/foco das áreas no desktop. Delegado no documento porque #nav é
+   recriada a cada render(). O atraso evita piscar ao atravessar o vão. */
+if (typeof document !== 'undefined' && document.addEventListener) {
+  const areaOf = el => (el && el.closest) ? el.closest('#nav .nav-area') : null;
+  document.addEventListener('mouseover', ev => {
+    const area = areaOf(ev.target);
+    if (!area || !desktopNav()) return;
+    showAreaMenu(area.dataset.group, area);
+  });
+  document.addEventListener('mouseout', ev => {
+    const area = areaOf(ev.target);
+    if (!area || !desktopNav()) return;
+    const to = ev.relatedTarget;
+    if (to && to.closest && (to.closest('#nav .nav-area') || to.closest('#subnav'))) return;
+    scheduleHideAreaMenu();
+  });
+  document.addEventListener('mouseover', ev => {
+    if (ev.target && ev.target.closest && ev.target.closest('#subnav')) clearTimeout(areaMenuTimer);
+  });
+  document.addEventListener('mouseout', ev => {
+    const sub = ev.target && ev.target.closest ? ev.target.closest('#subnav') : null;
+    if (!sub) return;
+    const to = ev.relatedTarget;
+    if (to && to.closest && (to.closest('#subnav') || to.closest('#nav .nav-area'))) return;
+    scheduleHideAreaMenu();
+  });
+  document.addEventListener('focusin', ev => {
+    const area = areaOf(ev.target);
+    if (!area || !desktopNav()) return;
+    showAreaMenu(area.dataset.group, area);
+  });
+  document.addEventListener('focusout', ev => {
+    if (!desktopNav()) return;
+    const t = ev.target;
+    if (!t || !t.closest || (!t.closest('#nav .nav-area') && !t.closest('#subnav'))) return;
+    setTimeout(() => {
+      const ae = document.activeElement;
+      if (ae && ae.closest && (ae.closest('#nav') || ae.closest('#subnav'))) return;
+      scheduleHideAreaMenu(0);
+    }, 0);
+  });
+  document.addEventListener('pointerdown', ev => {
+    if (!areaMenuIsOpen()) return;
+    const t = ev.target;
+    if (t && t.closest && (t.closest('#nav') || t.closest('#subnav'))) return;
+    hideAreaMenu();
+  }, true);
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('scroll', () => { if (areaMenuIsOpen()) hideAreaMenu(); }, { passive: true });
+    window.addEventListener('resize', () => { if (areaMenuIsOpen()) hideAreaMenu(); });
+  }
+}
+
+/* A subnav pode rolar em larguras apertadas; mantém o destino ativo visível. */
+function scrollNavToActive() {
+  const nav = document.getElementById('subnav');
+  if (!nav || !nav.clientWidth) return;
+  const on = nav.querySelector('button.on');
+  if (!on) return;
+  const nr = nav.getBoundingClientRect(), br = on.getBoundingClientRect();
+  if (br.left < nr.left + 4 || br.right > nr.right - 4) {
+    nav.scrollLeft += (br.left - nr.left) - (nav.clientWidth - on.offsetWidth) / 2;
+  }
+}
+
+/* Busca de telas: rótulo, id, grupo e aliases. */
+function matchTabs(q) {
+  const s = String(q || '').trim().toLowerCase();
+  if (s.length < 2) return [];
+  const score = id => {
+    const m = TAB_META[id]; if (!m) return 0;
+    const n = m.n.toLowerCase();
+    const al = m.aliases || [];
+    if (n === s || al.includes(s)) return 4;
+    if (n.startsWith(s)) return 3;
+    if (al.some(a => a.startsWith(s))) return 2;
+    if (n.includes(s)) return 1;
+    return 0;
+  };
+  return Object.keys(TAB_META).map(id => ({id, s: score(id)})).filter(x => x.s > 0)
+    .sort((a, b) => b.s - a.s).map(x => x.id).slice(0, 6);
+}
+
+/* --- MENU "MAIS" (mobile): grupos, busca, recentes e diálogo acessível --- */
+let moreSheetOpener = null;
+function moreItemHtml(id, seg) {
+  const m = TAB_META[id];
+  if (!m) return '';
+  const label = seg ? (seg === 'personal' ? 'Pessoal' : 'Rede') : m.n;
+  const icon = seg ? (seg === 'personal' ? 'user' : 'briefcase') : m.icon;
+  const on = seg ? (id === tab && peopleMode === seg) : id === tab;
+  return `<button class="more-item${on ? ' on' : ''}" data-a="tab" data-t="${id}"${seg ? ` data-seg="${seg}"` : ''}${on ? ' aria-current="page"' : ''}><span class="more-ico" aria-hidden="true">${ico(icon)}</span><span class="more-lbl">${esc(label)}</span></button>`;
+}
+function moreGroupsHtml(q) {
+  const query = String(q || '').trim().toLowerCase();
+  const hit = (id, extra) => {
+    const m = TAB_META[id];
+    if (!m) return false;
+    if (!query) return true;
+    const g = GROUP_BY_ID[m.group];
+    return [m.n, id, g ? g.n : '', (m.aliases || []).join(' '), extra || ''].join(' ').toLowerCase().includes(query);
+  };
+  // O sheet mostra só o que NÃO está na barra (D6): os 4 fixos não se repetem —
+  // nem o padrão do grupo — porque duplicar caminho é ruído. Pessoas idem quando
+  // está na barra; Hoje e Config ficam fora (barra/engrenagem).
+  const sections = NAV_GROUPS.map(g => {
+    if (g.id === 'today') return null;
+    if (g.id === 'people') {
+      if (BOTTOM_TABS.indexOf('people') >= 0) return null;
+      if (!hit('people', 'rede pessoal')) return null;
+      return {g, html: moreItemHtml('people', 'pro') + moreItemHtml('people', 'personal')};
+    }
+    const ids = g.tabs.filter(id => BOTTOM_TABS.indexOf(id) < 0 && hit(id));
+    if (!ids.length) return null;
+    return {g, html: ids.map(id => moreItemHtml(id)).join('')};
+  }).filter(Boolean);
+  if (!sections.length) return '<div class="more-empty">Nenhuma tela com esse nome.</div>';
+  return sections.map(({g, html}) => `<div class="more-group"><div class="more-label">${esc(g.n)}</div><div class="more-grid">${html}</div></div>`).join('');
+}
 function showMoreSheet() {
   const el = document.getElementById('moreSheet');
   if (!el) return;
-  el.innerHTML = `<div class="more-sheet-panel"><div class="big" style="margin-bottom:8px"><b>Menu</b><button data-a="closeMore" aria-label="Fechar menu" title="Fechar menu">${ico('x')}</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px">${TABS.map(t => `<button data-a="tab" data-t="${t[0]}" class="${t[0]===tab?'on':''}" style="padding:12px 8px;font-size:12px;background:var(--s2);border:1px solid var(--bd)">${t[1]}</button>`).join('')}</div></div>`;
+  moreSheetOpener = document.activeElement;
+  const recents = recentTabs.filter(id => TAB_META[id] && BOTTOM_TABS.indexOf(id) < 0).slice(0, 3);
+  el.innerHTML = `<div class="more-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
+    <div class="more-head"><span id="moreTitle" class="more-title">Mais telas</span><button class="more-close" data-a="closeMore" aria-label="Fechar menu" title="Fechar menu">${ico('x')}</button></div>
+    <input id="moreSearch" class="more-search" type="search" placeholder="Buscar tela…" aria-label="Buscar tela" autocomplete="off">
+    ${recents.length ? `<div class="more-recents"><span class="more-label">Recentes</span>${recents.map(id => `<button class="more-chip" data-a="tab" data-t="${id}">${esc(TAB_META[id].n)}</button>`).join('')}</div>` : ''}
+    <div id="moreBody">${moreGroupsHtml('')}</div>
+  </div>`;
   el.classList.add('open');
+  document.body.classList.add('more-open');
+  // v142.1 — arrastar o cabeçalho/pegador para baixo fecha o sheet (padrão de
+  // bottom sheet). Só inicia no topo para não brigar com a rolagem do conteúdo.
+  const panel = el.querySelector('.more-sheet-panel');
+  if (panel) {
+    let startY = null, startX = 0;
+    panel.addEventListener('pointerdown', ev => {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      const onHead = ev.target.closest && ev.target.closest('.more-head');
+      const onHandle = ev.target === panel && (ev.clientY - panel.getBoundingClientRect().top) <= 24;
+      if (!onHead && !onHandle) return;
+      startY = ev.clientY; startX = ev.clientX;
+      panel.style.transition = 'none';
+    });
+    panel.addEventListener('pointermove', ev => {
+      if (startY == null) return;
+      const dy = ev.clientY - startY;
+      if (Math.abs(ev.clientX - startX) > Math.abs(dy)) return;
+      if (dy > 0) {panel.style.transform = `translateY(${Math.min(dy, 120)}px)`; ev.preventDefault();}
+    });
+    const finishDrag = ev => {
+      if (startY == null) return;
+      const dy = ev.clientY - startY;
+      startY = null;
+      panel.style.transition = '';
+      panel.style.transform = '';
+      if (dy > 60) hideMoreSheet();
+    };
+    panel.addEventListener('pointerup', finishDrag);
+    panel.addEventListener('pointercancel', finishDrag);
+  }
+  setTimeout(() => document.getElementById('moreSearch')?.focus(), 30);
 }
-function hideMoreSheet() {document.getElementById('moreSheet')?.classList.remove('open');}
+function hideMoreSheet() {
+  const el = document.getElementById('moreSheet');
+  if (!el || !el.classList.contains('open')) return;
+  el.classList.remove('open');
+  el.innerHTML = '';
+  document.body.classList.remove('more-open');
+  const op = moreSheetOpener; moreSheetOpener = null;
+  if (op && op.focus) {try {op.focus({preventScroll: true});} catch (e) {try {op.focus();} catch (e2) {}}}
+}
 
-/* --- LISTAS DE ABAS --- */
-const TABS = [
-  ['week','Hoje'],['q','Fila'],['jobs','Vagas'],['proj','Projetos'],
-  ['clients','Clientes'],['earn','Rendimento'],
-  ['cal','Prazos'],['goal','Metas'],['skills','Habilidades'],['stats','Stats'],
-  ['review','Revisão'],['people','Pessoas'],
-  ['history','Histórico'],['cmds','Comandos'],['config','Config']
-];
-const BOTTOM_TABS = ['week','q','jobs','stats','more'];
-const BOTTOM_LABELS = {week:'Hoje',q:'Fila',jobs:'Vagas',stats:'Stats',more:'Mais'};
-const BOTTOM_ICONS = {week:'calendar',q:'inbox',jobs:'briefcase',stats:'clock',more:'menu'};
+/* Filtro ao vivo no sheet e trap de foco enquanto ele estiver aberto. */
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('input', ev => {
+    if (!ev.target || ev.target.id !== 'moreSearch') return;
+    const body = document.getElementById('moreBody');
+    if (body) body.innerHTML = moreGroupsHtml(ev.target.value);
+  }, true);
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Tab') return;
+    const el = document.getElementById('moreSheet');
+    if (!el || !el.classList.contains('open')) return;
+    const panel = el.querySelector('.more-sheet-panel');
+    if (!panel) return;
+    const f = [...panel.querySelectorAll('button, input, [href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.disabled && x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (ev.shiftKey && document.activeElement === first) {ev.preventDefault(); last.focus();}
+    else if (!ev.shiftKey && document.activeElement === last) {ev.preventDefault(); first.focus();}
+  }, true);
+}
 
 function renderBottomNav() {
   const el = document.getElementById('bottomNav');
   if (!el) return;
-  const primary = BOTTOM_TABS.slice(0,-1);
+  const primary = BOTTOM_TABS.slice(0, -1);
   el.innerHTML = BOTTOM_TABS.map(k => {
     const active = k === 'more' ? !primary.includes(tab) : tab === k;
-    return `<button data-a="${k==='more'?'moreOpen':'tab'}" data-t="${k}" class="${active?'on':''}"><span class="bn-icon" aria-hidden="true">${ico(BOTTOM_ICONS[k])}</span><span>${BOTTOM_LABELS[k]}</span></button>`;
+    const more = k === 'more';
+    return `<button data-a="${more ? 'moreOpen' : 'tab'}" data-t="${k}" class="${active ? 'on' : ''}"${active && !more ? ' aria-current="page"' : ''}${more ? ' aria-haspopup="dialog"' : ''}><span class="bn-icon" aria-hidden="true">${ico(BOTTOM_ICONS[k])}</span><span>${BOTTOM_LABELS[k]}</span></button>`;
   }).join('');
 }
 
@@ -302,12 +725,23 @@ function render() {
   const gxp = globalXp();
   const info = levelInfo(gxp);
   $('#lvl').innerHTML = `Nível <b>${info.lv}</b> · ${Math.round(gxp)} XP<div class="lb"><div style="width:${info.progress*100}%"></div></div>`;
-  $('#nav').innerHTML = TABS.map(t => `<button class="${t[0]===tab?'on':''}" data-a="tab" data-t="${t[0]}">${t[1]}</button>`).join('');
+  $('#nav').innerHTML = navAreasHtml();
+  const subnav = document.getElementById('subnav');
+  if (subnav) {
+    // Um render novo invalida o dropdown flutuante: ele pertence à fileira antiga.
+    subnav.classList.remove('nav-dropdown-open');
+    subnav.style.left = ''; subnav.style.top = '';
+    delete subnav.dataset.group;
+    const sub = navSubHtml();
+    subnav.innerHTML = sub;
+    subnav.hidden = !sub;
+  }
   applyLogo();
   renderBackupBanner();
   $('#app').innerHTML = VIEWS[tab] ? VIEWS[tab]() : '<div class="empty">Aba não encontrada</div>';
   renderBottomNav();
   renderTimer();
+  scrollNavToActive();
 }
 
 function applyLogo() {
@@ -1007,7 +1441,7 @@ function cardJob(app) {
   const prospectCta = (app.stage === 'prospect' && !app.url) ? `<div class="prospect-cta"><span style="font-size:12px;color:var(--mu)">Ainda não apliquei.</span><button data-a="jobApply" data-id="${app.id}">${ico('check')} Apliquei</button></div>` : '';
   const projectBadge = proj ? `<span class="tag" style="color:var(--ok);cursor:pointer" data-a="gotoProject" data-id="${proj.id}">${ico('chevron-down','ico--next')} ${esc(proj.n)}</span>` : '';
   const canConvert = !terminal && (app.stage === 'offer' || app.stage === 'accepted') && !app.projectId;
-  return `<div class="job-card ${terminal?'terminal':''}" style="--c:${themeColor(stage.color)}"><div class="big" style="margin:0 0 4px"><div class="job-title"><span class="job-client">${esc(app.client)}</span>${app.role && app.role!==app.client ? ' — ' + esc(app.role) : ''}</div><span class="stage-badge" style="--c:${themeColor(stage.color)}">${stage.n}</span></div><div class="meta">${prMark(app.priority)}<span class="pr-lbl">${PR[app.priority]}</span>${app.platform?`<span class="tag">${esc(app.platform)}</span>`:''}${app.area?`<span class="tag tag-skill" style="--c:${alive(S.skills).find(s=>s.n===app.area)?.color||'var(--mu)'}">${esc(app.area)}</span>`:''}${app.subarea?`<span class="tag tag-sub">${esc(app.subarea)}</span>`:''}${app.ticket?`<span class="tag">${fmtBRL(app.ticket)}</span>`:''}${!terminal && days>0?`<span class="tag">${days}d na fase</span>`:''}${timeInvested?`<span class="tag tag-time">${ico('timer')} ${fmtMin(timeInvested)}</span>`:''}${app.url?`<a class="tag" href="${esc(app.url)}" target="_blank" rel="noopener noreferrer">vaga ↗</a>`:''}${!terminal?`<span class="score-badge ${scoreClass(score)}">${score}</span>`:''}${projectBadge}</div>${app.contactName||app.contactInfo ? `<div class="meta">${app.contactName?`<span class="tag">${ico('user')} ${esc(app.contactName)}</span>`:''}${app.contactInfo?`<span class="tag">${esc(app.contactInfo)}</span>`:''}</div>` : ''}${fuBadge ? `<div class="job-followup-row">${fuBadge}</div>` : ''}${app.notes ? `<div class="tdesc">${esc(app.notes)}</div>` : ''}${prospectCta}<div class="acts">${!app.url?`<button data-a="jobAddLink" data-id="${app.id}" title="Colar o link desta vaga" aria-label="Adicionar link">+ link</button>`:''}${app.stage==='prospect' && app.url?`<button class="primary" data-a="jobOpenApply" data-id="${app.id}">Abrir e aplicar ↗</button>`:''}<select class="postpone-sel" data-a="jobStage" data-id="${app.id}"><option value="">${terminal?'Reabrir em…':'→ estágio'}</option>${JOB_STAGES.filter(s => s.id !== app.stage).map(s => `<option value="${s.id}">${s.n}</option>`).join('')}</select>${!terminal && app.nextFollowUp?`<button data-a="jobFollowUp" data-id="${app.id}">Falei hoje</button>`:''}${!terminal && !app.linkedTaskId?`<button data-a="jobCreateTask" data-id="${app.id}">+ Tarefa</button>`:''}${canConvert?`<button data-a="jobConvert" data-id="${app.id}" style="background:var(--ok);color:#000">→ Virou projeto</button>`:''}<button data-a="jobDel" data-id="${app.id}" aria-label="Excluir vaga" title="Excluir vaga">${ico('x')}</button></div><details data-eid="${app.id}" ${openEdits.has(app.id)?'open':''}><summary>Editar</summary><div class="form"><label>Cliente<input data-p="${esc(k('client'))}" value="${esc(app.client)}"></label><label>Vaga<input data-p="${esc(k('role'))}" value="${esc(app.role)}"></label><label class="full">Link<input data-p="${esc(k('url'))}" value="${esc(app.url||'')}"></label><label>Contato<input data-p="${esc(k('contactName'))}" value="${esc(app.contactName||'')}"></label><label>Email<input data-p="${esc(k('contactInfo'))}" value="${esc(app.contactInfo||'')}"></label><label>Plataforma<input data-p="${esc(k('platform'))}" list="jobPlatforms" value="${esc(app.platform||'')}"></label><label>Área<select data-p="${esc(k('area'))}"><option value="">—</option>${jobAreaOptions(app.area).map(a => `<option value="${esc(a)}" ${app.area===a?'selected':''}>${esc(a)}</option>`).join('')}</select></label><label>Subárea<input data-p="${esc(k('subarea'))}" list="jobSubareas" value="${esc(app.subarea||'')}"></label><label>Ticket<input type="number" data-p="${esc(k('ticket'))}" value="${app.ticket||0}"></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), app.priority)}</select></label><label>Follow-up<input type="date" data-p="${esc(k('nextFollowUp'))}" value="${esc(app.nextFollowUp||'')}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="2">${esc(app.notes||'')}</textarea></label></div></details></div>`;
+  return `<div class="job-card ${terminal?'terminal':''}" style="--c:${themeColor(stage.color)}"><div class="big" style="margin:0 0 2px"><div class="job-title"><span class="job-client">${esc(app.client)}</span>${app.role && app.role!==app.client ? ' — ' + esc(app.role) : ''}</div><span class="stage-badge" style="--c:${themeColor(stage.color)}">${stage.n}</span></div><div class="meta">${prMark(app.priority)}<span class="pr-lbl">${PR[app.priority]}</span>${app.platform?`<span class="tag">${esc(app.platform)}</span>`:''}${app.area?`<span class="tag tag-skill" style="--c:${alive(S.skills).find(s=>s.n===app.area)?.color||'var(--mu)'}">${esc(app.area)}</span>`:''}${app.subarea?`<span class="tag tag-sub">${esc(app.subarea)}</span>`:''}${app.ticket?`<span class="tag">${fmtBRL(app.ticket)}</span>`:''}${!terminal && days>0?`<span class="tag">${days}d na fase</span>`:''}${timeInvested?`<span class="tag tag-time">${ico('timer')} ${fmtMin(timeInvested)}</span>`:''}${app.url?`<a class="tag" href="${esc(app.url)}" target="_blank" rel="noopener noreferrer">vaga ↗</a>`:''}${!terminal?`<span class="score-badge ${scoreClass(score)}">${score}</span>`:''}${projectBadge}</div>${app.contactName||app.contactInfo ? `<div class="meta">${app.contactName?`<span class="tag">${ico('user')} ${esc(app.contactName)}</span>`:''}${app.contactInfo?`<span class="tag">${esc(app.contactInfo)}</span>`:''}</div>` : ''}${fuBadge ? `<div class="job-followup-row">${fuBadge}</div>` : ''}${app.notes ? `<div class="tdesc">${esc(app.notes)}</div>` : ''}${prospectCta}<div class="acts">${!app.url?`<button data-a="jobAddLink" data-id="${app.id}" title="Colar o link desta vaga" aria-label="Adicionar link">+ link</button>`:''}${app.stage==='prospect' && app.url?`<button class="primary" data-a="jobOpenApply" data-id="${app.id}">Abrir e aplicar ↗</button>`:''}<select class="postpone-sel" data-a="jobStage" data-id="${app.id}"><option value="">${terminal?'Reabrir em…':'→ estágio'}</option>${JOB_STAGES.filter(s => s.id !== app.stage).map(s => `<option value="${s.id}">${s.n}</option>`).join('')}</select>${!terminal && app.nextFollowUp?`<button data-a="jobFollowUp" data-id="${app.id}">Falei hoje</button>`:''}${!terminal && !app.linkedTaskId?`<button data-a="jobCreateTask" data-id="${app.id}">+ Tarefa</button>`:''}${canConvert?`<button data-a="jobConvert" data-id="${app.id}" style="background:var(--ok);color:#000">→ Virou projeto</button>`:''}<button data-a="jobDel" data-id="${app.id}" aria-label="Excluir vaga" title="Excluir vaga">${ico('x')}</button></div><details data-eid="${app.id}" ${openEdits.has(app.id)?'open':''}><summary>Editar</summary><div class="form"><label>Cliente<input data-p="${esc(k('client'))}" value="${esc(app.client)}"></label><label>Vaga<input data-p="${esc(k('role'))}" value="${esc(app.role)}"></label><label class="full">Link<input data-p="${esc(k('url'))}" value="${esc(app.url||'')}"></label><label>Contato<input data-p="${esc(k('contactName'))}" value="${esc(app.contactName||'')}"></label><label>Email<input data-p="${esc(k('contactInfo'))}" value="${esc(app.contactInfo||'')}"></label><label>Plataforma<input data-p="${esc(k('platform'))}" list="jobPlatforms" value="${esc(app.platform||'')}"></label><label>Área<select data-p="${esc(k('area'))}"><option value="">—</option>${jobAreaOptions(app.area).map(a => `<option value="${esc(a)}" ${app.area===a?'selected':''}>${esc(a)}</option>`).join('')}</select></label><label>Subárea<input data-p="${esc(k('subarea'))}" list="jobSubareas" value="${esc(app.subarea||'')}"></label><label>Ticket<input type="number" data-p="${esc(k('ticket'))}" value="${app.ticket||0}"></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), app.priority)}</select></label><label>Follow-up<input type="date" data-p="${esc(k('nextFollowUp'))}" value="${esc(app.nextFollowUp||'')}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="2">${esc(app.notes||'')}</textarea></label></div></details></div>`;
 }
 
 function viewProjects() {
@@ -1370,7 +1804,9 @@ function viewPeople() {
   const nPro = all.filter(c => c.type === 'pro' && !c.archived).length;
   const nPer = all.filter(c => c.type === 'personal' && !c.archived).length;
   const seg = `<div class="view-toggle people-seg" role="tablist" aria-label="Rede ou pessoal"><button role="tab" aria-selected="${peopleMode === 'pro'}" class="${peopleMode === 'pro' ? 'on' : ''}" data-a="peopleSeg" data-type="pro">${ico('briefcase')} Rede <span class="count">${nPro}</span></button><button role="tab" aria-selected="${peopleMode === 'personal'}" class="${peopleMode === 'personal' ? 'on' : ''}" data-a="peopleSeg" data-type="personal">${ico('user')} Pessoal <span class="count">${nPer}</span></button></div>`;
-  return viewContacts(peopleMode, seg);
+  // No desktop/tablet o segmento vive na subnav; o título mantém o nome da lista.
+  const head = seg + `<h3 class="people-desktop-heading">${peopleMode === 'personal' ? 'Amizades e vínculos' : 'Rede profissional'}</h3>`;
+  return viewContacts(peopleMode, head);
 }
 /* v140 — nome plausível no modo discreto: primeiro nome + inicial do sobrenome.
    Tarja (••/···) anuncia que algo está escondido; um nome curto não. */
@@ -1394,7 +1830,7 @@ function contactCard(c, score, type) {
   // v139 — no modo discreto o conteúdo sensível não é renderizado (não é só CSS).
   const vis = frag => hidden ? '' : frag;
   const clientBadge = linkedClient ? `<span class="tag contact-client" style="color:var(--ok);cursor:pointer" data-a="gotoClient" data-id="${linkedClient.id}">${ico('chevron-down','ico--next')} ${esc(linkedClient.n)}</span>` : '';
-  return `<div class="contact-card ${cls}${hidden ? ' discreet' : ''}" data-cid="${c.id}" style="--c:${themeColor(status.color)}"><div class="big" style="margin-bottom:4px"><input data-p="${esc(k('n'))}" value="${esc(hidden ? maskContactName(c.n) : c.n)}"${hidden ? ' readonly aria-label="Nome resumido"' : ''} style="font-weight:600;flex:1;min-width:0">${hidden ? '' : `<span class="contact-score ${scCls}" title="${esc(contactScoreBreakdown(c))}">${score >= 0 ? score : '—'}</span>`}<span class="badge" style="color:${themeColor(status.color)}">${hidden ? (STATUS_SHORT[status.k] || 'Em dia') : status.label}</span>${discreet ? `<button class="contact-reveal" data-a="contactReveal" data-id="${c.id}" title="${hidden ? 'Ver detalhes' : 'Ocultar'}" aria-label="${hidden ? 'Ver detalhes do contato' : 'Ocultar contato'}">${ico(hidden ? 'more' : 'x')}</button>` : ''}</div><div class="meta">${hidden ? '' : `<span class="tag">${esc(c.cat)}</span>`}${vis(c.where?`<span class="tag tag-extra">${esc(c.where)}</span>`:'')}${vis(c.role?`<span class="tag tag-extra">${esc(c.role)}</span>`:'')}${hidden ? '' : (days != null?`<span class="tag">${days}d atrás</span>`:'<span class="tag">sem contato</span>')}${c.waitingFor?`<span class="waiting-pill">${ico('clock')} ${!hidden && c.waitingSince ? Math.floor((Date.now()-c.waitingSince)/86400000)+'d' : ''}</span>`:''}${isSnoozed?`<span class="snoozed-pill">${ico('pause')} ${hidden ? '' : fmtDate(c.snoozedUntil)}</span>`:''}${vis(rate != null?`<span class="response-rate ${rateCls} tag-extra" title="Taxa de resposta">${ico('repeat')} ${Math.round(rate*100)}%</span>`:'')}${vis(depthLabel?`<span class="tag tag-extra" style="opacity:.7">${depthLabel}</span>`:'')}${vis(clientBadge)}${vis(c.url?`<a class="tag contact-url" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">perfil ↗</a>`:'')}</div>${vis((c.tags||[]).length?`<div class="meta contact-tags" style="margin-top:2px">${(c.tags||[]).map(t => `<span class="tag" style="background:color-mix(in srgb,var(--ac) 10%,var(--s2))">${esc(t)}</span>`).join('')}</div>`:'')}${vis(c.lastConversation?`<div class="contact-last-conv">"${esc(c.lastConversation)}"</div>`:'')}${vis(recentInter.length?`<details class="contact-inter"><summary>Interações (${(c.interactions||[]).length})</summary>${recentInter.map(i => {const it = INTERACTION_TYPES.find(t => t.id === i.type) || INTERACTION_TYPES[0]; return `<div class="interaction-row"><span class="dir ${i.direction}">${i.direction==='out'?ico('arrow-up'):ico('arrow-down')}</span><span style="flex:none">${ico(INTERACTION_ICON[it.id] || 'more')} ${it.n}</span><span class="note">${esc(i.note || '')}</span><span style="color:var(--mu);font-size:10px">${fmtDate(iso(new Date(i.at)))}</span></div>`;}).join('')}</details>`:'')}${vis(c.nextAction?`<div class="contact-next">${ico('flag')} ${esc(c.nextAction)}</div>`:'')}<div class="quick-actions"><button class="primary" data-a="contactSend" data-id="${c.id}">${ico('arrow-up')} Enviei</button><button class="secondary" data-a="contactReceive" data-id="${c.id}">${ico('arrow-down')} Recebi</button><button class="secondary" data-a="contactSnooze" data-id="${c.id}">${ico('pause')} Adiar</button>${!c.clientId?`<button class="secondary" data-a="contactConvert" data-id="${c.id}">→ Virou cliente</button>`:''}</div>${hidden ? '' : `<details data-eid="${c.id}" ${openEdits.has(c.id)?'open':''}><summary>Editar</summary><div class="form"><label>Categoria<select data-p="${esc(k('cat'))}">${selOptions((type==='pro'?CAT_PRO:CAT_PERSONAL).map(x=>[x,x]), c.cat)}</select></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), c.priority)}</select></label><label>Cadência<input type="number" data-p="${esc(k('cadence'))}" value="${c.cadence||30}"></label><label>Último<input type="date" data-p="${esc(k('lastContact'))}" value="${esc(c.lastContact||'')}"></label><label>Próximo<input type="date" data-p="${esc(k('nextContact'))}" value="${esc(c.nextContact||'')}"></label><label class="full">Próximo passo<input data-p="${esc(k('nextAction'))}" value="${esc(c.nextAction||'')}" placeholder="Ligar na terça sobre a proposta"></label><label>Aniversário<input type="date" data-p="${esc(k('birthday'))}" value="${esc(c.birthday||'')}"></label><label>Onde<input data-p="${esc(k('where'))}" value="${esc(c.where||'')}"></label><label>Link<input data-p="${esc(k('url'))}" value="${esc(c.url||'')}"></label><label>Cargo<input data-p="${esc(k('role'))}" value="${esc(c.role||'')}"></label><label class="full">Contexto<input data-p="${esc(k('context'))}" value="${esc(c.context||'')}"></label><label class="full">Última conversa<input data-p="${esc(k('lastConversation'))}" value="${esc(c.lastConversation||'')}"></label><label class="full">Tags<input data-p="${esc(k('tagsStr'))}" list="contactTags" value="${esc(tagList(c.tags).join(', '))}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="3">${esc(c.notes||'')}</textarea></label></div><div class="acts" style="margin-top:8px"><button data-a="contactLog" data-id="${c.id}">${ico('plus')} Log</button>${c.waitingFor?`<button data-a="contactClearWaiting" data-id="${c.id}">Cancelar aguardando</button>`:''}${isSnoozed?`<button data-a="contactUnsnooze" data-id="${c.id}">Cancelar adiamento</button>`:''}<button data-a="cArchive" data-id="${c.id}">${c.archived?'Restaurar':'Arquivar'}</button><button data-a="cDel" data-id="${c.id}" aria-label="Excluir contato" title="Excluir contato">${ico('x')} Excluir</button></div></details>`}</div>`;
+  return `<div class="contact-card ${cls}${hidden ? ' discreet' : ''}" data-cid="${c.id}" style="--c:${themeColor(status.color)}"><div class="big" style="margin-bottom:2px"><input data-p="${esc(k('n'))}" value="${esc(hidden ? maskContactName(c.n) : c.n)}"${hidden ? ' readonly aria-label="Nome resumido"' : ''} style="font-weight:600;flex:1;min-width:0">${hidden ? '' : `<span class="contact-score ${scCls}" title="${esc(contactScoreBreakdown(c))}">${score >= 0 ? score : '—'}</span>`}<span class="badge" style="color:${themeColor(status.color)}">${hidden ? (STATUS_SHORT[status.k] || 'Em dia') : status.label}</span>${discreet ? `<button class="contact-reveal" data-a="contactReveal" data-id="${c.id}" title="${hidden ? 'Ver detalhes' : 'Ocultar'}" aria-label="${hidden ? 'Ver detalhes do contato' : 'Ocultar contato'}">${ico(hidden ? 'more' : 'x')}</button>` : ''}</div><div class="meta">${hidden ? '' : `<span class="tag">${esc(c.cat)}</span>`}${vis(c.where?`<span class="tag tag-extra">${esc(c.where)}</span>`:'')}${vis(c.role?`<span class="tag tag-extra">${esc(c.role)}</span>`:'')}${hidden ? '' : (days != null?`<span class="tag">${days}d atrás</span>`:'<span class="tag">sem contato</span>')}${c.waitingFor?`<span class="waiting-pill">${ico('clock')} ${!hidden && c.waitingSince ? Math.floor((Date.now()-c.waitingSince)/86400000)+'d' : ''}</span>`:''}${isSnoozed?`<span class="snoozed-pill">${ico('pause')} ${hidden ? '' : fmtDate(c.snoozedUntil)}</span>`:''}${vis(rate != null?`<span class="response-rate ${rateCls} tag-extra" title="Taxa de resposta">${ico('repeat')} ${Math.round(rate*100)}%</span>`:'')}${vis(depthLabel?`<span class="tag tag-extra" style="opacity:.7">${depthLabel}</span>`:'')}${vis(clientBadge)}${vis(c.url?`<a class="tag contact-url" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">perfil ↗</a>`:'')}</div>${vis((c.tags||[]).length?`<div class="meta contact-tags" style="margin-top:2px">${(c.tags||[]).map(t => `<span class="tag" style="background:color-mix(in srgb,var(--ac) 10%,var(--s2))">${esc(t)}</span>`).join('')}</div>`:'')}${vis(c.lastConversation?`<div class="contact-last-conv">"${esc(c.lastConversation)}"</div>`:'')}${vis(recentInter.length?`<details class="contact-inter"><summary>Interações (${(c.interactions||[]).length})</summary>${recentInter.map(i => {const it = INTERACTION_TYPES.find(t => t.id === i.type) || INTERACTION_TYPES[0]; return `<div class="interaction-row"><span class="dir ${i.direction}">${i.direction==='out'?ico('arrow-up'):ico('arrow-down')}</span><span style="flex:none">${ico(INTERACTION_ICON[it.id] || 'more')} ${it.n}</span><span class="note">${esc(i.note || '')}</span><span style="color:var(--mu);font-size:10px">${fmtDate(iso(new Date(i.at)))}</span></div>`;}).join('')}</details>`:'')}${vis(c.nextAction?`<div class="contact-next">${ico('flag')} ${esc(c.nextAction)}</div>`:'')}<div class="quick-actions"><button class="primary" data-a="contactSend" data-id="${c.id}">${ico('arrow-up')} Enviei</button><button class="secondary" data-a="contactReceive" data-id="${c.id}">${ico('arrow-down')} Recebi</button><button class="secondary" data-a="contactSnooze" data-id="${c.id}">${ico('pause')} Adiar</button>${!c.clientId?`<button class="secondary" data-a="contactConvert" data-id="${c.id}">→ Virou cliente</button>`:''}</div>${hidden ? '' : `<details data-eid="${c.id}" ${openEdits.has(c.id)?'open':''}><summary>Editar</summary><div class="form"><label>Categoria<select data-p="${esc(k('cat'))}">${selOptions((type==='pro'?CAT_PRO:CAT_PERSONAL).map(x=>[x,x]), c.cat)}</select></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), c.priority)}</select></label><label>Cadência<input type="number" data-p="${esc(k('cadence'))}" value="${c.cadence||30}"></label><label>Último<input type="date" data-p="${esc(k('lastContact'))}" value="${esc(c.lastContact||'')}"></label><label>Próximo<input type="date" data-p="${esc(k('nextContact'))}" value="${esc(c.nextContact||'')}"></label><label class="full">Próximo passo<input data-p="${esc(k('nextAction'))}" value="${esc(c.nextAction||'')}" placeholder="Ligar na terça sobre a proposta"></label><label>Aniversário<input type="date" data-p="${esc(k('birthday'))}" value="${esc(c.birthday||'')}"></label><label>Onde<input data-p="${esc(k('where'))}" value="${esc(c.where||'')}"></label><label>Link<input data-p="${esc(k('url'))}" value="${esc(c.url||'')}"></label><label>Cargo<input data-p="${esc(k('role'))}" value="${esc(c.role||'')}"></label><label class="full">Contexto<input data-p="${esc(k('context'))}" value="${esc(c.context||'')}"></label><label class="full">Última conversa<input data-p="${esc(k('lastConversation'))}" value="${esc(c.lastConversation||'')}"></label><label class="full">Tags<input data-p="${esc(k('tagsStr'))}" list="contactTags" value="${esc(tagList(c.tags).join(', '))}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="3">${esc(c.notes||'')}</textarea></label></div><div class="acts" style="margin-top:8px"><button data-a="contactLog" data-id="${c.id}">${ico('plus')} Log</button>${c.waitingFor?`<button data-a="contactClearWaiting" data-id="${c.id}">Cancelar aguardando</button>`:''}${isSnoozed?`<button data-a="contactUnsnooze" data-id="${c.id}">Cancelar adiamento</button>`:''}<button data-a="cArchive" data-id="${c.id}">${c.archived?'Restaurar':'Arquivar'}</button><button data-a="cDel" data-id="${c.id}" aria-label="Excluir contato" title="Excluir contato">${ico('x')} Excluir</button></div></details>`}</div>`;
 }
 /* v139 — teto por anel. Nó-aresta perde legibilidade com muita gente (Dunbar: camadas
    de ~5/15/50/150); o excedente vira um "+N" que abre a lista. */

@@ -1,4 +1,4 @@
-// =========================================================
+﻿// =========================================================
 // ESTADO.JS — Memória do app
 // Constantes, variáveis de estado, modelos de dados,
 // persistência (salvar/carregar/backup) e lixeira.
@@ -263,6 +263,30 @@ function fmtMoney(amount, cur) {const s = CURRENCIES[cur]?.sym || (cur || 'R$');
 /* --- VARIÁVEIS DE ESTADO GLOBAL --- */
 let S = null;
 let tab = 'week';
+/* R1 — preferências de navegação: locais do aparelho, fora de `S`/sync/backup. */
+let recentTabs = (function () {
+  try {
+    const v = JSON.parse(localStorage.getItem('atelier_recent_tabs_v1') || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, 5) : [];
+  } catch (e) { return []; }
+})();
+let lastTabByGroup = (function () {
+  try {
+    const v = JSON.parse(localStorage.getItem('atelier_last_tab_group_v1') || '{}');
+    return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  } catch (e) { return {}; }
+})();
+function pushRecentTab(id) {
+  if (!id || id === 'config') return;
+  recentTabs = [id].concat(recentTabs.filter(x => x !== id)).slice(0, 5);
+  try { localStorage.setItem('atelier_recent_tabs_v1', JSON.stringify(recentTabs)); } catch (e) {}
+}
+function rememberTabGroup(id) {
+  const g = (typeof GROUP_OF_TAB !== 'undefined' && GROUP_OF_TAB[id]) || '';
+  if (!g) return;
+  lastTabByGroup[g] = id;
+  try { localStorage.setItem('atelier_last_tab_group_v1', JSON.stringify(lastTabByGroup)); } catch (e) {}
+}
 let day = todayI();
 let cal = new Date();
 let dbDoc = null;
@@ -288,6 +312,7 @@ let undoStack = [];
 let focusTaskId = null;
 let focusTargetMin = 25;
 let searchQuery = '';
+let searchIndex = -1; // R5 — linha destacada na paleta de busca
 let expandedTasks = new Set();
 let expandedSubs = new Set();
 let subsCollapsed = new Set();
