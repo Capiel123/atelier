@@ -1129,6 +1129,12 @@ document.addEventListener('keydown', ev => {
     // v94: não roubar o foco enquanto o usuário edita subtarefa/detalhes
     const ae = document.activeElement;
     if (ae && ae.closest && ae.closest('.sub, .subs, [data-eid], [contenteditable="true"]')) return;
+    // v146: F é "voltar ao foco", não "trocar de tarefa". Com o overlay aberto não
+    // mexe em nada; com timer ativo reabre a tarefa do timer, mesmo que o dia visível
+    // tenha mudado. A primeira pendente do dia só entra quando não há timer.
+    if (focusTaskId && document.getElementById('focusOverlay')) return;
+    const timerTask = S.timer && S.timer.taskId ? T(S.timer.taskId) : null;
+    if (timerTask && !isDone(timerTask)) { openFocus(timerTask.id); return; }
     const nt = firstPendingTaskInList();
     if (nt) openFocus(nt.id); else toast('Sem tarefa pendente');
     return;
