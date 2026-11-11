@@ -28,6 +28,23 @@ function ico(name, cls) {
   return `<svg class="ico${cls ? ' ' + cls : ''}" aria-hidden="true" focusable="false"><use href="#i-${use}-${name}"/></svg>`;
 }
 
+/* v147 — rosácea do Gótico Clássico. Linha fina de 1 px, sem animação.
+   Só aparece onde o CSS da família `cathedral` habilita (estado vazio e foco). */
+function roseWindow(cls) {
+  const rays = Array.from({ length: 12 }, (_, i) => {
+    const a = i * Math.PI / 6;
+    const x1 = 60 + 20 * Math.cos(a), y1 = 60 + 20 * Math.sin(a);
+    const x2 = 60 + 56 * Math.cos(a), y2 = 60 + 56 * Math.sin(a);
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+  }).join('');
+  const petals = Array.from({ length: 12 }, (_, i) => {
+    const a = (i + 0.5) * Math.PI / 6;
+    const cx = 60 + 37 * Math.cos(a), cy = 60 + 37 * Math.sin(a);
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5"/>`;
+  }).join('');
+  return `<svg class="rose-window${cls ? ' ' + cls : ''}" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1"><circle cx="60" cy="60" r="56"/><circle cx="60" cy="60" r="44"/><circle cx="60" cy="60" r="20"/><circle cx="60" cy="60" r="7"/>${rays}${petals}</g></svg>`;
+}
+
 // Seções da Semana: glifo antigo → símbolo do sprite.
 const SECTION_ICON = { commitment:'flag', work:'briefcase', personal:'user' };
 function sectionIcon(section) {return ico(SECTION_ICON[section] || 'briefcase');}
@@ -43,6 +60,8 @@ const TRASH_ICON = {task:'check',project:'briefcase',client:'user',contact:'mail
 function refreshStaticIcons() {
   const search = document.querySelector('.search-btn');
   if (search) search.innerHTML = ico('search');
+  const gear = document.querySelector('.gear-btn');
+  if (gear) gear.innerHTML = ico('sliders');
   const stop = document.getElementById('tstop');
   if (stop) stop.innerHTML = ico('pause') + ' Parar';
   const fab = document.getElementById('fab');
@@ -969,7 +988,7 @@ function renderFilteredTasks() {
     if (el) el.textContent = `(${plan.filter(t=>!isDone(t)).length} pend · ${plan.filter(t=>isDone(t)).length} feitas)`;
   }, 0);
 
-  if (!dayList.length) return '<div class="msg">Nada ainda.</div>';
+  if (!dayList.length) return `<div class="msg empty-rose">${roseWindow()}<span>Nada ainda.</span></div>`;
   if (!list.length) return '<div class="msg">Nada com esses filtros.</div>';
 
   // "Concluídas" lista o que está concluído e não foi limpo — inclusive semanas
@@ -1041,7 +1060,7 @@ function renderFilteredTasks() {
 
   return (sectionsHtml + doneSectionHtml) || (hasFilter
     ? '<div class="msg">Nada com esses filtros.</div>'
-    : '<div class="msg">Nada planejado para esta semana.</div>');
+    : `<div class="msg empty-rose">${roseWindow()}<span>Nada planejado para esta semana.</span></div>`);
 }
 
 function refreshTaskList() {const el = document.getElementById('taskList'); if (el) el.innerHTML = renderFilteredTasks();}
@@ -1128,7 +1147,7 @@ function cardTaskCompact(t, score) {
   const _as = activeSubs(t); const subsTotal = _as.length; const subsDone = _as.filter(s => s.d).length;
   const isSelected = selectedTaskId === t.id;
   const doneNow = isDone(t);
-  return `<div class="card compact ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}" data-a="expandTask" data-id="${t.id}">
+  return `<div class="card compact ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''} ${runningThis?'timer-on':''}" style="--c:${borderColor}" data-card="${t.id}" data-a="expandTask" data-id="${t.id}">
     <div class="row" style="align-items:center; width:100%;">
       <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti">
@@ -1154,6 +1173,7 @@ function cardTask(t, score) {
   const spent = taskMinutes(t); const pctT = t.est ? Math.min(100, Math.round(spent / t.est * 100)) : 0;
   const subsTotal = activeSubs(t).length;
   const runningThis = S.timer && S.timer.taskId === t.id && !S.timer.subId;
+  const timerOnTask = !!(S.timer && S.timer.taskId === t.id);
   const isQuick = t.est && t.est <= 10;
   const labels = (t.labels||[]).map(lid => S.labels.find(l => l.id === lid)).filter(Boolean);
   const stuck = isStuck(t); const urgentStuck = isUrgentStuck(t); const over = isOverEstimate(t);
@@ -1168,7 +1188,7 @@ function cardTask(t, score) {
   // de labels para não gastar uma faixa vertical só com a pontuação.
   const flagsHtml = `${stuck ? `<span class="postpone-badge ${urgentStuck?'urgent':'stuck'}">${ico('repeat')} ${t.postponedCount}x</span>` : ''}${over ? `<span class="parkinson-badge">${ico('timer')} 2×</span>` : ''}${score != null ? `<span class="score-badge ${scoreClass(score)}" title="${esc(scoreTip)}">${score}</span>` : ''}`;
 
-  return `<div class="card ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}">
+  return `<div class="card ${doneNow?'done':''} ${t.next?'next-card-in':''} ${isSelected?'selected':''} ${timerOnTask?'timer-on':''}" style="--c:${borderColor}" data-card="${t.id}">
     <div class="row task-header" data-a="expandTask" data-id="${t.id}">
       <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
@@ -1665,7 +1685,7 @@ function viewStats() {
   // t.logs mantém note:'pomodoro' apenas como espelho; NÃO há fallback para logs.
   // v102: dedupe na leitura (não apaga histórico) — entradas antigas duplicadas
   // pelo mesmo foco contam uma vez.
-  const pomodorosToday = dedupePomodoros(S.pomodoros || []).filter(p => p.date === td).length;
+  const pomodorosToday = pomodorosTodayCount(td);
   const weekMin = weekLogs.reduce((a,l) => a + (+l.minutes||0), 0);
   const manualWeekMin = weekLogs.filter(l => l.note === 'manual').reduce((a,l) => a + (+l.minutes||0), 0);
   const todayLogs = allLogs.filter(l => l.end && iso(new Date(l.end)) === td);
@@ -2049,7 +2069,7 @@ function closeReportSheet() {document.getElementById('reportSheet')?.remove();}
 function renderTimer() {
   const el = $('#timerWidget'), lbl = $('#tlabel'), time = $('#ttime'), stopBtn = $('#tstop'), bankEl = $('#tbank');
   if (!el) return;
-  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) {const b = ensureFocusBank(); const inBlock = Math.floor((b.sec || 0) % (25 * 60) / 60); bankEl.innerHTML = ico('tomato') + ' ' + (b.count || 0) + ' hoje' + ((b.sec || 0) > 0 ? ' · ' + inBlock + '/25' : '');} return;}
+  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) {const b = ensureFocusBank(); const bc = Math.max(b.count || 0, pomodorosTodayCount()); const inBlock = Math.floor((b.sec || 0) % (25 * 60) / 60); bankEl.innerHTML = ico('tomato') + ' ' + bc + ' hoje' + ((b.sec || 0) > 0 ? ' · ' + inBlock + '/25' : '');} return;}
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   el.classList.add('run');
   time.textContent = fmtClock(timerElapsedSec());
@@ -2061,8 +2081,9 @@ function renderTimer() {
   lbl.innerHTML = (prefix ? prefix + ' ' : '') + esc(label.slice(0, 40));
   if (bankEl) {
     const bank = ensureFocusBank();
+    const bc = Math.max(bank.count || 0, pomodorosTodayCount());
     const inBlock = Math.floor((focusBankSec() % (25 * 60)) / 60);
-    bankEl.innerHTML = (S.timer.phase === 'rest' ? ico('tomato') + ' ' + (bank.count || 0) + ' hoje' : ico('tomato') + ' ' + (bank.count || 0) + ' · ' + inBlock + '/25');
+    bankEl.innerHTML = (S.timer.phase === 'rest' ? ico('tomato') + ' ' + bc + ' hoje' : ico('tomato') + ' ' + bc + ' · ' + inBlock + '/25');
   }
   stopBtn.style.display = '';
 }
@@ -2167,7 +2188,7 @@ function renderFocus() {
   // v97: "Pular" também aparece com o timer PAUSADO (só exige fase de foco com alvo).
   const isPomodoro = !!(S.timer && S.timer.phase === 'focus' && S.timer.targetMin);
   const bankNow = ensureFocusBank();
-  const bankCount = bankNow.count || 0;
+  const bankCount = Math.max(bankNow.count || 0, pomodorosTodayCount());
   const phase = (timerOnThisTask && S.timer.phase) ? S.timer.phase : 'focus';
   const isPaused = timerOnThisTask && S.timer.paused;
   const restPending = timerOnThisTask && phase === 'rest' && isPaused && (S.timer.accumulated || 0) === 0;
@@ -2308,12 +2329,20 @@ function renderFocus() {
     </div>`;
   }
 
+  // v153: tarefa sem subtarefas não tinha como ser concluída antes do timer
+  // acabar. O botão só aparece com o timer NESTA tarefa (evita concluir A
+  // enquanto B está rodando e misturar referências).
+  const canFinishNow = !subs.length && timerOnThisTask;
+  const finishNowBtn = canFinishNow
+    ? `<button data-a="focusDone" data-id="${t.id}" class="focus-btn ghost" title="Concluir a tarefa e voltar para Hoje">${ico('check')} Concluir tarefa</button>`
+    : '';
   const actionsHtml = (restPending || restDone || reviewPending)
     ? restChoiceHtml
     : `<div class="focus-actions">
         ${primaryBtn}
         ${skipBtn}
         ${switchReveal}
+        ${finishNowBtn}
         <button data-a="log" data-id="${t.id}" data-m="5" class="focus-btn ghost">+5m</button>
         <button data-a="log" data-id="${t.id}" data-m="-5" class="focus-btn ghost">-5m</button>
         <button data-a="closeFocus" class="focus-btn ghost">Sair</button>
@@ -2327,6 +2356,7 @@ function renderFocus() {
       <h1 class="focus-title">${esc(t.t)}</h1>
       ${switchHtml}
       <div class="focus-timer-wrap">
+        <div class="focus-rose" aria-hidden="true">${roseWindow()}</div>
         <svg class="focus-circle" viewBox="0 0 240 240">
           <circle cx="120" cy="120" r="100" fill="none" stroke="var(--bd)" stroke-width="6"/>
           <circle cx="120" cy="120" r="100" fill="none" stroke="${ringColor}" stroke-width="6" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" transform="rotate(-90 120 120)" stroke-linecap="round" class="focus-progress" style="transition:stroke-dashoffset .3s, stroke .3s"/>

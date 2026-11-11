@@ -1,4 +1,4 @@
-﻿// =========================================================
+// =========================================================
 // LOGICA.JS — Regras de negócio
 // XP, scores, contatos, projetos, vagas, timer, filtros.
 // Nada aqui gera HTML — apenas cálculos e mutações em S.
@@ -467,10 +467,17 @@ function awardFocusPomodoros() {
   while (focusBankSec() >= POMODORO_SEC && n < 20) {
     var seq = (b.count || 0) + 1;
     var pomTs = Date.now();
-    var id = 'pom_focus_' + b.date + '_' + seq;
+    // v153: o id não pode ser só a sequência do dia (dois aparelhos podiam
+    // criar pom_focus_data_7 para sessões diferentes e o sync colapsava).
+    // A âncora é a sessão do timer + o número do pomodoro dentro do bloco.
+    var sessionBase = (typeof pomodoroSessionId === 'function') ? pomodoroSessionId(S.timer) : '';
+    var blockNo = (S.timer.blockPoms || 0) + 1;
+    var sessionHash = tfnv(b.date + '|' + sessionBase + '|' + blockNo);
+    var id = 'pom_focus_' + b.date + '_h' + sessionHash;
+    var sessionId = 'focus:' + b.date + ':h' + sessionHash;
     if (!Array.isArray(S.pomodoros)) S.pomodoros = [];
-    if (!S.pomodoros.some(function (p) { return p.id === id; })) {
-      S.pomodoros.push(mkPomodoro({id: id, sessionId: 'focus:' + b.date + ':' + seq, date: b.date, ts: pomTs, targetMin: 25, taskId: S.timer.taskId || null, subId: S.timer.subId || null}));
+    if (!S.pomodoros.some(function (p) { return p.id === id || p.sessionId === sessionId; })) {
+      S.pomodoros.push(mkPomodoro({id: id, sessionId: sessionId, date: b.date, ts: pomTs, targetMin: 25, taskId: S.timer.taskId || null, subId: S.timer.subId || null}));
     }
     b.count = seq;
     b.lastPomodoroAt = pomTs;
@@ -526,6 +533,13 @@ function dedupePomodoros(list) {
     out.push(p);
   });
   return out;
+}
+// v153: total do dia a partir do histórico consolidado (fonte do KPI e do stack).
+// O focusBank.count é progresso local; o histórico é a verdade sincronizada.
+function pomodorosTodayCount(date) {
+  var d = date || iso(new Date());
+  var today = (S.pomodoros || []).filter(function (p) { return p.date === d; });
+  return dedupePomodoros(today).length;
 }
 // v103: agrupa tarefas com o mesmo título normalizado (para o verificador de
 // duplicadas da Config). Não altera nada; só devolve os grupos com 2+.
@@ -797,6 +811,9 @@ function completeTaskInFocus(t) {
   // (ou abrir o modal de saída no mobile), a tarefa já foi salva como concluída.
   save();
   try { closeFocus(); } catch (e) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); }
+  // v153: depois de concluir no foco, volta para a tela inicial de Hoje.
+  try { if (typeof goToTab === 'function') goToTab('week'); else tab = 'week'; } catch (e) { tab = 'week'; }
+  try { if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo(0, 0); } catch (e) {}
   save(); render();
 }
 /* v145 — som do timer. Antes: um único tom 720 Hz em ganho 0.15 por 0.5 s, fácil de

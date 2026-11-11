@@ -9,6 +9,13 @@
   var KEY = 'atelier_onboarding_v1';
   var STEPS = ['login', 'intro', 'theme'];
   var state = { step: 0, overlay: null, force: false, loginStatus: '', selectedTheme: null, busy: false, showAllThemes: false };
+  // Oito famílias editoriais (THEME_FAMILIES, estado.js). A ordem das chaves é
+  // a ordem dos cards e o primeiro tema de cada família é a entrada; o restante
+  // fica em "Ver mais".
+  var FAMILIES = (typeof THEME_FAMILIES !== 'undefined') ? THEME_FAMILIES : {};
+  var PRIMARY_THEMES = Object.keys(FAMILIES).map(function (family) {
+    return { id: FAMILIES[family][0], family: family };
+  });
 
   function readStore() {
     try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; }
@@ -45,23 +52,37 @@
 
   function themeGrid(selected, all) {
     var themes = (typeof THEMES !== 'undefined') ? THEMES : {};
-    var ids = Object.keys(themes);
-    if (!all) {
-      var nordic = selected === 'nordic-dark' ? 'nordic-dark' : 'nordic-light';
-      ids = [nordic, 'obsidian', 'vampire'].filter(function (id) { return !!themes[id]; });
-    }
+    var picks = PRIMARY_THEMES.filter(function (p) { return !!themes[p.id]; });
+    var ids = all ? Object.keys(themes) : picks.map(function (p) { return p.id; });
+    // Cache parcial (onboarding novo + estado antigo): sem famílias, mostra todos
+    // em vez de uma grade vazia; o usuário ainda consegue escolher um tema.
+    if (!ids.length) ids = Object.keys(themes);
+    var familyById = {};
+    Object.keys(FAMILIES).forEach(function (family) {
+      (FAMILIES[family] || []).forEach(function (id) { familyById[id] = family; });
+    });
     return ids.map(function (id) {
       var t = themes[id];
-      var axis = (t.mode === 'light' ? 'CLARO' : 'ESCURO') + (t.look ? ' · ' + t.look.toUpperCase() : '');
+      var modeLabel = t.mode === 'light' ? 'CLARO' : 'ESCURO';
+      var lookLabel = t.look ? t.look.toUpperCase() : '';
       var art = (typeof themeArtVars === 'function') ? themeArtVars(t) : '';
+      var family = familyById[id] || '';
+      var showFamily = !all && !!family;
+      // Sem repetir "Brutal · ESCURO · BRUTAL" quando a família já é o look.
+      var meta = all
+        ? (family ? family + ' · ' : '') + modeLabel +
+          (lookLabel && lookLabel !== family.toUpperCase() ? ' · ' + lookLabel : '')
+        : '';
       return '<button type="button" class="theme-card ' + (id === selected ? 'on' : '') + '" data-ob-theme="' + esc(id) + '" style="' + art + '">' +
         '<div class="theme-swatch" style="background:' + esc(t.bg) + ';border-bottom:1px solid ' + esc(t.bd) + '">' +
         '<span class="ts-aa" aria-hidden="true">Aa</span>' +
         '<span class="ts-dot" style="background:' + esc(t.ac) + ';color:' + esc(t.ac) + '"></span>' +
         '<span class="ts-bar" style="background:' + (typeof themeBarGradient === 'function' ? themeBarGradient(t) : 'linear-gradient(90deg,' + esc(t.bu) + ',' + esc(t.ac) + ')') + '"></span>' +
         '<span class="ts-dot" style="background:' + esc(t.bu) + ';color:' + esc(t.bu) + '"></span></div>' +
-        '<div class="theme-info"><div class="theme-name">' + esc(t.n) + '</div><div class="theme-desc">' + esc(t.desc) + '</div>' +
-        '<div class="theme-axis" style="font-size:8.5px;line-height:1.2;color:var(--mu);margin-top:2px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(axis) + '</div></div>' +
+        '<div class="theme-info">' + (showFamily ? '<div class="ob-family">' + esc(family) + '</div>' : '') +
+        '<div class="theme-name">' + esc(t.n) + '</div><div class="theme-desc">' + esc(t.desc) + '</div>' +
+        (showFamily || !meta ? '' : '<div class="theme-axis" style="font-size:8.5px;line-height:1.2;color:var(--mu);margin-top:2px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(meta) + '</div>') +
+        '</div>' +
         '</button>';
     }).join('');
   }
@@ -85,17 +106,18 @@
         '<div class="acts"><button type="button" data-ob="next">Vamos começar</button>' +
         '<button type="button" data-ob="skip-intro">Pular</button></div></div>';
     }
-    return '<div class="ob-step"><h2>Escolha seu tema</h2>' +
-      '<p class="msg">Aplique agora e mude quando quiser em Configurações.</p>' +
+    return '<div class="ob-step"><h2>Escolha seu estilo</h2>' +
+      '<p class="msg">Selecione o tipo de espaço que combina com você. Dá para trocar depois em Configurações.</p>' +
       '<div class="theme-grid">' + themeGrid(ctx.selectedTheme, !!state.showAllThemes) + '</div>' +
       '<div class="acts"><button type="button" data-ob="finish">Concluir</button>' +
       '<button type="button" data-ob="skip-theme">Pular</button>' +
-      '<button type="button" data-ob="toggle-themes">' + (state.showAllThemes ? 'Ver menos' : 'Ver todos os ' + Object.keys((typeof THEMES !== 'undefined') ? THEMES : {}).length + ' temas') + '</button></div></div>';
+      '<button type="button" data-ob="toggle-themes">' + (state.showAllThemes ? 'Ver menos' : 'Ver mais temas (' + Object.keys((typeof THEMES !== 'undefined') ? THEMES : {}).length + ')') + '</button></div></div>';
   }
 
   function render() {
     if (!state.overlay) return;
-    state.overlay.innerHTML = '<div class="ob-card" role="dialog" aria-modal="true" aria-label="Apresentação do Ateliê">' +
+    var wide = STEPS[state.step] === 'theme' ? ' ob-wide' : '';
+    state.overlay.innerHTML = '<div class="ob-card' + wide + '" role="dialog" aria-modal="true" aria-label="Apresentação do Ateliê">' +
       '<button type="button" class="ob-close" data-ob="skip-all" aria-label="Fechar">✕</button>' +
       stepHTML(STEPS[state.step], state) + '</div>';
   }
@@ -193,6 +215,7 @@
     reset: reset,
     markDone: markDone,
     _html: stepHTML,
+    _grid: themeGrid,
     getState: function () { return { step: state.step, selectedTheme: state.selectedTheme, loginStatus: state.loginStatus }; }
   };
   window.openOnboarding = function (opts) { open(opts || { force: true }); };

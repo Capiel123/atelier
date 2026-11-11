@@ -40,6 +40,22 @@
     return Object.keys(map).map(function (k) { return map[k]; });
   }
 
+  // v153 — pomodoros são append-only: o pull faz UNIÃO por id, nunca substituição.
+  // O mesmo id remoto atualiza o local; ids só do local permanecem. Ordena por ts
+  // para o payload/hash ficar estável entre dispositivos.
+  function pomodoroKey(p) {
+    if (!p) return '';
+    if (p.id != null && p.id !== '') return 'id:' + String(p.id);
+    if (p.sessionId) return 's:' + String(p.sessionId);
+    return 't:' + [p.date || '', p.ts || 0, p.taskId || '', p.subId || ''].join('|');
+  }
+  function mergePomodoros(local, remote) {
+    var out = unionById(local, remote, pomodoroKey);
+    return out.sort(function (a, b) {
+      return ((a.ts || 0) - (b.ts || 0)) || String(a.id || '').localeCompare(String(b.id || ''));
+    });
+  }
+
   function workLogId(taskId, date) { return 'wl_' + fnv(String(taskId || '') + '|' + String(date || '')); }
   function workLogKey(taskId, date) { return String(taskId || '') + '|' + String(date || ''); }
 
@@ -271,7 +287,7 @@
   window.__merge = {
     decide: decide, fromRow: fromRow, fromTimer: fromTimer, mergeEntity: mergeEntity, mergeWorkLog: mergeWorkLog,
     workLogId: workLogId, workLogKey: workLogKey,
-    unionLogs: unionLogs, unionSubs: unionSubs,
+    unionLogs: unionLogs, unionSubs: unionSubs, mergePomodoros: mergePomodoros,
     _test: { fromTask: fromTask, fromProject: fromProject, fromContact: fromContact, fromWorkLog: fromWorkLog, fromTimer: fromTimer }
   };
 })();

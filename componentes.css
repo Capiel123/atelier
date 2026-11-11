@@ -776,11 +776,11 @@
 }
 
 /* =========================================================
-   IDENTIDADE VISUAL AVANÃ‡ADA (Fase Identidade v2)
+   IDENTIDADE VISUAL AVANÇADA (Fase Identidade v2)
    Geometria de indicadores, barras de progresso animadas,
-   glassmorphism. Todos os efeitos especiais de texto estÃ£o
+   glassmorphism. Todos os efeitos especiais de texto estão
    EXCLUSIVAMENTE na classe .logo (layout.css).
-   Nenhum tÃ­tulo de card (.tt, .compact-tt) ou input
+   Nenhum título de card (.tt, .compact-tt) ou input
    recebe background-clip, text-shadow ou qualquer efeito
    que prejudique a leitura.
    ========================================================= */
@@ -792,13 +792,13 @@
 
 /* diamond: losango via clip-path */
 :root:not([data-look="brutal"]) .dot[style*="var(--pr"] {
-  /* fallback: herdado pelo dot-radius jÃ¡ existente */
+  /* fallback: herdado pelo dot-radius já existente */
 }
 
-/* Aplicamos via [data-dot-shape] injetado pelo JS em applyTheme se necessÃ¡rio,
-   mas para zero JS extra usamos as variÃ¡veis CSS com workaround de clip-path
-   baseado nos valores de --dot-shape usando @property + paint worklet nÃ£o estÃ¡
-   disponÃ­vel; em vez disso, usamos seletores por data-look ou overrides por
+/* Aplicamos via [data-dot-shape] injetado pelo JS em applyTheme se necessário,
+   mas para zero JS extra usamos as variáveis CSS com workaround de clip-path
+   baseado nos valores de --dot-shape usando @property + paint worklet não está
+   disponível; em vez disso, usamos seletores por data-look ou overrides por
    classe de tema injetada no <html>. Abordagem: applyTheme injeta data-dot-shape
    e data-chk-shape no documentElement. */
 
@@ -860,17 +860,47 @@
   clip-path:none;
 }
 
-/* hex: hexÃ¡gono via clip-path */
+/* hex: hexagono via clip-path.
+   O border reto nao acompanha o recorte e ficava cortado nos cantos.
+   O contorno agora e um anel de 1,5 px: o proprio .chk pinta o anel e o
+   ::before pinta o interior, ambos com o mesmo polygon. Vale para qualquer
+   tema com chkShape hex (Gótico e Oculto). */
 [data-chk-shape="hex"] .chk{
-  clip-path:polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  position:relative;
+  z-index:0;
+  border:0 !important;
   border-radius:0 !important;
+  background:var(--hex-ring,var(--chk-bd,var(--bd)));
+  clip-path:polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
 }
-/* Fallback para browsers sem clip-path: mantÃ©m cÃ­rculo */
+[data-chk-shape="hex"] .chk::before{
+  content:"";
+  position:absolute;
+  inset:1.5px;
+  z-index:-1;
+  background:var(--hex-fill,var(--chk-bg,var(--s2)));
+  clip-path:polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  pointer-events:none;
+}
+/* Estados: anel e interior acompanham conclusao/feedback. */
+[data-chk-shape="hex"] .card.done>.row>.chk{
+  --hex-ring:var(--chk-done,var(--c));
+  --hex-fill:var(--chk-done,var(--c));
+}
+[data-chk-shape="hex"] .card.task-completing .chk,
+[data-chk-shape="hex"] .chk.checked{
+  --hex-ring:var(--ok);
+  --hex-fill:var(--ok);
+}
+/* Fallback para browsers sem clip-path: mantem circulo com borda normal. */
 @supports not (clip-path: polygon(0 0)) {
   [data-chk-shape="hex"] .chk{
+    border:1.5px solid var(--chk-bd,var(--bd)) !important;
     border-radius:50% !important;
+    background:var(--chk-bg,var(--s2));
     clip-path:none;
   }
+  [data-chk-shape="hex"] .chk::before{content:none}
 }
 
 /* Chamfer (Neon): quadrado com o canto superior direito cortado.
@@ -890,11 +920,11 @@
 }
 
 /* -----------------------------------------------------------
-   2.3 BARRAS DE PROGRESSO â€” TIPOS ESPECIAIS
+   2.3 BARRAS DE PROGRESSO — TIPOS ESPECIAIS
    --progress-type: solid | metal | liquid | glow
-   As regras abaixo sobrepÃµem o .fill existente apenas quando
-   o tipo ativo estÃ¡ setado via [data-progress-type="..."].
-   NÃ£o afetam os temas que nÃ£o setam o tipo.
+   As regras abaixo sobrepõem o .fill existente apenas quando
+   o tipo ativo está setado via [data-progress-type="..."].
+   Não afetam os temas que não setam o tipo.
    ----------------------------------------------------------- */
 
 /* METAL: gradiente tridimensional com brilho central */
@@ -921,7 +951,7 @@
       color-mix(in srgb, var(--bu) 80%, black) 100%) !important;
 }
 
-/* LIQUID: gradiente diagonal animado â€” ilusÃ£o de fluxo */
+/* LIQUID: gradiente diagonal animado — ilusão de fluxo */
 @keyframes liquidFlow{
   0%{background-position:0% 50%}
   100%{background-position:200% 50%}
@@ -940,7 +970,7 @@
   box-shadow:none !important;
 }
 
-/* GLOW: sÃ³lido com box-shadow colorida tipo neon */
+/* GLOW: sólido com box-shadow colorida tipo neon */
 [data-progress-type="glow"] .fill{
   background:linear-gradient(90deg, var(--bu), var(--ac)) !important;
   box-shadow:
@@ -953,10 +983,10 @@
 }
 
 /* -----------------------------------------------------------
-   2.6 GLASSMORPHISM â€” MENUS E POPOVERS
+   2.6 GLASSMORPHISM — MENUS E POPOVERS
    Ativo quando --panel-glass:1 (injetado por applyTheme).
    Usa @supports para garantir que browsers sem backdrop-filter
-   caiam no fundo sÃ³lido normal (sem qualidade visual degradada).
+   caiam no fundo sólido normal (sem qualidade visual degradada).
    ----------------------------------------------------------- */
 @supports (backdrop-filter: blur(1px)){
   :root[style*="--panel-glass: 1"] .act-menu-panel,
@@ -1386,4 +1416,98 @@
   [data-family="neon"] .day-head[data-mode="min"] .day-head-cycle .th-day{font-size:17px}
 }
 [data-family="neon"]{--card-gap:10px}
+
+/* =========================================================
+   GÓTICO CLÁSSICO (v148) — G1–G3
+   Catedral, não cemitério: pedra escura, ouro só em detalhe,
+   vitral só em progresso/indicador ativo, ogiva só no FAB.
+   ========================================================= */
+
+/* G2 — barra de vitral (v149). Em vez de um gradiente contínuo, panes de
+   cor separados por chumbos de 1 px na cor do fundo. Os panes alternam
+   quente/frio (rubi, azul, ouro, esmeralda, rosa, ciano, âmbar, ametista,
+   ouro velho, rubi) como um vitral de verdade; o brilho vertical dá o
+   aspecto de vidro iluminado de cima. Tudo ancorado no trilho (--bar-span),
+   então o vitral “acende” pane a pane conforme o progresso sobe. */
+[data-progress-type="vitral"] .bar{
+  background:var(--s3);
+  border-color:var(--bd);
+}
+[data-progress-type="vitral"] .bar i{display:none}
+[data-progress-type="vitral"] .fill{
+  background-image:
+    linear-gradient(180deg,
+      rgba(255,255,255,.20) 0%,
+      rgba(255,255,255,.04) 42%,
+      rgba(0,0,0,.06) 62%,
+      rgba(0,0,0,.16) 100%),
+    repeating-linear-gradient(90deg,
+      transparent 0,
+      transparent calc(10% - 1px),
+      var(--bg) calc(10% - 1px),
+      var(--bg) 10%),
+    linear-gradient(90deg,
+      #DF5763 0%,   #DF5763 10%,
+      #86AFF6 10%,  #86AFF6 20%,
+      #E1C56E 20%,  #E1C56E 30%,
+      #82BC72 30%,  #82BC72 40%,
+      #F4A0C9 40%,  #F4A0C9 50%,
+      #79D4CB 50%,  #79D4CB 60%,
+      #E3814A 60%,  #E3814A 70%,
+      #CB9CEB 70%,  #CB9CEB 80%,
+      #DAAC53 80%,  #DAAC53 90%,
+      #DF5763 90%,  #DF5763 100%) !important;
+  background-size:
+    var(--bar-span,100%) 100%,
+    var(--bar-span,100%) 100%,
+    var(--bar-span,100%) 100% !important;
+  background-repeat:no-repeat,no-repeat,no-repeat !important;
+  box-shadow:none !important;
+}
+/* O rótulo fica sobre panes claros em 100%; o halo escuro preserva a leitura. */
+[data-progress-type="vitral"] .bar span{
+  text-shadow:0 1px 2px #000, 0 0 4px #000, 0 0 6px rgba(0,0,0,.7);
+}
+[data-family="cathedral"] .mini{background:var(--s3)}
+[data-family="cathedral"] .mini div{background:var(--progress-gradient,linear-gradient(90deg,#DF5763,#DAAC53))}
+[data-family="cathedral"] .theme-preview-bar div{background:var(--progress-gradient,linear-gradient(90deg,#DF5763,#DAAC53))}
+
+/* G2 — card em andamento: tira lateral de 3 px com o vitral.
+   O fundo do card continua s1; o gradiente pinta a borda esquerda. */
+[data-family="cathedral"] .card.timer-on{
+  border-left-color:transparent;
+  background-image:linear-gradient(180deg,
+    #DF5763 0%, #86AFF6 14%, #E1C56E 28%, #82BC72 42%,
+    #F4A0C9 56%, #79D4CB 70%, #E3814A 84%, #CB9CEB 100%);
+  background-size:3px 100%;
+  background-repeat:no-repeat;
+  background-position:left top;
+}
+
+/* G3 — nome do dia sem ornamento: mantem o ouro do accent e a leitura
+   do cabecalho, sem pilula/ogiva. A data continua ao lado. */
+
+/* G3 — rosácea: linha fina de ouro. Desligada fora do tema. */
+.rose-window{display:none;width:64px;height:64px;color:var(--ac)}
+[data-family="cathedral"] .rose-window{display:block}
+[data-family="cathedral"] .empty-rose{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  padding:22px 8px;
+  text-align:center;
+}
+[data-family="cathedral"] .empty-rose .rose-window{width:72px;height:72px;opacity:.9}
+[data-family="cathedral"] .focus-rose{
+  position:absolute;
+  inset:6%;
+  z-index:0;
+  color:var(--ac);
+  opacity:.14;
+  pointer-events:none;
+}
+[data-family="cathedral"] .focus-rose .rose-window{width:100%;height:100%}
+.focus-circle{position:relative;z-index:1}
+.focus-time{z-index:2}
 

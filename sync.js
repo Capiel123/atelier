@@ -570,11 +570,45 @@
     return true;
   }
 
+  // v153: pomodoros são append-only e não podem sumir por LWW do settings.
+  // Faz união também quando o blob remoto é "velho" (pode conter um pomodoro
+  // que este aparelho ainda não viu) e sobe o contador local do dia.
+  function mergePomodorosFromSettings(data) {
+    if (!data || !Array.isArray(data.pomodoros)) return false;
+    var before = Array.isArray(S.pomodoros) ? S.pomodoros : [];
+    var merged = (window.__merge && window.__merge.mergePomodoros)
+      ? window.__merge.mergePomodoros(before, data.pomodoros)
+      : data.pomodoros.slice();
+    var changed = merged.length !== before.length || JSON.stringify(merged) !== JSON.stringify(before);
+    // v153: se o local tem pomodoro que o remoto não tem, o remoto precisa
+    // recebê-lo. Sem enfileirar, o merge ficaria só neste aparelho (o seen
+    // marcaria o blob mesclado como "já enviado").
+    var remoteIds = {};
+    data.pomodoros.forEach(function (p) { if (p && p.id != null) remoteIds[String(p.id)] = 1; });
+    var localOnly = before.some(function (p) { return p && p.id != null && !remoteIds[String(p.id)]; });
+    if (localOnly) {
+      var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
+      pushOp(store, 'user_settings', 'settings', 'upsert');
+      writeJSON(OUTBOX_KEY, store);
+      state.pending = store.ops.length;
+    }
+    if (changed) S.pomodoros = merged;
+    try {
+      if (typeof ensureFocusBank === 'function' && typeof dedupePomodoros === 'function') {
+        var today = (typeof iso === 'function') ? iso(new Date()) : new Date().toISOString().slice(0, 10);
+        var n = dedupePomodoros((S.pomodoros || []).filter(function (p) { return p.date === today; })).length;
+        var bank = ensureFocusBank();
+        if (n > (bank.count || 0)) { bank.count = n; bank.updatedAt = Date.now(); changed = true; }
+      }
+    } catch (e) {}
+    return changed;
+  }
+
   function applyUserSettings(row) {
     var cu = numVal(row.client_updated_at, 0);
     var last = numVal(localStorage.getItem(SETTINGS_CU_KEY), 0);
-    if (last && cu <= last) return false;
     var data = row.data || {};
+    if (last && cu <= last) return mergePomodorosFromSettings(data);
     var cfg = Object.assign({}, data.cfg || {});
     // v100 (BUG 3): recolhimento de seções é preferência LOCAL (não vai no pull).
     var localSections = (S.cfg && S.cfg.sectionsCollapsed) || null;
@@ -588,7 +622,7 @@
     S.commands = Array.isArray(data.commands) ? data.commands : [];
     // Fase 4: S.pomodoros viaja no blob de user_settings (JSONB), sem tabela nova.
     // Se o remoto ainda não tem o campo (cliente antigo), preserva o local.
-    if (Array.isArray(data.pomodoros)) S.pomodoros = data.pomodoros;
+    mergePomodorosFromSettings(data);
     S.cfg.theme = localTheme;
     S.cfg.accentColor = localAccent;
     if (localSections) S.cfg.sectionsCollapsed = localSections;

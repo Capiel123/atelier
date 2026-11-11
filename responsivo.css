@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    RESPONSIVO.CSS
    Camada final: media queries (celular/desktop), polimento
    de UX (v14.1 / v15 / v16), acessibilidade. É o ÚLTIMO
@@ -45,7 +45,7 @@
   .focus-title{font-size:20px}
   .xp-hero{padding:12px;gap:10px}
   .xp-hero .xp-level{font-size:34px}
-  .theme-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .history-actions button{min-width:44px;min-height:44px}
   .history-report-bar .hr-generate{width:100%;margin-left:0}
   .logo-text{font-size:20px}
@@ -95,6 +95,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(min-width:1024px){
   .wrap{max-width:1080px;padding:20px 28px 48px}
   header{margin-bottom:14px}.logo-text{font-size:28px}
+  /* 20 temas em 5×4 no desktop; nenhum card sobra na última linha. */
+  .theme-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
   #nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);padding-top:6px}
   .nav-area{padding:10px 14px;font-size:13.5px}
   #subnav{margin-bottom:14px}
@@ -1196,3 +1198,35 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 }
 @keyframes v143drop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){#subnav.nav-dropdown-open{animation:none}}
+
+/* =========================================================
+   GÓTICO CLÁSSICO (v148) — G3
+   FAB em arco ogival: rubi com contorno ouro e “+” marfim.
+   O contorno é um anel de 1,5 px (::before), não um inset-shadow reto,
+   para seguir os lados inclinados do arco. Só mobile (≤640px).
+   ========================================================= */
+@media(max-width:640px){
+  [data-family="cathedral"] .fab{
+    border:0;
+    border-radius:0;
+    background:var(--ac);
+    color:var(--chk-mark);
+    clip-path:polygon(50% 0%,90% 22%,100% 55%,100% 100%,0% 100%,0% 55%,10% 22%);
+    box-shadow:none;
+  }
+  [data-family="cathedral"] .fab::before{
+    content:"";
+    position:absolute;
+    inset:1.5px;
+    z-index:-1;
+    background:var(--fab-bg);
+    clip-path:polygon(50% 0%,90% 22%,100% 55%,100% 100%,0% 100%,0% 55%,10% 22%);
+    pointer-events:none;
+  }
+  [data-family="cathedral"] .fab:hover{filter:brightness(1.08)}
+}
+
+/* v152 — onboarding: 8 famílias em 2 colunas no celular (4×2 no desktop). */
+@media(max-width:640px){
+  .ob-card.ob-wide .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

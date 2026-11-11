@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    PAGINAS.CSS
    Estilos específicos de telas/features: Modo Foco, busca,
    atalhos, Jobs, Contatos, Network, XP, Temas, Histórico,
@@ -261,7 +261,9 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
    ========================================================= */
 .section-group{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:14px;margin-bottom:12px;box-shadow:var(--card-shadow,none)}
 .section-group h3{margin-top:0}
-.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+/* v152 — 20 temas: 4 colunas no tablet (5×4), 5 no desktop (4×5) e 2 no
+   celular (10×2). Todas as divisões fecham sem linha órfã no fim. */
+.theme-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
 /* v122 — flex column + topo alinhado: o <button> centralizava o conteúdo
    quando a linha do grid esticava (descrição de 2 linhas), deixando um vazio
    acima do swatch nos temas vizinhos. Agora o conteúdo começa sempre no topo
@@ -348,7 +350,11 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .ob-list li{margin:4px 0}
 .ob-step .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .ob-step .msg{margin:8px 0}
-.ob-card .theme-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.ob-card .theme-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+/* v152 — a etapa de tema abre mais larga e mostra as 8 famílias em 4×2. */
+.ob-card.ob-wide{width:min(680px,94vw)}
+.ob-card.ob-wide .theme-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ob-family{font-size:8.5px;line-height:1.2;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ac);margin-bottom:2px}
 @media (max-width:640px){.ob-card{padding:18px 16px}.ob-step h2{font-size:18px}}
 
 /* Direção de arte — estilo de borda dos painéis/modais.

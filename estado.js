@@ -1,4 +1,4 @@
-﻿// =========================================================
+// =========================================================
 // ESTADO.JS — Memória do app
 // Constantes, variáveis de estado, modelos de dados,
 // persistência (salvar/carregar/backup) e lixeira.
@@ -42,7 +42,24 @@ const THEMES = {
   'nordic-dark':  {n:'Nordic Escuro', desc:'Pedra, carvão e névoa', mode:'dark', ac:'#B4C0C3', bu:'#8A857B', bg:'#181714', s1:'#201F1B', s2:'#282722', s3:'#312F2A', bd:'#3B3832', chkBg:'#201F1B', chkBd:'#6B675E', chkDone:'#B4C0C3', chkMark:'#181714', tx:'#ECE9E1', mu:'#AAA59B', ok:'#8FB8A4', wr:'#D8B47E', er:'#E59B93', onAc:'#181714', radius:'6px', radiusSm:'4px', radiusPill:'4px', surfaceCard:'#201F1B', surfacePanel:'#282722', fontBody:"'Atelier Nordic', system-ui, sans-serif", fontWordmark:"'Atelier Nordic', system-ui, sans-serif"},
   'herbario-light': {n:'Herbário Claro', desc:'Jardim encantado · verde e orquídea', mode:'light', ac:'#246A42', bu:'#7049A9', bg:'#F1EAE3', s1:'#E8DCD5', s2:'#E3D9D1', s3:'#CDDDCA', bd:'#BDCFB9', chkBg:'#FAF6F0', chkBd:'#6B7D6E', chkDone:'#2F7F57', chkMark:'#FAF6F0', tx:'#26332A', mu:'#546056', ok:'#296A3B', wr:'#7F5505', er:'#9A413D', onAc:'#FAF6F0', radius:'14px', radiusSm:'10px', surfaceCard:'#DFEFDC', surfacePanel:'#E8DCD5', fontBody:"'Atelier Herbario', system-ui, sans-serif", fontWordmark:"'Atelier Herbario Display', Georgia, serif"},
   'herbario-dark':  {n:'Herbário Escuro', desc:'Musgo, sálvia e bronze', mode:'dark', ac:'#8BBEAA', bu:'#B499E4', bg:'#231F13', s1:'#2B281A', s2:'#343021', s3:'#3E3B2A', bd:'#4D4937', chkBg:'#231F13', chkBd:'#8D8972', chkDone:'#8BBEAA', chkMark:'#231F13', tx:'#EFE6D3', mu:'#ABA693', ok:'#88CA95', wr:'#E0B771', er:'#F4928A', onAc:'#231F13', radius:'14px', radiusSm:'10px', surfaceCard:'#2B281A', surfacePanel:'#343021', fontBody:"'Atelier Herbario', system-ui, sans-serif", fontWordmark:"'Atelier Herbario Display', Georgia, serif"},
-  'neon-rain': {n:'Neon Rain', desc:'Chuva neon · cyberpunk', mode:'dark', ac:'#FF5DBF', bu:'#36D9E8', bg:'#16101F', s1:'#1B1B2B', s2:'#29243C', s3:'#342E4B', bd:'#3D3B5C', chkBg:'#1B1B2B', chkBd:'#66718F', chkDone:'#36D9E8', chkMark:'#101019', tx:'#E8E7F2', mu:'#B6B5D0', ok:'#56D1A3', wr:'#E4AC59', er:'#FD717C', onAc:'#101019', controlBd:'#66718F', fabBg:'#F02FAD', fontBody:"'Atelier Neon', system-ui, sans-serif", fontWordmark:"'Atelier Neon', system-ui, sans-serif"}
+  'neon-rain': {n:'Neon Rain', desc:'Chuva neon · cyberpunk', mode:'dark', ac:'#FF5DBF', bu:'#36D9E8', bg:'#16101F', s1:'#1B1B2B', s2:'#29243C', s3:'#342E4B', bd:'#3D3B5C', chkBg:'#1B1B2B', chkBd:'#66718F', chkDone:'#36D9E8', chkMark:'#101019', tx:'#E8E7F2', mu:'#B6B5D0', ok:'#56D1A3', wr:'#E4AC59', er:'#FD717C', onAc:'#101019', controlBd:'#66718F', fabBg:'#F02FAD', fontBody:"'Atelier Neon', system-ui, sans-serif", fontWordmark:"'Atelier Neon', system-ui, sans-serif"},
+  'gothic-classic': {n:'Gótico Clássico', desc:'Catedral · pedra e vitral', mode:'dark', ac:'#C69E61', bu:'#93A9C6', bg:'#111316', s1:'#1C2024', s2:'#292D31', s3:'#373A3D', bd:'#55504A', chkBg:'#1C2024', chkBd:'#75716A', chkDone:'#7F263B', chkMark:'#F3EBDA', tx:'#EDE6D6', mu:'#A8A49C', ok:'#68B88F', wr:'#DCAF61', er:'#FA807F', onAc:'#111316', controlBd:'#75716A', fabBg:'#7F263B', radius:'10px', radiusSm:'6px', fontWordmark:"'Grenze Gotisch Wordmark','Grenze Gotisch',serif", prHigh:'#C69E61', prMed:'#C69E61', prLow:'#C69E61', progressGradient:'linear-gradient(90deg,#DF5763 0%,#86AFF6 10%,#E1C56E 20%,#82BC72 30%,#F4A0C9 40%,#79D4CB 50%,#E3814A 60%,#CB9CEB 70%,#DAAC53 80%,#DF5763 90%,#DF5763 100%)'}
+};
+
+/* --- FAMÍLIAS DE ESTILO (onboarding e documentação) ---
+   Agrupamento editorial dos 20 temas em 8 famílias. A ordem das chaves é a
+   ordem dos cards do onboarding e o primeiro id de cada família é a entrada.
+   Não confundir com a chave `family` (data-family), que liga o CSS de direção
+   de arte de Nordic, Herbário, Neon e Gótico. Ver docs/design/TEMAS.md §4. */
+const THEME_FAMILIES = {
+  'Minimalista': ['nordic-light', 'nordic-dark'],
+  'Clássico': ['obsidian', 'bone'],
+  'Gótico': ['gothic-classic', 'vampire', 'occult'],
+  'Fantasia': ['herbario-light', 'herbario-dark', 'moonlight', 'ember'],
+  'Romântico': ['rose'],
+  'Noturno': ['noir', 'abyss'],
+  'Cyberpunk': ['neon-rain', 'cyanotic', 'toxic'],
+  'Brutal': ['deepbone', 'chrome', 'deepbone-light']
 };
 
 /* --- IDENTIDADE VISUAL (Fase Identidade v2) ---
@@ -73,7 +90,8 @@ const THEME_IDENTITY = {
   'nordic-dark':  { dotShape:'ticks', chkShape:'square', progressType:'solid', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'soft', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'nordic', paletteUse:'marker' },
   'herbario-light': { dotShape:'circle', chkShape:'circle', progressType:'iris', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'herbal', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'marker' },
   'herbario-dark':  { dotShape:'circle', chkShape:'circle', progressType:'bronze', logoEffect:'none', topOrnament:'', isGlass:false, iconSet:'herbal', icoStroke:'1.5', icoCap:'round', icoJoin:'round', family:'herbario', paletteUse:'text' },
-  'neon-rain':      { dotShape:'pips', chkShape:'chamfer', progressType:'neon',  logoEffect:'none', topOrnament:'', isGlass:false, family:'neon', paletteUse:'text', iconSet:'tech', icoStroke:'1.5', icoCap:'round', icoJoin:'miter' }
+  'neon-rain':      { dotShape:'pips', chkShape:'chamfer', progressType:'neon',  logoEffect:'none', topOrnament:'', isGlass:false, family:'neon', paletteUse:'text', iconSet:'tech', icoStroke:'1.5', icoCap:'round', icoJoin:'miter' },
+  'gothic-classic': { dotShape:'diamond', chkShape:'hex', progressType:'vitral', logoEffect:'serif', topOrnament:'', isGlass:false, family:'cathedral', paletteUse:'text', iconSet:'cathedral', icoStroke:'1.5', icoCap:'round', icoJoin:'miter' }
 };
 
 /* --- DIREÇÃO DE ARTE POR TEMA ---
@@ -141,7 +159,8 @@ const THEME_PALETTES = {
   'nordic-dark':  ['#CFA08E','#D8BB91','#C9C098','#94B29C','#93C0C0','#9DB4C4','#B7AAC5','#D4AEB8','#B2ADA3'],
   'herbario-light': ['#B55F44','#9B6923','#707124','#448551','#2F7E78','#3E7DAC','#844AC7','#AC3A8E','#757975'],
   'herbario-dark':  ['#FA9B7D','#EAB26D','#D1D485','#7EC289','#89D8D1','#76B9EC','#B8A9F5','#F6A9CE','#B0B4B1'],
-  'neon-rain':      ['#FF7E82','#FEAA74','#F4CD4F','#7AC863','#5DE0EF','#75A7FF','#D396FF','#FEA5E7','#A9A6A9']
+  'neon-rain':      ['#FF7E82','#FEAA74','#F4CD4F','#7AC863','#5DE0EF','#75A7FF','#D396FF','#FEA5E7','#A9A6A9'],
+  'gothic-classic': ['#FC8D80','#F3A16B','#E1C56E','#82BC72','#79D4CB','#86AFF6','#CB9CEB','#F4A0C9','#B3AEAD']
 };
 Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
 Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });
