@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
 
 /* --- NAVEGAÇÃO POR ÁREA (R3) ---
    A área não é um destino novo: abre a última tela usada do grupo (D9) ou o padrão.
@@ -76,6 +76,7 @@ document.addEventListener('click', ev => {
     case 'peopleSeg': {
       peopleMode = btn.dataset.type === 'personal' ? 'personal' : 'pro';
       revealedContacts.clear();
+      orbitSelectedId = null;
       render();
       if (keyboardNav) focusNavSelector('#subnav .nav-subitem.on');
       return;
@@ -86,7 +87,7 @@ document.addEventListener('click', ev => {
       if (revealedContacts.has(id)) revealedContacts.delete(id); else revealedContacts.add(id);
       render(); return;
     }
-    case 'contactOrbitMore': {contactView[btn.dataset.type] = 'list'; saveContactView(); render(); return;}
+    case 'contactOrbitMore': {contactView[btn.dataset.type] = 'list'; orbitSelectedId = null; saveContactView(); render(); return;}
     case 'contactsCompact': {
       const total = (S.contacts || []).reduce((n, c) => n + (c.interactions || []).length, 0);
       if (!total) {toast('Nada para compactar'); return;}
@@ -739,7 +740,7 @@ document.addEventListener('click', ev => {
     case 'jobDel': if (!confirm('Excluir vaga? Ela vai para o lixo.')) return; softDelete('applications', id); break;
     case 'reviewJobFollowUp': {const app = S.applications.find(x => x.id === id); if (app) recordJobInteraction(app); break;}
     case 'reviewJobSnooze': {const app = S.applications.find(x => x.id === id); if (app) {const d = new Date(); d.setDate(d.getDate()+7); app.nextFollowUp = iso(d); touch(app);} break;}
-    case 'contactView': contactView[btn.dataset.type] = btn.dataset.mode; saveContactView(); render(); return;
+    case 'contactView': contactView[btn.dataset.type] = btn.dataset.mode; orbitSelectedId = null; saveContactView(); render(); return;
     case 'toggleTagFilter': {const tp = btn.dataset.type, tag = btn.dataset.tag; const arr = contactFilterState[tp].tags; if (arr.includes(tag)) contactFilterState[tp].tags = arr.filter(x => x !== tag); else contactFilterState[tp].tags.push(tag); render(); return;}
     case 'clearTagFilter': contactFilterState[btn.dataset.type].tags = []; render(); return;
     case 'cAdd': {const type = btn.dataset.type; const n = V('cN_' + type); if (!n) {toast('Nome obrigatório', true); return;} const cad = +V('cCadence_' + type) || (type === 'pro' ? 30 : 21); const tags = tagList(V('cTags_' + type) || ''); S.contacts.push(mkContact({n, type, cat: V('cCat_' + type) || (type === 'pro' ? 'Prospect' : 'Conhecido'), where: V('cWhere_' + type), url: V('cUrl_' + type), role: V('cRole_' + type), context: V('cContext_' + type), notes: V('cNotes_' + type), lastConversation: V('cLastConv_' + type), nextAction: V('cNextAction_' + type), cadence: cad, tags})); if (window.__atelierDraftClear) window.__atelierDraftClear('contact:' + type + ':'); break;}
@@ -762,17 +763,40 @@ document.addEventListener('click', ev => {
     case 'contactLog': {if (!c) break; openInteractionSheet(c.id); return;}
     case 'contactOrbitClick': {
       if (!c) break;
-      // v139: o nó abre o contato na lista (a órbita não tem cards para rolar).
-      contactView[c.type] = 'list';
-      saveContactView();
+      // O5: 1º toque abre o mini-card; 2º toque (ou "Abrir na lista") vai para a lista.
+      if (orbitSelectedId === c.id) { openOrbitContact(c); return; }
+      orbitSelectedId = c.id;
+      render();
+      // O5: no mobile o mini-card fica acima do SVG; garante que ele apareça
+      // sem tirar o usuário do contexto da órbita. No teclado, devolve o foco
+      // ao nó (o render recria o SVG).
+      setTimeout(() => {
+        const mini = document.querySelector('.orbit-mini');
+        if (mini && mini.scrollIntoView) mini.scrollIntoView({block: 'nearest'});
+        const node = document.querySelector('g[data-a="contactOrbitClick"][data-id="' + c.id + '"]');
+        if (node && node.focus) { try { node.focus({preventScroll: true}); } catch (e) { node.focus(); } }
+      }, 0);
+      return;
+    }
+    case 'contactOrbitOpen': if (!c) break; openOrbitContact(c); return;
+    case 'contactOrbitClose': orbitSelectedId = null; render(); return;
+    case 'contactOrbitFav': {
+      if (!c) break;
+      const on = toggleOrbitFavorite(c.id);
+      save(); render();
+      toast(on ? '★ Favorito' : 'Favorito removido');
+      return;
+    }
+    case 'contactOrbitRing': {
+      const tp = btn.dataset.type || 'pro';
+      const d = +btn.dataset.depth || 0;
+      orbitDepthFilter[tp] = orbitDepthFilter[tp] === d ? 0 : d;
+      orbitSelectedId = null;
       render();
       setTimeout(() => {
-        const card = document.querySelector('[data-cid="' + c.id + '"]');
-        if (!card) return;
-        card.scrollIntoView({behavior: 'smooth', block: 'center'});
-        card.classList.add('highlight');
-        setTimeout(() => card.classList.remove('highlight'), 2100);
-      }, 80);
+        const ring = document.querySelector('.orbit-ring-hit[data-depth="' + d + '"]');
+        if (ring && ring.focus) { try { ring.focus({preventScroll: true}); } catch (e) { ring.focus(); } }
+      }, 0);
       return;
     }
     case 'cDel': if (!confirm('Excluir contato? Ele vai para o lixo.')) return; softDelete('contacts', id); break;
@@ -1127,6 +1151,16 @@ document.addEventListener('keydown', ev => {
     ev.preventDefault();
     ev.target.click();
     return;
+  }
+  // O5 — nós e anéis do Orbit são focáveis; Enter/Espaço acionam como clique.
+  if ((ev.key === 'Enter' || ev.key === ' ') && tgt && tgt.closest) {
+    const orbitTarget = tgt.closest('[data-a="contactOrbitClick"], [data-a="orbitRing"]');
+    if (orbitTarget) {
+      ev.preventDefault();
+      if (orbitTarget.dispatchEvent) orbitTarget.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+      else if (orbitTarget.click) orbitTarget.click();
+      return;
+    }
   }
   if (ev.key === 'n' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {ev.preventDefault(); if (tab === 'week' && (!showQuickAdd || getDayHeadMode() !== 'full')) { showQuickAdd = true; setDayHeadMode('full'); render(); } focusQuickAdd(); return;}
   if (ev.key === 'f' && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {

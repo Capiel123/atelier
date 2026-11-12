@@ -1230,3 +1230,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(max-width:640px){
   .ob-card.ob-wide .theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* O5 — Orbit: mini-card e alvos de toque no celular. */
+@media(max-width:640px){
+  .orbit-mini{max-width:none;padding:10px}
+  .orbit-mini-actions button{min-height:44px}
+  .orbit-svg .orbit-ring-hit{stroke-width:20}
+  .orbit-svg .node-label{font-size:10px}
+}

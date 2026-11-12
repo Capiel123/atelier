@@ -168,20 +168,50 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .contact-card .big > input[data-p]:focus{background:var(--s2);border-color:var(--ac);padding:2px 6px}
 
 /* Visualização "órbita" (rede de contatos) */
-.orbit-wrap{background:var(--surface-card,var(--s1));border:1px solid var(--bd);border-radius:var(--radius,12px);padding:12px;margin-bottom:12px;display:flex;flex-direction:column;align-items:center}
+.orbit-wrap{background:var(--surface-card,var(--s1));border:1px solid var(--control-bd,var(--bd));border-radius:var(--radius,12px);padding:12px;margin-bottom:12px;display:flex;flex-direction:column;align-items:center}
 .orbit-svg{width:100%;max-width:380px;height:auto;display:block}
-.orbit-svg .ring{fill:none;stroke-width:1;stroke-dasharray:3,3}
-.orbit-svg .ring-1{stroke:color-mix(in srgb,var(--ac) 35%,transparent)}
-.orbit-svg .ring-2{stroke:color-mix(in srgb,var(--ac) 18%,transparent)}
-.orbit-svg .ring-3{stroke:color-mix(in srgb,var(--ac) 8%,transparent)}
+.orbit-svg g[data-a="contactOrbitClick"]{cursor:pointer}
+/* O5 — contraste: anéis mais presentes, rótulos em tx e halo de superfície nos nós. */
+.orbit-svg .ring{fill:none;stroke-width:1.2;stroke-dasharray:var(--orbit-ring-dash,none);pointer-events:none}
+.orbit-svg .ring-1{stroke:color-mix(in srgb,var(--ac) 72%,var(--bd))}
+.orbit-svg .ring-2{stroke:color-mix(in srgb,var(--ac) 50%,var(--bd))}
+.orbit-svg .ring-3{stroke:color-mix(in srgb,var(--ac) 34%,var(--bd))}
+.orbit-svg .ring--on{stroke:var(--ac);stroke-width:1.7}
+.orbit-svg .orbit-ring-hit{fill:none;stroke:transparent;stroke-width:16;pointer-events:stroke;cursor:pointer}
 .orbit-svg .center{fill:var(--ac)}
-.orbit-svg .node{cursor:pointer;transition:r .15s}
-.orbit-svg .node:hover{stroke:var(--tx);stroke-width:2}
-.orbit-svg .node-label{fill:var(--mu);font-size:9px;pointer-events:none;text-anchor:middle;font-weight:600}
-.orbit-legend{display:flex;gap:14px;font-size:10.5px;color:var(--mu);margin-top:10px;flex-wrap:wrap;justify-content:center}
+/* O4/O5 — nós na forma do dotShape (símbolos o-*): cheio = ativo, vazado = atrasado/aguardando/adiado. */
+.orbit-svg .orbit-node{fill:currentColor;stroke:var(--surface-card,var(--s1));stroke-width:.12;paint-order:stroke}
+.orbit-svg .orbit-node--open{fill:none;stroke:currentColor;stroke-width:.24}
+.orbit-svg .orbit-node--late{stroke-width:.34;stroke-dasharray:1.1 .9}
+.orbit-svg .orbit-node--fav{stroke:var(--ac);stroke-width:.3}
+.orbit-svg .orbit-node--sel{stroke:var(--tx);stroke-width:.38}
+.orbit-svg .orbit-node--dim{opacity:.16}
+.orbit-svg .orbit-node:hover,
+.orbit-svg g[data-a="contactOrbitClick"]:hover .orbit-node,
+.orbit-svg g[data-a="contactOrbitClick"]:focus-visible .orbit-node{stroke:var(--tx);stroke-width:.4}
+.orbit-svg .orbit-ring-hit:focus-visible{stroke:var(--ac);stroke-width:18}
+.orbit-svg .orbit-hit{fill:transparent;stroke:none;pointer-events:all}
+.orbit-svg .orbit-fav-dot{fill:var(--ac);stroke:none;pointer-events:none}
+.orbit-svg .orbit-center-motif{fill:none;stroke:currentColor;stroke-width:1.4;color:var(--ac);opacity:.18;pointer-events:none}
+.orbit-svg .orbit-center-initial{fill:var(--on-ac,#000);font-size:12px;font-weight:700;text-anchor:middle;pointer-events:none}
+.orbit-svg .node-label{fill:var(--tx);opacity:.84;font-size:9.5px;pointer-events:none;text-anchor:middle;font-weight:700;paint-order:stroke;stroke:var(--surface-card,var(--s1));stroke-width:1.4}
+.orbit-svg .orbit-sector{stroke:color-mix(in srgb,var(--mu) 42%,transparent);stroke-width:.6;stroke-dasharray:2 6;pointer-events:none}
+.orbit-legend{display:flex;gap:14px;font-size:10.5px;color:var(--tx);opacity:.82;margin-top:10px;flex-wrap:wrap;justify-content:center}
 .orbit-legend span{display:flex;align-items:center;gap:4px}
 .orbit-legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
-.orbit-labels{font-size:10px;color:var(--mu);fill:var(--mu)}
+.orbit-legend-fav i{border-radius:0;transform:rotate(45deg);background:var(--ac)}
+.orbit-labels{font-size:11px;fill:var(--tx);opacity:.78;text-anchor:middle;font-weight:600}
+.orbit-labels--dim{opacity:.3}
+.orbit-mini{width:100%;max-width:360px;background:var(--s1);border:1px solid var(--control-bd,var(--bd));border-radius:10px;padding:10px 12px;margin-bottom:10px;text-align:left}
+.orbit-mini-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.orbit-mini-top b{font-size:13px;color:var(--tx);line-height:1.25}
+.orbit-mini-top button{background:transparent;border:0;color:var(--mu);font-size:16px;line-height:1;padding:4px;min-width:32px;min-height:32px}
+.orbit-mini-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px;font-size:11.5px;color:var(--mu)}
+.orbit-mini-status{color:var(--tx);font-weight:600}
+.orbit-mini-last{margin-top:6px;font-size:12px;line-height:1.45;color:var(--mu);overflow-wrap:anywhere}
+.orbit-mini-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.orbit-mini-actions button{background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px;padding:7px 10px;min-height:36px;cursor:pointer}
+.orbit-mini-actions button[aria-pressed="true"]{border-color:var(--ac);color:var(--ac)}
 /* v139 — modo discreto (tela compartilhada) e órbita com teto por anel. */
 .contact-reveal{background:transparent;border:1px solid var(--bd);color:var(--mu);padding:3px 6px;border-radius:6px;font-size:11px;line-height:1;flex:none;min-height:26px}
 .contact-reveal:hover{color:var(--ac);border-color:var(--ac)}
@@ -193,7 +223,7 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .contact-card.discreet .contact-url,
 .contact-card.discreet .contact-client,
 .contact-card.discreet .contact-next{display:none!important}
-.orbit-count{font-size:10.5px;color:var(--mu);margin-top:6px;text-align:center;letter-spacing:.02em}
+.orbit-count{font-size:11px;color:var(--tx);opacity:.75;margin-top:6px;text-align:center;letter-spacing:.02em}
 .orbit-over{color:var(--ac);font-weight:600}
 .orbit-more{margin-top:8px;font-size:11.5px;padding:6px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--ac);cursor:pointer}
 .orbit-more:hover{border-color:var(--ac)}
@@ -291,6 +321,18 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
    ========================================================= */
 .history-day{margin-bottom:14px}
 .history-day-header{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd);margin-bottom:4px;font-size:13px}
+.history-day-header b::before{content:var(--top-ornament,"");color:var(--ac);opacity:.65;margin-right:4px;font-size:11px;font-weight:400;pointer-events:none}
+/* O3 — régua de dias: linha contínua + nó por dia na forma do dotShape do tema.
+   Geometria só no CSS; a cor vem de --hist-rail (token do tema). */
+.history-days{position:relative;padding-left:16px}
+.history-days::before{content:"";position:absolute;left:4px;top:8px;bottom:8px;width:1px;background:var(--hist-rail,var(--bd));pointer-events:none}
+.history-days .history-day{position:relative}
+.history-days .history-day::before{content:"";position:absolute;left:-15px;top:9px;width:7px;height:7px;box-sizing:border-box;background:var(--hist-rail,var(--bd));border-radius:50%;pointer-events:none}
+[data-dot-shape="square"] .history-days .history-day::before{border-radius:0}
+[data-dot-shape="diamond"] .history-days .history-day::before{border-radius:0;transform:rotate(45deg)}
+[data-dot-shape="ring"] .history-days .history-day::before{background:var(--bg);border:1.5px solid var(--hist-rail,var(--bd))}
+[data-dot-shape="ticks"] .history-days .history-day::before{background:repeating-linear-gradient(90deg,var(--hist-rail,var(--bd)) 0 1px,transparent 1px 3px)}
+[data-dot-shape="pips"] .history-days .history-day::before{background:radial-gradient(circle at 15% 50%,var(--hist-rail,var(--bd)) 1.1px,transparent 1.3px),radial-gradient(circle at 50% 50%,var(--hist-rail,var(--bd)) 1.1px,transparent 1.3px),radial-gradient(circle at 85% 50%,var(--hist-rail,var(--bd)) 1.1px,transparent 1.3px)}
 .history-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid color-mix(in srgb,var(--bd) 40%,transparent)}
 .history-row:last-child{border-bottom:none}
 .history-content{flex:1;min-width:0}

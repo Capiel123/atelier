@@ -126,6 +126,8 @@
   --bg-pattern:none;--bg-pattern-size:auto;--bg-pattern-opacity:0;
   --dot-shape:circle;--chk-shape:square;
   --progress-type:solid;--logo-effect:none;--top-ornament:"";
+  /* O1 — motivos: forma do Foco (anel), Orbit e Histórico */
+  --focus-ring-cap:round;--focus-ticks:none;--orbit-ring-dash:none;--hist-rail:var(--bd);
   --fab-bg:color-mix(in srgb,var(--bg) 86%,var(--s2));
   --fab-border:var(--ac);
   --font-body:'DM Sans',system-ui,sans-serif;
@@ -163,6 +165,14 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
   pointer-events:none;
 }
 .ico.ico--on{fill:currentColor}
+/* O1 — motivo do tema: mesma gramática do ico, mas o desenho é ambiente.
+   A espessura e as pontas ficam no CSS (os símbolos `m-*` não as definem). */
+.motif{
+  display:block;width:100%;height:100%;
+  fill:none;stroke:currentColor;stroke-width:1;
+  stroke-linecap:round;stroke-linejoin:round;
+  pointer-events:none;
+}
 /* v100: rotações para setas que o sprite não tem em todas as direções. */
 .ico--prev{transform:rotate(90deg)}
 .ico--next{transform:rotate(-90deg)}

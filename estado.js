@@ -62,6 +62,49 @@ const THEME_FAMILIES = {
   'Brutal': ['deepbone', 'chrome', 'deepbone-light']
 };
 
+/* --- MOTIVOS (O1) ---
+   Marca d'água ambiente do tema: um símbolo `m-*` do sprite, só geometria e
+   `currentColor`. Base por família editorial e exceções onde a identidade
+   pede desenho próprio; Brutal não tem motivo (a identidade é o anel grosso).
+   O motivo é ambiente, não informação: não repete dado da tela. */
+const MOTIF_BY_FAMILY = {
+  'Minimalista': 'dial',
+  'Clássico': 'compass',
+  'Gótico': 'rosace',
+  'Fantasia': 'wreath',
+  'Romântico': 'petals',
+  'Noturno': 'rule',
+  'Cyberpunk': 'hud',
+  'Brutal': 'grid'
+};
+const MOTIF_BY_THEME = {
+  vampire: 'lattice', occult: 'sigil', moonlight: 'phases', ember: 'embers',
+  abyss: 'constellation', cyanotic: 'radar', toxic: 'reticle'
+};
+/* O4/O5 — forma do nó do Orbit. Base = `dotShape` do tema; seis temas trocam
+   por um desenho próprio (hexágono, estrela 4/5 pontas, crescente, chanfrado
+   e planeta). Brasa usa estrela de 5 pontas para não repetir o Abismo. */
+const ORBIT_NODE_BY_THEME = {
+  'gothic-classic': 'hex', abyss: 'star4', ember: 'star5', moonlight: 'crescent',
+  'neon-rain': 'chamfer', occult: 'planet'
+};
+/* Ticks da régua do Foco (r=100 → C≈628,32 → 60 marcas por período 10,47).
+   Só onde a régua combina; nos demais o trilho continua sólido. */
+const FOCUS_TICKS = {
+  'nordic-light': '1 9.47', 'nordic-dark': '1 9.47',
+  'neon-rain': '14 6.94', occult: '2 8.47', cyanotic: '6 14.94'
+};
+/* Declarados em O1, usados em O3 (Histórico) e O4 (Orbit). */
+const ORBIT_DASH = { vampire: '8 4', occult: '4 4', moonlight: '1 5' };
+const HIST_RAIL = {
+  'Clássico': 'color-mix(in srgb, var(--ac) 30%, var(--bd))',
+  'Gótico': 'color-mix(in srgb, var(--ac) 40%, var(--bd))',
+  'Fantasia': 'color-mix(in srgb, var(--ac) 26%, var(--bd))',
+  'Romântico': 'color-mix(in srgb, var(--ac) 26%, var(--bd))',
+  'Cyberpunk': 'color-mix(in srgb, var(--ac) 40%, transparent)',
+  'Brutal': 'var(--tx)'
+};
+
 /* --- IDENTIDADE VISUAL (Fase Identidade v2) ---
    Tokens de arte e padrão visual por tema.
    bgPattern / bgPatternSize / bgPatternOpacity: padrão de fundo via CSS.
@@ -165,6 +208,18 @@ const THEME_PALETTES = {
 Object.keys(THEME_ART).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_ART[id]); });
 Object.keys(THEME_IDENTITY).forEach(id => { if (THEMES[id]) Object.assign(THEMES[id], THEME_IDENTITY[id]); });
 Object.keys(THEME_PALETTES).forEach(id => { if (THEMES[id]) THEMES[id].palette = THEME_PALETTES[id]; });
+// O1 — motivo e tokens de forma: a família dá a base, o tema sobrescreve.
+Object.keys(THEME_FAMILIES).forEach(family => {
+  THEME_FAMILIES[family].forEach(id => {
+    if (!THEMES[id]) return;
+    THEMES[id].motif = MOTIF_BY_THEME[id] || MOTIF_BY_FAMILY[family];
+    THEMES[id].focusCap = THEMES[id].icoCap || 'round';
+    THEMES[id].orbitNode = ORBIT_NODE_BY_THEME[id] || THEMES[id].dotShape || 'circle';
+    if (FOCUS_TICKS[id]) THEMES[id].focusTicks = FOCUS_TICKS[id];
+    if (ORBIT_DASH[id]) THEMES[id].orbitDash = ORBIT_DASH[id];
+    if (HIST_RAIL[family]) THEMES[id].histRail = HIST_RAIL[family];
+  });
+});
 const PR = ['Alta','Média','Baixa'];
 const PRC = ['var(--pr-high, #e0626a)','var(--pr-med, #e0a33b)','var(--pr-low, #6f8de0)'];
 const DAYS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
@@ -324,6 +379,22 @@ let filterState = {text:'', type:'', area:'', proj:'', labels:[], showLabels:fal
 let jobFilter = {stage:'active', area:'', priority:'all', platform:'', text:''};
 let contactFilterState = {pro: {text:'', cat:'', status:'all', tags:[], sort:'score'}, personal: {text:'', cat:'', status:'all', tags:[], sort:'score'}};
 let contactView = loadContactView();
+// O5 — estado local da órbita (não entra em S, exceto os favoritos).
+let orbitSelectedId = null;
+let orbitDepthFilter = {pro: 0, personal: 0};
+function orbitFavorites() {
+  if (!S || !S.cfg) return [];
+  if (!Array.isArray(S.cfg.orbitFavorites)) S.cfg.orbitFavorites = [];
+  return S.cfg.orbitFavorites;
+}
+function isOrbitFavorite(id) { return !!id && orbitFavorites().indexOf(id) >= 0; }
+function toggleOrbitFavorite(id) {
+  if (!id) return false;
+  const list = orbitFavorites();
+  const i = list.indexOf(id);
+  if (i >= 0) list.splice(i, 1); else list.push(id);
+  return i < 0;
+}
 // v137 — aba única "Pessoas": o segmento decide qual tipo é exibido (não persiste).
 let peopleMode = 'pro';
 let lastSlot = null;
@@ -407,7 +478,10 @@ function applyTheme() {
     topOrnament: '--top-ornament',
     // Ícones por identidade (v99)
     icoStroke: '--ico-stroke', icoCap: '--ico-cap',
-    icoJoin: '--ico-join', icoGlow: '--ico-glow'
+    icoJoin: '--ico-join', icoGlow: '--ico-glow',
+    // O1 — forma do Foco/Orbit/Histórico (docs/design/TEMAS.md §5)
+    focusCap: '--focus-ring-cap', focusTicks: '--focus-ticks',
+    orbitDash: '--orbit-ring-dash', histRail: '--hist-rail'
   };
   // bgPatternOpacity: número (pode ser 0, não é falsy safe); tratamento explícito
   if (t.bgPatternOpacity !== undefined && t.bgPatternOpacity !== null)
@@ -439,6 +513,9 @@ function applyTheme() {
   else rootEl.removeAttribute('data-progress-type');
   if (t.logoEffect && t.logoEffect !== 'none') rootEl.setAttribute('data-logo-effect', t.logoEffect);
   else rootEl.removeAttribute('data-logo-effect');
+  // O1 — motivo do tema: `none`/ausente remove o atributo (nenhuma marca d'água).
+  if (t.motif && t.motif !== 'none') rootEl.setAttribute('data-motif', t.motif);
+  else rootEl.removeAttribute('data-motif');
 
   // Ícones por identidade (v99): a família vive no <html>; o CSS lê --ico-*.
   if (t.iconSet) rootEl.setAttribute('data-icon-set', t.iconSet);

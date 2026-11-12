@@ -28,21 +28,22 @@ function ico(name, cls) {
   return `<svg class="ico${cls ? ' ' + cls : ''}" aria-hidden="true" focusable="false"><use href="#i-${use}-${name}"/></svg>`;
 }
 
-/* v147 — rosácea do Gótico Clássico. Linha fina de 1 px, sem animação.
-   Só aparece onde o CSS da família `cathedral` habilita (estado vazio e foco). */
-function roseWindow(cls) {
-  const rays = Array.from({ length: 12 }, (_, i) => {
-    const a = i * Math.PI / 6;
-    const x1 = 60 + 20 * Math.cos(a), y1 = 60 + 20 * Math.sin(a);
-    const x2 = 60 + 56 * Math.cos(a), y2 = 60 + 56 * Math.sin(a);
-    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
-  }).join('');
-  const petals = Array.from({ length: 12 }, (_, i) => {
-    const a = (i + 0.5) * Math.PI / 6;
-    const cx = 60 + 37 * Math.cos(a), cy = 60 + 37 * Math.sin(a);
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5"/>`;
-  }).join('');
-  return `<svg class="rose-window${cls ? ' ' + cls : ''}" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1"><circle cx="60" cy="60" r="56"/><circle cx="60" cy="60" r="44"/><circle cx="60" cy="60" r="20"/><circle cx="60" cy="60" r="7"/>${rays}${petals}</g></svg>`;
+/* O1 — motivo do tema: marca d'água ambiente (Foco e estado vazio).
+   O desenho vem do sprite `m-*`, só geometria + currentColor; `none` ou
+   símbolo ausente devolve vazio (nunca inventa geometria). */
+function motifName() {
+  try {
+    const el = document.documentElement;
+    if (!el) return '';
+    if (typeof el.getAttribute === 'function') return el.getAttribute('data-motif') || '';
+    if (el.dataset && el.dataset.motif) return el.dataset.motif;
+    return '';
+  } catch (e) { return ''; }
+}
+function motif(name, cls) {
+  const m = name || motifName();
+  if (!m || m === 'none') return '';
+  return `<svg class="motif${cls ? ' ' + cls : ''}" viewBox="0 0 240 240" aria-hidden="true" focusable="false"><use href="#m-${m}"/></svg>`;
 }
 
 // Seções da Semana: glifo antigo → símbolo do sprite.
@@ -988,7 +989,7 @@ function renderFilteredTasks() {
     if (el) el.textContent = `(${plan.filter(t=>!isDone(t)).length} pend · ${plan.filter(t=>isDone(t)).length} feitas)`;
   }, 0);
 
-  if (!dayList.length) return `<div class="msg empty-rose">${roseWindow()}<span>Nada ainda.</span></div>`;
+  if (!dayList.length) return `<div class="msg empty-motif">${motif()}<span>Nada ainda.</span></div>`;
   if (!list.length) return '<div class="msg">Nada com esses filtros.</div>';
 
   // "Concluídas" lista o que está concluído e não foi limpo — inclusive semanas
@@ -1060,7 +1061,7 @@ function renderFilteredTasks() {
 
   return (sectionsHtml + doneSectionHtml) || (hasFilter
     ? '<div class="msg">Nada com esses filtros.</div>'
-    : `<div class="msg empty-rose">${roseWindow()}<span>Nada planejado para esta semana.</span></div>`);
+    : `<div class="msg empty-motif">${motif()}<span>Nada planejado para esta semana.</span></div>`);
 }
 
 function refreshTaskList() {const el = document.getElementById('taskList'); if (el) el.innerHTML = renderFilteredTasks();}
@@ -1618,6 +1619,7 @@ function viewHistory() {
   const range = reportWeekRange();
   const knownHtml = days.length ? days.map(d => `<div class="history-day"><div class="history-day-header"><b>${d.split('-').reverse().join('/')}</b><span class="msg" style="margin:0">${byDay[d].length} registro${byDay[d].length!==1?'s':''}</span></div>${byDay[d].map(entry => historyEntryHTML(entry, d, logsByTask)).join('')}</div>`).join('') : '';
   const unknownHtml = unknown.length ? `<div class="history-day history-day--unknown"><div class="history-day-header"><b>Data desconhecida</b><span class="msg" style="margin:0">${unknown.length} registro${unknown.length!==1?'s':''} · concluídas sem data registrada</span></div>${unknown.map(t => historyEntryHTML({type:'task', t}, 'unknown', logsByTask)).join('')}</div>` : '';
+  const daysHtml = knownHtml || unknownHtml ? `<div class="history-days">${knownHtml}${unknownHtml}</div>` : '';
   return `<div class="history-report-bar">
       <button data-a="reportWeekPrev" title="Semana anterior" aria-label="Semana anterior">${ico('chevron-down','ico--prev')}</button>
       <button data-a="reportWeekToday">Esta semana</button>
@@ -1627,9 +1629,8 @@ function viewHistory() {
     </div>
     <div class="filter-bar" style="flex-wrap:wrap"><button data-a="histFilter" data-v="7d" class="${historyFilter==='7d'?'on':''}">7 dias</button><button data-a="histFilter" data-v="30d" class="${historyFilter==='30d'?'on':''}">30 dias</button><button data-a="histFilter" data-v="all" class="${historyFilter==='all'?'on':''}">Tudo</button></div>
     <div class="stats"><span>${filtered.length} tarefa${filtered.length!==1?'s':''}</span><span>Tempo: <b>${fmtMin(totalMin)}</b></span><span>XP: <b>${totalXp}</b></span></div>
-    ${knownHtml}
-    ${unknownHtml}
-    ${!days.length && !unknown.length ? '<div class="msg">Nenhuma tarefa concluída no período.</div>' : ''}`;
+    ${daysHtml}
+    ${!days.length && !unknown.length ? `<div class="msg empty-motif">${motif()}<span>Nenhuma tarefa concluída no período.</span></div>` : ''}`;
 }
 
 function historyEntryHTML(entry, dayStr, logsByTask) {
@@ -1643,7 +1644,7 @@ function historyEntryHTML(entry, dayStr, logsByTask) {
   const xpAwarded = t.xpClaimed && !isPersonalSection(t) ? taskBaseXp(t) : 0;
   const logs = (logsByTask[t.id] || []).sort((a,b) => (b.ts || 0) - (a.ts || 0));
   const logsHtml = logs.map(l => `<div class="history-log">${ico('edit')} ${esc(l.text)}${l.date && l.date !== dayStr ? ` <span class="history-log-date">· ${fmtDate(l.date)}</span>` : ''}</div>`).join('');
-  return `<div class="history-row"><div class="history-content"><div class="history-title">${esc(t.t)}</div><div class="history-meta"><span class="tag">${esc(areaLabel(t.area))}</span>${taskMinutes(t)>0?`<span class="tag">${ico('timer')} ${fmtMin(taskMinutes(t))}</span>`:''}${xpAwarded?`<span class="tag" style="color:var(--ac)">+${xpAwarded} XP</span>`:''}${isPersonalSection(t)?`<span class="tag" style="opacity:.6">sem XP</span>`:''}</div>${logsHtml}${subBreakdown}</div><div class="history-actions"><button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo" aria-label="Registrar ou editar resumo">${ico('edit')}</button><button data-a="histReopen" data-id="${t.id}" title="Reabrir" aria-label="Reabrir tarefa">${ico('repeat')}</button><button data-a="histCopy" data-id="${t.id}" title="Copiar para hoje" aria-label="Copiar para hoje">${ico('copy')}</button><button data-a="histDel" data-id="${t.id}" title="Excluir" aria-label="Excluir tarefa">${ico('x')}</button></div></div>`;
+  return `<div class="history-row"><div class="history-content"><div class="history-title">${esc(t.t)}</div><div class="history-meta"><span class="tag">${esc(areaLabel(t.area))}</span>${taskMinutes(t)>0?`<span class="tag">${ico('timer')} ${fmtMin(taskMinutes(t))}</span>`:''}${xpAwarded?`<span class="tag" style="color:var(--ac)">+${xpAwarded} XP</span>`:''}${isPersonalSection(t)?`<span class="tag" style="opacity:.6">sem XP</span>`:''}</div>${logsHtml}${subBreakdown}</div><div class="history-actions"><button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo" aria-label="Registrar/editar resumo">${ico('edit')}</button><button data-a="histReopen" data-id="${t.id}" title="Reabrir" aria-label="Reabrir">${ico('repeat')}</button><button data-a="histCopy" data-id="${t.id}" title="Copiar para hoje" aria-label="Copiar para hoje">${ico('copy')}</button><button data-a="histDel" data-id="${t.id}" title="Excluir" aria-label="Excluir">${ico('x')}</button></div></div>`;
 }
 
 function events() {
@@ -1785,6 +1786,7 @@ function viewContacts(type, segHtml) {
   }
   if (filt.cat) filtered = filtered.filter(c => c.cat === filt.cat);
   if (filt.text) {const q = filt.text.toLowerCase(); filtered = filtered.filter(c => (c.n||'').toLowerCase().includes(q) || (c.notes||'').toLowerCase().includes(q) || (c.context||'').toLowerCase().includes(q) || (c.lastConversation||'').toLowerCase().includes(q) || tagList(c.tags).some(t => t.includes(q)));}
+  const beforeTags = filtered;
   if (filt.tags.length) filtered = filtered.filter(c => filt.tags.every(t => tagList(c.tags).includes(t)));
   const scored = filtered.map(c => ({c, score: contactScore(c)}));
   if (filt.sort === 'score') scored.sort((a,b) => {if (a.c.archived !== b.c.archived) return a.c.archived ? 1 : -1; return b.score - a.score;});
@@ -1820,9 +1822,14 @@ function viewContacts(type, segHtml) {
     <summary>${ico('plus')} Novo contato</summary>
     <div class="card" style="margin-top:8px"><div class="form"><label>Nome<input id="cN_${type}" data-draft="contact:${type}:cN" value="${dc('cN')}"></label><label>Categoria<select id="cCat_${type}" data-draft="contact:${type}:cCat">${categories.map(c=>`<option ${dcKey('cCat')===c?'selected':''}>${c}</option>`).join('')}</select></label><label>Onde<input id="cWhere_${type}" data-draft="contact:${type}:cWhere" value="${dc('cWhere')}"></label><label>Link<input id="cUrl_${type}" data-draft="contact:${type}:cUrl" value="${dc('cUrl')}"></label><label>Cargo<input id="cRole_${type}" data-draft="contact:${type}:cRole" value="${dc('cRole')}"></label><label>Contexto<input id="cContext_${type}" data-draft="contact:${type}:cContext" value="${dc('cContext')}"></label><label>Cadência<input id="cCadence_${type}" type="number" data-draft="contact:${type}:cCadence" value="${dc('cCadence') || (isPro?30:21)}"></label><label class="full">Próximo passo<input id="cNextAction_${type}" data-draft="contact:${type}:cNextAction" value="${dc('cNextAction')}" placeholder="Ligar na terça sobre a proposta"></label><label class="full">Última conversa<input id="cLastConv_${type}" data-draft="contact:${type}:cLastConv" value="${dc('cLastConv')}" placeholder="Falou que estava mudando pra Berlim"></label><label class="full">Tags (vírgula, minúsculas)<input id="cTags_${type}" data-draft="contact:${type}:cTags" list="contactTags" placeholder="motion, edição" value="${dc('cTags')}"></label><label class="full">Notas<textarea id="cNotes_${type}" rows="2" data-draft="contact:${type}:cNotes">${dc('cNotes')}</textarea></label></div><button data-a="cAdd" data-type="${type}" style="margin-top:8px">Adicionar</button></div>
   </details>`;
-  const cardsHtml = view === 'orbit' ? renderOrbit(type, filtered) : scored.map(({c, score}) => contactCard(c, score, type)).join('');
+  // O5 — no Orbit, a tag ativa não remove os nós: acende os que batem e apaga
+  // os demais por opacidade. Na lista, o filtro continua removendo.
+  const orbitContacts = (view === 'orbit' && filt.tags.length) ? beforeTags : filtered;
+  const orbitKeep = (view === 'orbit' && filt.tags.length) ? new Set(filtered.map(c => c.id)) : null;
+  const cardsHtml = view === 'orbit' ? renderOrbit(type, orbitContacts, orbitKeep) : scored.map(({c, score}) => contactCard(c, score, type)).join('');
   const head = segHtml || `<h3 style="margin-top:0">${isPro ? 'Rede profissional' : 'Amizades e vínculos'}</h3>`;
-  return `${discreet ? '' : tagDatalist}${head}<div class="msg">${isPro ? 'Score = urgência de retomar contato.' : 'Score gentil: contatos pessoais pesam × 0.75.'}</div>${kpis}${controls}${filtersWrap}${form}<h3>Contatos <span class="count">(${filtered.length})</span></h3>${cardsHtml || '<div class="msg">Nenhum contato ainda. Use "Novo contato" acima para adicionar.</div>'}`;
+  const shownCount = (view === 'orbit' && filt.tags.length) ? orbitContacts.length : filtered.length;
+  return `${discreet ? '' : tagDatalist}${head}<div class="msg">${isPro ? 'Score = urgência de retomar contato.' : 'Score gentil: contatos pessoais pesam × 0.75.'}</div>${kpis}${controls}${filtersWrap}${form}<h3>Contatos <span class="count">(${shownCount})</span></h3>${cardsHtml || '<div class="msg">Nenhum contato ainda. Use "Novo contato" acima para adicionar.</div>'}`;
 }
 /* v137 — aba Pessoas: um ponto de entrada, listas separadas por tipo (score e categorias continuam próprios). */
 function viewPeople() {
@@ -1861,26 +1868,151 @@ function contactCard(c, score, type) {
 /* v139 — teto por anel. Nó-aresta perde legibilidade com muita gente (Dunbar: camadas
    de ~5/15/50/150); o excedente vira um "+N" que abre a lista. */
 const ORBIT_CAP = {1: 10, 2: 18, 3: 26};
+/* O4 — inicial do dono no centro da órbita. Sem nome salvo no estado: usa o
+   e-mail/usuário autenticado e cai em "V" (você) quando não há sessão. */
+function orbitInitial() {
+  let who = '';
+  try {
+    const a = window.__auth && window.__auth.getState ? window.__auth.getState() : null;
+    const u = a && a.user;
+    if (u) who = (u.user_metadata && (u.user_metadata.name || u.user_metadata.full_name)) || u.email || '';
+  } catch (e) {}
+  const ini = initials(who);
+  return ini && ini !== '?' ? ini.slice(0, 1) : 'V';
+}
 const STATUS_SHORT = {atrasado: 'Atrasado', hoje: 'Hoje', aguardando: 'Aguardando', snoozed: 'Adiado', agendado: 'Em dia', interagido: 'Sem próximo', novo: 'Novo', arquivado: 'Arquivado'};
-function renderOrbit(type, contacts) {
+/* O5 — mini-card do primeiro toque. No modo discreto não há nome completo,
+   categoria, conversa, tags nem score; só o nome plausível e o status neutro. */
+function orbitMiniCard(c) {
+  const status = contactStatus(c);
+  const hidden = discreet;
+  const fav = isOrbitFavorite(c.id);
+  const name = hidden ? maskContactName(c.n) : c.n;
+  const statusLabel = hidden ? (STATUS_SHORT[status.k] || 'Em dia') : status.label;
+  const last = (!hidden && c.lastConversation) ? c.lastConversation : '';
+  return `<div class="orbit-mini" role="group" aria-label="Contato selecionado">
+    <div class="orbit-mini-top"><b>${esc(name)}</b><button type="button" data-a="contactOrbitClose" aria-label="Fechar contato" title="Fechar">${ico('x')}</button></div>
+    <div class="orbit-mini-meta">${hidden || !c.cat ? '' : `<span class="tag">${esc(c.cat)}</span>`}<span class="orbit-mini-status">${esc(statusLabel)}</span></div>
+    ${last ? `<div class="orbit-mini-last">${esc(last)}</div>` : ''}
+    <div class="orbit-mini-actions"><button type="button" data-a="contactOrbitOpen" data-id="${c.id}">Abrir na lista</button><button type="button" data-a="contactOrbitFav" data-id="${c.id}" aria-pressed="${fav}">${fav ? '★' : '☆'} ${fav ? 'Favorito' : 'Favoritar'}</button></div>
+  </div>`;
+}
+function openOrbitContact(c) {
+  if (!c) return;
+  orbitSelectedId = null;
+  contactView[c.type] = 'list';
+  saveContactView();
+  render();
+  setTimeout(() => {
+    const card = document.querySelector('[data-cid="' + c.id + '"]');
+    if (!card) return;
+    card.scrollIntoView({behavior: 'smooth', block: 'center'});
+    card.classList.add('highlight');
+    setTimeout(() => card.classList.remove('highlight'), 2100);
+  }, 80);
+}
+function renderOrbit(type, contacts, keepIds) {
   if (!contacts.length) return '<div class="orbit-wrap"><div class="msg">Nenhum contato.</div></div>';
   const W = 360, H = 360, CX = W/2, CY = H/2;
   const rings = {1: 55, 2: 110, 3: 160};
+  const isPro = type === 'pro';
+  const cats = (isPro ? CAT_PRO : CAT_PERSONAL).slice();
+  // Contatos antigos podem ter categoria fora da lista atual; ganham setor próprio.
+  contacts.forEach(c => { if (c.cat && cats.indexOf(c.cat) < 0) cats.push(c.cat); });
+  const nCats = Math.max(1, cats.length);
+  const sectorSize = (2 * Math.PI) / nCats;
+  const depthFilter = orbitDepthFilter[type] || 0;
+  const fav = id => isOrbitFavorite(id);
+
+  // O5 — favoritos são puxados para o anel íntimo; o resto segue connectionDepth.
   const byDepth = {1: [], 2: [], 3: []};
-  contacts.forEach(c => byDepth[connectionDepth(c)].push(c));
+  contacts.forEach(c => {
+    const d = fav(c.id) ? 1 : connectionDepth(c);
+    (byDepth[d] || byDepth[3]).push(c);
+  });
   let hidden = 0;
-  const total = {};
+  const total = {}, kept = {};
   [1, 2, 3].forEach(d => {
-    const all = byDepth[d].slice().sort((a, b) => contactScore(b) - contactScore(a));
+    const all = byDepth[d].slice().sort((a, b) => {
+      const fa = fav(a.id) ? 1 : 0, fb = fav(b.id) ? 1 : 0;
+      if (fa !== fb) return fb - fa;
+      return contactScore(b) - contactScore(a);
+    });
     total[d] = all.length;
     hidden += Math.max(0, all.length - ORBIT_CAP[d]);
-    byDepth[d] = all.slice(0, ORBIT_CAP[d]);
+    kept[d] = all.slice(0, ORBIT_CAP[d]);
   });
+
+  // Divisórias de categoria: o ângulo é o setor, o raio continua sendo a profundidade.
+  let sectorSvg = '';
+  for (let i = 0; i < nCats; i++) {
+    const a = -Math.PI / 2 + i * sectorSize;
+    const x1 = Math.round(CX + 20 * Math.cos(a)), y1 = Math.round(CY + 20 * Math.sin(a));
+    const x2 = Math.round(CX + rings[3] * Math.cos(a)), y2 = Math.round(CY + rings[3] * Math.sin(a));
+    sectorSvg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="orbit-sector" data-cat="${esc(cats[i] || '')}"/>`;
+  }
+
+  const theme = (typeof THEMES !== 'undefined' && S && S.cfg && THEMES[S.cfg.theme]) || null;
+  const nodeShape = (theme && theme.orbitNode) || 'circle';
+  const openStatus = {atrasado: 1, aguardando: 1, snoozed: 1};
   let nodesSvg = '';
-  [1, 2, 3].forEach(depth => {const arr = byDepth[depth]; const r = rings[depth]; arr.forEach((c, i) => {const angle = arr.length === 1 ? 0 : (i / arr.length) * 2 * Math.PI - Math.PI / 2; const x = CX + r * Math.cos(angle); const y = CY + r * Math.sin(angle); const status = contactStatus(c); const size = c.priority === 0 ? 11 : c.priority === 1 ? 8 : 6; const sc = contactScore(c); const opacity = sc >= 60 ? 1 : 0.7; const title = discreet ? `Contato · ${STATUS_SHORT[status.k] || '···'}` : `${c.n} · score ${sc} · ${status.label}`; const lbl = discreet ? '' : initials(c.n); nodesSvg += `<g data-a="contactOrbitClick" data-id="${c.id}" style="cursor:pointer"><title>${esc(title)}</title><circle cx="${x}" cy="${y}" r="${size}" fill="${status.color}" class="node" opacity="${opacity}"/>${depth <= 2 && lbl ? `<text x="${x}" y="${y + size + 10}" class="node-label">${esc(lbl)}</text>` : ''}</g>`;});});
+  [1, 2, 3].forEach(depth => {
+    const arr = kept[depth];
+    const r = rings[depth];
+    const byCat = {};
+    arr.forEach(c => {
+      const ci = Math.max(0, cats.indexOf(c.cat));
+      (byCat[ci] = byCat[ci] || []).push(c);
+    });
+    Object.keys(byCat).forEach(k => {
+      const ci = +k, list = byCat[k];
+      const start = -Math.PI / 2 + ci * sectorSize + sectorSize * 0.14;
+      const span = sectorSize * 0.72;
+      list.forEach((c, i) => {
+        const t = list.length === 1 ? 0.5 : i / (list.length - 1);
+        const angle = start + span * t;
+        const x = Math.round(CX + r * Math.cos(angle));
+        const y = Math.round(CY + r * Math.sin(angle));
+        const status = contactStatus(c);
+        const size = c.priority === 0 ? 12 : c.priority === 1 ? 9 : 7;
+        const sc = contactScore(c);
+        const isFav = fav(c.id);
+        const dim = depthFilter && depthFilter !== depth ? ' orbit-node--dim' : '';
+        const tagDim = keepIds && !keepIds.has(c.id) ? ' orbit-node--dim' : '';
+        const sel = orbitSelectedId === c.id ? ' orbit-node--sel' : '';
+        const nodeCls = 'orbit-node' + (openStatus[status.k] ? ' orbit-node--open' : '') +
+          (status.k === 'atrasado' ? ' orbit-node--late' : '') +
+          (isFav ? ' orbit-node--fav' : '') + sel + dim + tagDim;
+        const aria = discreet ? `Contato · ${STATUS_SHORT[status.k] || '···'}` : `${c.n} · ${status.label}`;
+        const title = discreet ? `Contato · ${STATUS_SHORT[status.k] || '···'}` : `${c.n} · score ${sc} · ${status.label}`;
+        const lbl = discreet ? '' : initials(c.n);
+        const hit = Math.max(12, Math.round(size * 1.7));
+        // O5 — "aguardando"/"adiado" têm cor dessaturada; mistura com tx para
+        // o nó não sumir nos temas escuros (o segundo sinal continua no formato).
+        const rawColor = themeColor(status.color);
+        const nodeColor = (status.k === 'aguardando' || status.k === 'snoozed')
+          ? `color-mix(in srgb, ${rawColor} 55%, var(--tx))` : rawColor;
+        nodesSvg += `<g data-a="contactOrbitClick" data-id="${c.id}" data-depth="${depth}" role="button" tabindex="0" aria-label="${esc(aria)}"><title>${esc(title)}</title><circle cx="${x}" cy="${y}" r="${hit}" class="orbit-hit"/><use href="#o-${nodeShape}" x="-1" y="-1" width="2" height="2" transform="translate(${x} ${y}) scale(${size})" class="${nodeCls}" style="color:${nodeColor}"/>${isFav ? `<circle cx="${x}" cy="${y - size * 1.6}" r="2.1" class="orbit-fav-dot"/>` : ''}${depth <= 2 && lbl ? `<text x="${x}" y="${y + size + 10}" class="node-label${dim}${tagDim}">${esc(lbl)}</text>` : ''}</g>`;
+      });
+    });
+  });
+
   const capLabel = `íntimo ${Math.min(total[1], ORBIT_CAP[1])} · regular ${Math.min(total[2], ORBIT_CAP[2])} · distante ${Math.min(total[3], ORBIT_CAP[3])}${hidden ? ` <span class="orbit-over">(+${hidden})</span>` : ''}`;
   const moreBtn = hidden ? `<button class="orbit-more" data-a="contactOrbitMore" data-type="${type}">+${hidden} outro${hidden > 1 ? 's' : ''} · ver em lista</button>` : '';
-  return `<div class="orbit-wrap"><svg class="orbit-svg" viewBox="0 0 ${W} ${H}"><circle cx="${CX}" cy="${CY}" r="${rings[1]}" class="ring ring-1"/><circle cx="${CX}" cy="${CY}" r="${rings[2]}" class="ring ring-2"/><circle cx="${CX}" cy="${CY}" r="${rings[3]}" class="ring ring-3"/><circle cx="${CX}" cy="${CY}" r="8" class="center"/><text x="${CX}" y="${CY + 20}" class="node-label" style="fill:var(--ac)">você</text><text x="${CX}" y="${CY - rings[1] - 6}" class="orbit-labels" style="text-anchor:middle;fill:var(--ac);opacity:.7">íntimo</text><text x="${CX}" y="${CY - rings[2] - 6}" class="orbit-labels" style="text-anchor:middle">regular</text><text x="${CX}" y="${CY - rings[3] - 6}" class="orbit-labels" style="text-anchor:middle;opacity:.5">distante</text>${nodesSvg}</svg><div class="orbit-legend"><span><i style="background:#e0626a"></i>atrasado</span><span><i style="background:#e0a33b"></i>hoje</span><span><i style="background:#6b3a5e"></i>aguardando</span><span><i style="background:#4fb3a2"></i>em dia</span><span><i style="background:#9a94a3"></i>novo</span></div><div class="orbit-count">${capLabel}</div>${moreBtn}</div>`;
+  const ringLabel = (d, txt) => `<text x="${CX}" y="${CY - rings[d] - 6}" class="orbit-labels${depthFilter && depthFilter !== d ? ' orbit-labels--dim' : ''}" data-depth="${d}">${txt}</text>`;
+  const ringHit = [1, 2, 3].map(d => `<circle cx="${CX}" cy="${CY}" r="${rings[d]}" class="orbit-ring-hit" data-a="orbitRing" data-type="${type}" data-depth="${d}" role="button" tabindex="0" aria-label="Filtrar anel ${d === 1 ? 'íntimo' : d === 2 ? 'regular' : 'distante'}"/>`).join('');
+  const ringsSvg = `<circle cx="${CX}" cy="${CY}" r="${rings[1]}" class="ring ring-1${depthFilter === 1 ? ' ring--on' : ''}"/><circle cx="${CX}" cy="${CY}" r="${rings[2]}" class="ring ring-2${depthFilter === 2 ? ' ring--on' : ''}"/><circle cx="${CX}" cy="${CY}" r="${rings[3]}" class="ring ring-3${depthFilter === 3 ? ' ring--on' : ''}"/>${ringHit}`;
+  const centerMotif = motifName();
+  const centerArt = centerMotif && centerMotif !== 'none' ? `<use href="#m-${centerMotif}" x="${CX - 52}" y="${CY - 52}" width="104" height="104" class="orbit-center-motif"/>` : '';
+  const selected = orbitSelectedId && contacts.find(c => c.id === orbitSelectedId);
+  const mini = selected ? orbitMiniCard(selected) : '';
+  const legend = [['atrasado', '#e0626a'], ['hoje', '#e0a33b'], ['aguardando', '#6b3a5e', 1], ['em dia', '#4fb3a2'], ['novo', '#9a94a3']]
+    .map(([label, color, mix]) => {
+      const raw = themeColor(color);
+      const bg = mix ? `color-mix(in srgb, ${raw} 55%, var(--tx))` : raw;
+      return `<span><i style="background:${bg}"></i>${label}</span>`;
+    }).join('') + '<span class="orbit-legend-fav"><i></i>favorito</span>';
+  return `<div class="orbit-wrap">${mini}<svg class="orbit-svg" viewBox="0 0 ${W} ${H}">${sectorSvg}${ringsSvg}${centerArt}<circle cx="${CX}" cy="${CY}" r="13" class="center"/><text x="${CX}" y="${CY + 4}" class="orbit-center-initial">${esc(orbitInitial())}</text>${ringLabel(1, 'íntimo')}${ringLabel(2, 'regular')}${ringLabel(3, 'distante')}${nodesSvg}</svg><div class="orbit-legend">${legend}</div><div class="orbit-count">${capLabel}</div>${moreBtn}</div>`;
 }
 
 function viewCommands() {
@@ -2176,6 +2308,48 @@ function showFocusCompleteModal(t) {
 }
 function updateFocusTimer() {if (!focusTaskId || !S.timer || S.timer.taskId !== focusTaskId) return; if (S.timer.paused) return; const elapsedSec = timerElapsedSec(); const targetMin = S.timer.targetMin || focusTargetMin; const remainingSec = Math.max(0, targetMin * 60 - elapsedSec); const te = document.getElementById('focusTime'); if (te) te.textContent = fmtClock(remainingSec); const prog = targetMin > 0 ? Math.min(1, (elapsedSec/60) / targetMin) : 0; const circ = 2 * Math.PI * 100; const c = document.querySelector('.focus-progress'); if (c) c.style.strokeDashoffset = circ * (1 - prog); const sp = document.getElementById('focusSpent'); if (sp) {const m = Math.floor(subElapsedSec() / 60); if (sp.dataset.m !== String(m)) {sp.dataset.m = String(m); sp.textContent = fmtMin(m);}}}
 
+/* O2 — anel do foco com o visual da barra do tema, sem animação nova.
+   Vitral vira panes duros; iris/neon usam o gradiente do tema; bronze e
+   metal repetem o brilho da barra; glow usa bu→ac. Sólido/liquid ficam de
+   fora (o anel segue na cor semântica) — exceto os brutais: a barra escura é
+   metal (`--bar-metal`) e a clara é o gradiente base bu→ac, mesmo com
+   `progressType:'solid'`. */
+function focusRingDefs(t) {
+  if (!t) return '';
+  const type = t.progressType || 'solid';
+  const brutalMetal = t.look === 'brutal' && t.mode === 'dark';
+  const brutalLight = t.look === 'brutal' && t.mode === 'light';
+  if ((type === 'solid' || type === 'liquid') && !brutalMetal && !brutalLight) return '';
+  const hexes = (t.progressGradient || '').match(/#[0-9a-f]{3,8}/gi) || [];
+  let stops = '';
+  if (brutalMetal) {
+    // Mesma receita de `--bar-metal` (componentes.css), sem as hairlines de 1px.
+    stops = '<stop offset="0%" style="stop-color:color-mix(in srgb, var(--ac) 82%, var(--bu))"/><stop offset="50%" style="stop-color:color-mix(in srgb, var(--ac) 35%, var(--bu))"/><stop offset="100%" style="stop-color:color-mix(in srgb, var(--ac) 82%, var(--bu))"/>';
+  } else if (brutalLight) {
+    // Brutal claro não tem metal: a barra é o gradiente base bu→ac.
+    stops = '<stop offset="0%" style="stop-color:var(--bu)"/><stop offset="100%" style="stop-color:var(--ac)"/>';
+  } else if (type === 'vitral' && hexes.length > 2) {
+    hexes.forEach((c, i) => {
+      const a = (i * 100 / hexes.length).toFixed(1);
+      const b = ((i + 1) * 100 / hexes.length - .4).toFixed(1);
+      stops += `<stop offset="${a}%" style="stop-color:${c}"/><stop offset="${b}%" style="stop-color:${c}"/>`;
+    });
+  } else if (hexes.length > 1) {
+    hexes.forEach((c, i) => { stops += `<stop offset="${(i * 100 / (hexes.length - 1)).toFixed(1)}%" style="stop-color:${c}"/>`; });
+  } else if (type === 'bronze') {
+    stops = '<stop offset="0%" style="stop-color:color-mix(in srgb, var(--bronze) 72%, white)"/><stop offset="45%" style="stop-color:var(--bronze)"/><stop offset="100%" style="stop-color:color-mix(in srgb, var(--bronze) 93%, black)"/>';
+  } else if (type === 'metal') {
+    stops = '<stop offset="0%" style="stop-color:color-mix(in srgb, var(--ac) 90%, white)"/><stop offset="45%" style="stop-color:color-mix(in srgb, var(--ac) 50%, var(--bu))"/><stop offset="100%" style="stop-color:color-mix(in srgb, var(--bu) 80%, black)"/>';
+  } else {
+    stops = '<stop offset="0%" style="stop-color:var(--bu)"/><stop offset="100%" style="stop-color:var(--ac)"/>';
+  }
+  // Metal e bronze brilham de cima para baixo na barra; o anel segue a mesma luz.
+  const vertical = brutalMetal || type === 'metal' || type === 'bronze';
+  const dir = vertical ? 'x1="0" y1="0" x2="0" y2="1"'
+    : (brutalLight ? 'x1="0" y1="0" x2="1" y2="0"' : 'x1="0" y1="0" x2="1" y2="1"');
+  return `<defs><linearGradient id="focusRingGrad" ${dir}>${stops}</linearGradient></defs>`;
+}
+
 function renderFocus() {
   if (!focusTaskId) return;
   const t = S.tasks.find(x => x.id === focusTaskId);
@@ -2218,6 +2392,11 @@ function renderFocus() {
     : '';
 
   const ringColor = !timerOnThisTask ? 'var(--bu)' : (phase === 'rest' ? 'var(--ok)' : (isPaused ? 'var(--wr)' : 'var(--ac)'));
+  // O2 — foco ativo reusa o visual da barra do tema (gradiente/panes), estático.
+  // Pausa e descanso mantêm a cor semântica sólida.
+  const ringTheme = (typeof THEMES !== 'undefined' && S.cfg) ? THEMES[S.cfg.theme] : null;
+  const ringDefs = (timerOnThisTask && !isPaused && phase === 'focus') ? focusRingDefs(ringTheme) : '';
+  const ringStroke = ringDefs ? 'url(#focusRingGrad)' : ringColor;
   let eyebrow;
   if (!timerOnThisTask) eyebrow = 'Pronto para focar';
   else if (reviewPending) eyebrow = 'Bloco concluído';
@@ -2356,10 +2535,11 @@ function renderFocus() {
       <h1 class="focus-title">${esc(t.t)}</h1>
       ${switchHtml}
       <div class="focus-timer-wrap">
-        <div class="focus-rose" aria-hidden="true">${roseWindow()}</div>
+        <div class="focus-motif" aria-hidden="true">${motif()}</div>
         <svg class="focus-circle" viewBox="0 0 240 240">
-          <circle cx="120" cy="120" r="100" fill="none" stroke="var(--bd)" stroke-width="6"/>
-          <circle cx="120" cy="120" r="100" fill="none" stroke="${ringColor}" stroke-width="6" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" transform="rotate(-90 120 120)" stroke-linecap="round" class="focus-progress" style="transition:stroke-dashoffset .3s, stroke .3s"/>
+          ${ringDefs}
+          <circle cx="120" cy="120" r="100" fill="none" stroke="var(--bd)" stroke-width="6" class="focus-track"/>
+          <circle cx="120" cy="120" r="100" fill="none" stroke="${ringStroke}" stroke-width="6" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" transform="rotate(-90 120 120)" class="focus-progress" style="transition:stroke-dashoffset .3s, stroke .3s"/>
         </svg>
         <div class="focus-time" id="focusTime">${timeStr}</div>
       </div>

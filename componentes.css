@@ -1487,27 +1487,30 @@
 /* G3 — nome do dia sem ornamento: mantem o ouro do accent e a leitura
    do cabecalho, sem pilula/ogiva. A data continua ao lado. */
 
-/* G3 — rosácea: linha fina de ouro. Desligada fora do tema. */
-.rose-window{display:none;width:64px;height:64px;color:var(--ac)}
-[data-family="cathedral"] .rose-window{display:block}
-[data-family="cathedral"] .empty-rose{
+/* O1/O2 — motivo do tema: marca d'água ambiente (Foco e estados vazios).
+   Um desenho por família/tema, herdado do `data-motif`; nunca é informação. */
+.empty-motif{
   display:flex;
   flex-direction:column;
   align-items:center;
   gap:8px;
   padding:22px 8px;
+  margin:0;
   text-align:center;
 }
-[data-family="cathedral"] .empty-rose .rose-window{width:72px;height:72px;opacity:.9}
-[data-family="cathedral"] .focus-rose{
+.empty-motif .motif{width:72px;height:72px;color:var(--ac);opacity:.55}
+.focus-motif{
   position:absolute;
   inset:6%;
   z-index:0;
   color:var(--ac);
-  opacity:.14;
+  opacity:.12;
   pointer-events:none;
 }
-[data-family="cathedral"] .focus-rose .rose-window{width:100%;height:100%}
+[data-mode="light"] .focus-motif{opacity:.10}
+/* Anel do foco: ponta vem do tema e o trilho vira régua onde há ticks. */
+.focus-track{stroke-dasharray:var(--focus-ticks,none)}
+.focus-progress{stroke-linecap:var(--focus-ring-cap,round)}
 .focus-circle{position:relative;z-index:1}
 .focus-time{z-index:2}
 
