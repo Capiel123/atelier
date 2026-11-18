@@ -1060,6 +1060,10 @@ document.addEventListener('change', ev => {
   if (key === 'day') v = dv(v);
   if (key === 'time') v = v || '';
   if (key === 'section') v = v || '';
+  if (col === 'tasks' && key === 'proj' && v) {
+    const pr = S.projects.find(x => x.id === v);
+    if (pr && (pr.archived || pr.completedAt || pr.deletedAt)) {toast('Projeto concluído ou arquivado não pode ser associado', true); render(); return;}
+  }
   if (col === 'contacts' && key === 'tagsStr') {obj.tags = tagList(v);} else {obj[key] = v;}
   touch(obj);
   save(); render();

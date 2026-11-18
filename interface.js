@@ -1630,10 +1630,23 @@ function cardTask(t, score) {
 
     ${subsCollapsedNow ? '' : `<details data-eid="${t.id}" ${openEdits.has(t.id)?'open':''}>
       <summary>Editar detalhes</summary>
-      <div class="form"><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades${pillPicker(alive(S.skills).filter(s=>!s.archived), t.skills||[], 'skill', t.id)}</label><label class="full">Labels${pillPicker(S.labels, t.labels||[], 'label', t.id)}</label><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label></div>
+      <div class="form"><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions(taskProjectOptions(t), t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades${pillPicker(alive(S.skills).filter(s=>!s.archived), t.skills||[], 'skill', t.id)}</label><label class="full">Labels${pillPicker(S.labels, t.labels||[], 'label', t.id)}</label><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label></div>
     </details>
       ${aiContextDetailsHtml(t)}`}
   </div>`;
+}
+
+/* v163 — tarefa só se associa a projeto ativo. Um vínculo já existente com
+   projeto concluído/arquivado continua visível para não “perder” o valor. */
+function taskProjectOptions(t) {
+  const active = alive(S.projects).filter(p => !p.archived && !p.completedAt);
+  const opts = [['', '—'], ...active.map(p => [p.id, p.n])];
+  const cur = t && t.proj ? (S.projects || []).find(p => p.id === t.proj) : null;
+  if (cur && !active.some(p => p.id === cur.id)) {
+    const why = cur.deletedAt ? 'removido' : cur.completedAt ? 'concluído' : 'arquivado';
+    opts.push([cur.id, cur.n + ' (' + why + ')']);
+  }
+  return opts;
 }
 
 function taskAreaOptions(t) {
@@ -1697,7 +1710,9 @@ function aiContextDetailsHtml(t) {
 }
 
 function viewQueue() {
-  const queueTasks = dayTasks(null).filter(t => !isDone(t));
+  const queueAll = dayTasks(null);
+  const queueTasks = queueAll.filter(t => !isDone(t));
+  const queueDone = queueAll.filter(t => isDone(t));
   return `<div class="msg" style="margin-bottom:12px">Registre ideias e tarefas rapidamente, sem precisar de data.</div>${adder(null)}
   <div class="queue-ai-bar">
     <button type="button" class="queue-ai-btn" data-a="copyAiPrompt" title="Copia um prompt pronto; troque o Tema: no seu AI">${ico('sparkle')} Copiar prompt para IA</button>
@@ -1705,7 +1720,8 @@ function viewQueue() {
   </div>
   <div id="queueList">
     ${queueTasks.length ? queueTasks.map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>'}
-  </div>`;
+  </div>
+  ${queueDone.length ? `<details class="queue-done"><summary>Concluídas na Fila (${queueDone.length})</summary>${queueDone.map(t => cardQueue(t)).join('')}</details>` : ''}`;
 }
 
 function cardQueue(t) {
@@ -1762,7 +1778,7 @@ function cardQueue(t) {
           <label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label>
           <label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label>
           <label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label>
-          <label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label>
+          <label>Projeto<select data-p="${esc(k('proj'))}">${selOptions(taskProjectOptions(t), t.proj)}</select></label>
           <label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label>
           <label class="full">Habilidades<div class="pill-stack">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="--pc:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label>
           <label class="full">Labels<div class="pill-stack">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="--pc:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label>

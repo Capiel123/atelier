@@ -1534,3 +1534,6 @@
 .ai-task-card li{font-size:12px;line-height:1.45}
 /* v161 — projetos: formulário recolhível no mobile (o desktop segue sempre aberto) */
 .proj-add-toggle{display:none}
+/* v163 — concluídas na Fila ficam visíveis em um bloco recolhido */
+.queue-done{margin-top:12px;border-top:1px solid var(--bd);padding-top:8px}
+.queue-done summary{cursor:pointer;font-size:12px;color:var(--mu)}
