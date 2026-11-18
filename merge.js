@@ -192,22 +192,25 @@
     var d = decide(local.updatedAt, 0, remote.updatedAt, remoteRow.updated_at);
     var base = (d >= 0) ? local : remote; // >=0 → local vence; -1 → remoto vence; empate 0 → local (empate final: local não é pior; escalares idênticos)
     var merged = Object.assign({}, base);
-    // Estado de conclusão é "final": versão antiga não reabre uma tarefa já concluída.
-    // done:true carrega doneAt; done:false (reaberta) carrega updatedAt — vence o mais recente.
+    // Estado de conclusão é "final": edição comum (updatedAt) não reabre uma
+    // tarefa concluída. Só uma reabertura explícita muda o estado; ela grava
+    // doneAt=agora com done=false. Assim uma cópia pendente antiga que só foi
+    // editada (dia, timer, seção) não "ressuscita" o card no celular.
     var ld = !!local.done, rd = !!remote.done;
     if (ld !== rd) {
       var doneSide = ld ? local : remote;
       var notDoneSide = ld ? remote : local;
-      var doneStamp = num(doneSide.updatedAt, 0) || num(doneSide.doneAt, 0);
-      var notUpd = num(notDoneSide.updatedAt, 0);
-      // v124: usa o updatedAt da versão concluída (LWW), não o doneAt.
-      // Editar seção/cor depois de concluir atualiza updatedAt; comparar com doneAt
-      // reabria a tarefa em outro aparelho (K08).
-      var keepDone = doneStamp >= notUpd;
+      var doneStamp = num(doneSide.doneAt, 0) || num(doneSide.updatedAt, 0);
+      var reopenStamp = num(notDoneSide.doneAt, 0); // 0 = pendente que nunca foi reaberto
+      // v161: compara o carimbo da mudança de estado, não o updatedAt da edição.
+      var keepDone = doneStamp >= reopenStamp;
       merged.done = keepDone;
-      merged.doneAt = keepDone ? num(doneSide.doneAt, 0) : null;
+      merged.doneAt = keepDone ? doneSide.doneAt : notDoneSide.doneAt;
     } else if (ld && rd) {
       merged.doneAt = Math.max(num(local.doneAt, 0), num(remote.doneAt, 0));
+    } else {
+      // Os dois pendentes: preserva o marcador de reabertura mais recente.
+      merged.doneAt = Math.max(num(local.doneAt, 0), num(remote.doneAt, 0)) || null;
     }
     merged.logs = unionLogs(local.logs, remote.logs);
     merged.subs = unionSubs(local.subs, remote.subs, d >= 0);

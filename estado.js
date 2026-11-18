@@ -721,15 +721,9 @@ function migrate(raw) {
     manualHours: (p.manualHours != null && p.manualHours !== '') ? +p.manualHours : null,
     goals: Array.isArray(p.goals) ? p.goals.map((g, gi) => ({id: g.id || uid(), t: String(g.t || ''), d: !!g.d, order: g.order ?? gi})) : []
   }));
-  s.projects.forEach(p => {
-    if (!p.completedAt && !p.archived) {
-      const ts = s.tasks.filter(t => t.proj === p.id);
-      if (ts.length > 0 && ts.every(t => t.done)) {
-        const maxDone = Math.max(...ts.map(t => t.doneAt || 0));
-        if (maxDone > 0) p.completedAt = maxDone;
-      }
-    }
-  });
+  /* v161 — projetos só são concluídos por ação explícita (`pcomplete`). Antes,
+     `migrate()` marcava `completedAt` sozinho quando todas as tarefas estavam
+     prontas, finalizando projetos sem o usuário pedir. */
 
   if (s.timer) {
     s.timer = {
@@ -954,12 +948,19 @@ function undo() {
   if (!undoStack.length) return toast('Nada para desfazer');
   try {
     const before = new Set((S.tasks||[]).map(t => t.id));
+    const beforeDone = new Map((S.tasks||[]).map(t => [t.id, !!t.done]));
     S = JSON.parse(undoStack.pop());
     const after = new Set((S.tasks||[]).map(t => t.id));
     /* v119: entidades removidas pelo undo (ex.: cópia) precisam de tombstone;
        senão o próximo pull ressuscita. */
     before.forEach(id => {
       if (!after.has(id) && window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id);
+    });
+    /* v161: desfazer uma conclusão é uma reabertura explícita. Marca doneAt para
+       o merge não tratar a tarefa como uma cópia pendente antiga. */
+    const undoAt = Date.now();
+    (S.tasks || []).forEach(t => {
+      if (beforeDone.get(t.id) && !t.done) { t.doneAt = undoAt; touch(t); }
     });
     applyTheme(); save(); render(); toast('Desfeito');
   } catch (e) { toast('Erro', true); }

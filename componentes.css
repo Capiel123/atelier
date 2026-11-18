@@ -1532,3 +1532,5 @@
 .ai-task-meta{font-size:11px;color:var(--mu);margin-top:2px;font-variant-numeric:tabular-nums}
 .ai-task-card ul{margin:6px 0 0 18px;padding:0;color:var(--mu)}
 .ai-task-card li{font-size:12px;line-height:1.45}
+/* v161 — projetos: formulário recolhível no mobile (o desktop segue sempre aberto) */
+.proj-add-toggle{display:none}

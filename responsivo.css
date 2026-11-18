@@ -1389,3 +1389,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .ai-ctx summary{min-height:44px}
   .ai-task-sheet .acts button{min-height:44px}
 }
+/* v161 — formulário de projeto recolhível no mobile */
+@media(max-width:640px){
+  .proj-add-toggle{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--radius-sm);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .proj-add-toggle:hover{border-color:var(--ac);color:var(--ac)}
+  .proj-add-body{display:none}
+  .proj-add.open .proj-add-body{display:block;margin-top:8px}
+}

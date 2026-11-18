@@ -193,7 +193,7 @@
         }
         var row = rowFor(table, S, user.id, ent);
         if (table === 'work_logs' && row.task_id) row.id = window.__merge.workLogId(row.task_id, row.date || '');
-        items.push({ op: o, row: row });
+        items.push({ op: o, row: row, ent: ent });
       });
 
       if (!items.length) { markDone(store, seen, ops); continue; }
@@ -216,6 +216,26 @@
           });
           items = kept;
           if (!items.length) continue;
+        }
+      }
+
+      // v161: antes de subir, faz o mesmo merge do pull para a tarefa que venceu
+      // o LWW. Assim um push do celular não apaga logs/subs que o PC já tinha
+      // (tempo manual + timer, subtarefas) e a conclusão não é reaberta por uma
+      // edição pendente sem marcador de reabertura.
+      if (table === 'tasks' && items.length) {
+        var remoteRows = remoteCu && remoteCu.__rows;
+        if (remoteRows) {
+          items.forEach(function (it) {
+            var rr = it.row && remoteRows[it.row.id];
+            if (!rr || !it.ent) return;
+            try {
+              var merged = window.__merge.mergeEntity('tasks', it.ent, rr);
+              if (merged && merged.action === 'set' && merged.entity && window.__importer && window.__importer.mapOne) {
+                it.row = window.__importer.mapOne('tasks', merged.entity, user.id);
+              }
+            } catch (e) {}
+          });
         }
       }
 
@@ -269,13 +289,18 @@
       var timer = setTimeout(function () { finish(null); }, 8000);
       (async function () {
         var map = {};
+        var rows = {};
         for (var i = 0; i < ids.length; i += REMOTE_VERSION_CHUNK) {
           if (done) return;
           var chunk = ids.slice(i, i + REMOTE_VERSION_CHUNK);
-          var r = await client.from(table).select('id,client_updated_at').eq('user_id', user.id).in('id', chunk);
+          // v161: além da versão, traz o JSONB de logs/subs e o estado para o push
+          // preservar o histórico append-only do remoto (merge antes do upsert).
+          var r = await client.from(table).select('id,client_updated_at,updated_at,done,done_at,deleted_at,logs,subs').eq('user_id', user.id).in('id', chunk);
           if (!r || r.error) { finish(null); return; }
-          (r.data || []).forEach(function (x) { map[x.id] = x.client_updated_at; });
+          (r.data || []).forEach(function (x) { map[x.id] = x.client_updated_at; rows[x.id] = x; });
         }
+        // Não enumerável para não quebrar consumidores que contam as versões.
+        try { Object.defineProperty(map, '__rows', {value: rows}); } catch (e) { map.__rows = rows; }
         finish(map);
       })().catch(function () { finish(null); });
     });

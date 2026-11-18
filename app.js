@@ -523,7 +523,7 @@ document.addEventListener('click', ev => {
       p.goals = arr; touch(p);
       break;
     }
-    case 'histReopen': {const tt = T(id); if (tt && tt.done) {tt.done = false; tt.doneAt = null; touch(tt); toast('Tarefa reaberta');} break;}
+    case 'histReopen': {const tt = T(id); if (tt && tt.done) {tt.done = false; tt.doneAt = Date.now(); touch(tt); toast('Tarefa reaberta');} break;}
     case 'histCopy': {const tt = T(id); if (!tt) return; const copy = {...tt, id: uid(), done: false, doneAt: null, xpClaimed: false, next: false, order: 0, spent: 0, logs: [], skills: Array.isArray(tt.skills)?[...tt.skills]:[], labels: Array.isArray(tt.labels)?[...tt.labels]:[], subs: (tt.subs||[]).filter(sb => !sb.deletedAt).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: todayI(), createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; S.tasks.push(copy); toast('Copiada para hoje'); break;}
     case 'histDel': if (!confirm('Excluir tarefa permanentemente do histórico?')) return; if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.tasks = S.tasks.filter(x => x.id !== id); if (focusTaskId === id) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); } break;
     case 'earnFilter': earningsFilter = btn.dataset.v; render(); return;
@@ -572,7 +572,9 @@ document.addEventListener('click', ev => {
           return;
         }
       } else {
-        t.done = false; t.doneAt = null; touch(t);
+        // v161: doneAt guarda o carimbo da mudança de estado (reabertura), não null.
+        // O merge só reabre uma conclusão quando este marcador é mais novo.
+        t.done = false; t.doneAt = Date.now(); touch(t);
         toast('Tarefa reaberta');
         break;
       }
@@ -855,7 +857,13 @@ document.addEventListener('click', ev => {
     }
     case 'cDel': if (!confirm('Excluir contato? Ele vai para o lixo.')) return; softDelete('contacts', id); break;
     case 'cArchive': {if (!c) break; c.archived = !c.archived; touch(c); break;}
-    case 'padd': {const n = V('pn'); if (!n) break; S.projects.push(mkProject({n, area: V('pa') || 'Carreira', due: V('pdu'), reward: V('prw'), clientId: V('pclient') || ''})); break;}
+    case 'toggleProjAdd': {
+      projAddOpen = !projAddOpen;
+      render();
+      if (projAddOpen) setTimeout(() => {const el = document.getElementById('pn'); if (el) {try {el.focus({preventScroll:true});} catch (e) {el.focus();}}}, 0);
+      return;
+    }
+    case 'padd': {const n = V('pn'); if (!n) break; S.projects.push(mkProject({n, area: V('pa') || 'Carreira', due: V('pdu'), reward: V('prw'), clientId: V('pclient') || ''})); projAddOpen = false; break;}
     case 'pdel': if (!confirm('Excluir projeto? Ele vai para o lixo.')) return; softDelete('projects', id); break;
     case 'claim': {const p = S.projects.find(x => x.id === id); if (p) {p.claimed = true; touch(p);} break;}
     case 'parch': {const p = S.projects.find(x => x.id === id); if (p) {p.archived = !p.archived; touch(p);} break;}
