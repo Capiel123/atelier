@@ -1514,3 +1514,21 @@
 .focus-circle{position:relative;z-index:1}
 .focus-time{z-index:2}
 
+
+/* v160 — IA: contexto no card, prompt da Fila e prévia do bloco */
+.ai-ctx{margin:12px 0 0;border-top:1px solid var(--bd);padding-top:8px}
+.ai-ctx summary{min-height:36px;cursor:pointer}
+.ai-ctx-body{padding:8px 2px 2px;font-size:12px;color:var(--mu);line-height:1.5}
+.ai-ctx-body .msg{margin:0 0 8px}
+.queue-ai-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.queue-ai-btn{display:inline-flex;align-items:center;gap:6px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--radius-sm);padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.queue-ai-btn:hover{background:var(--s3,var(--s2));border-color:var(--ac);color:var(--ac)}
+.queue-ai-bar .msg{margin:0;flex:1;min-width:180px}
+.shortcuts-content.ai-task-sheet{max-width:560px;max-height:85vh;overflow:auto}
+.ai-task-input{width:100%;min-height:150px;resize:vertical;font:12px/1.45 var(--font-mono);margin-top:4px}
+.ai-task-preview{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ai-task-card{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.ai-task-card b{color:var(--tx)}
+.ai-task-meta{font-size:11px;color:var(--mu);margin-top:2px;font-variant-numeric:tabular-nums}
+.ai-task-card ul{margin:6px 0 0 18px;padding:0;color:var(--mu)}
+.ai-task-card li{font-size:12px;line-height:1.45}

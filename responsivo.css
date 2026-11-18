@@ -1382,3 +1382,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 @media(min-width:1024px) and (prefers-reduced-motion:reduce){
   .side-nav,#timerWidget,#timerWidget #tlabel,.side-chev,.side-collapse-ico{transition:none}
 }
+
+/* v160 — alvos de toque do fluxo de IA na Fila e na prévia */
+@media(max-width:640px){
+  .queue-ai-btn{min-height:44px}
+  .ai-ctx summary{min-height:44px}
+  .ai-task-sheet .acts button{min-height:44px}
+}

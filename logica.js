@@ -864,6 +864,167 @@ const inp = (p, v, ty='text', ph='') => `<input data-p="${esc(p)}" type="${ty}" 
 function parseQuickLine(s, d) {let pr = 1, est = 0, proj = '', time = ''; s = s.replace(/!(a|m|b)\b/i, (_,x) => {pr = {a:0,m:1,b:2}[x.toLowerCase()]; return '';}); s = s.replace(/~(\d+)/, (_,n) => {est = +n; return '';}); s = s.replace(/#(\S+)/, (_,n) => {const p = alive(S.projects).find(p => p.n.toLowerCase().startsWith(n.toLowerCase())); if (p) proj = p.id; return p ? '' : '#' + n;}); s = s.replace(/@(\d{1,2}:\d{2})/, (_,t) => {time = t.padStart(5,'0'); return '';}); const title = s.trim(); if (!title) return null; return mkTask(title, {pr, est, proj, time, day: d, area: S.projects.find(p => p.id === proj)?.area || 'Carreira', order: d != null ? dayTasks(d).length : 0});}
 function addQuick(d, text) {const t = parseQuickLine(text, d); if (t) S.tasks.push(t); return t;}
 function addBulk(d, text) {text.split('\n').map(x => x.trim()).filter(Boolean).forEach(l => {const t = parseQuickLine(l, d); if (t) S.tasks.push(t);});}
+
+/* --- BLOCO DA IA (v160) ---
+   A IA externa devolve um bloco de texto; o app lê, mostra a prévia e cria a
+   tarefa com subtarefas usando o mesmo parseQuickLine (tokens ~min e !prio).
+   Sem API/rede, sem chave e sem mudar o modelo de dados. */
+const AI_TASK_OPEN_RE = /\[\s*ATELIER\s*:\s*TAREFA\s*\]/i;
+const AI_TASK_BLOCK_RE = /\[\s*ATELIER\s*:\s*TAREFA\s*\]([\s\S]*?)\[\s*\/\s*ATELIER\s*:\s*TAREFA\s*\]/gi;
+const AI_MAX_TASKS = 20;
+const AI_MAX_SUBS = 50;
+
+/* Sinal forte de bloco da IA: envelope explícito ou checklist com subtarefa
+   indentada. Evita interceptar um título normal colado na barra rápida. */
+function looksLikeAiTaskBlock(text) {
+  const s = String(text || '');
+  if (!s.trim()) return false;
+  if (AI_TASK_OPEN_RE.test(s)) return true;
+  return /^\s*[-*•]\s+(?:\[[ xX]\]\s*)?\S.*\n(?:[ \t]+[-*•]\s+)/m.test(s);
+}
+
+function cleanAiLine(raw) {
+  let s = String(raw || '').replace(/\s+$/, '');
+  s = s.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '');
+  s = s.replace(/^\[[ xX]\]\s*/, '');
+  s = s.replace(/^\*\*(.*?)\*\*$/, '$1');
+  s = s.replace(/^__(.*?)__$/, '$1');
+  s = s.replace(/^`(.*?)`$/, '$1');
+  return s.trim();
+}
+
+function parseAiBlockLines(body) {
+  const lines = String(body || '').split(/\r?\n/);
+  const specs = [];
+  let current = null;
+  let firstIsBullet = null;
+  for (const raw of lines) {
+    if (!raw || !raw.trim()) continue;
+    if (/^\s*```/.test(raw)) continue;
+    if (/^\s*[-*_]{3,}\s*$/.test(raw)) continue;
+    if (/^\s*\[\s*\/?\s*ATELIER\s*:\s*TAREFA\s*\]\s*$/i.test(raw)) continue;
+    const indent = (raw.match(/^[ \t]*/) || [''])[0].replace(/\t/g, '  ').length;
+    const isBullet = /^\s*(?:[-*•]|\d+[.)])\s+/.test(raw);
+    if (firstIsBullet === null) firstIsBullet = isBullet;
+    const text = cleanAiLine(raw);
+    if (!text) continue;
+    if (!specs.length) {
+      current = {titleLine: text, subs: []};
+      specs.push(current);
+      continue;
+    }
+    if (firstIsBullet && isBullet && indent === 0) {
+      if (specs.length >= AI_MAX_TASKS) break;
+      current = {titleLine: text, subs: []};
+      specs.push(current);
+      continue;
+    }
+    if (current && current.subs.length < AI_MAX_SUBS) current.subs.push(text);
+  }
+  return specs.filter(s => s && s.titleLine).slice(0, AI_MAX_TASKS);
+}
+
+/* Extrai um ou mais blocos. Se o envelope não vier, só aceita quando o texto
+   tem cara de checklist; uma linha solta não vira tarefa por acidente. */
+function parseAiTaskBlocks(text) {
+  const src = String(text || '');
+  const bodies = [];
+  AI_TASK_BLOCK_RE.lastIndex = 0;
+  let m;
+  while ((m = AI_TASK_BLOCK_RE.exec(src))) bodies.push(m[1]);
+  if (!bodies.length) {
+    if (!AI_TASK_OPEN_RE.test(src) && !looksLikeAiTaskBlock(src)) return [];
+    // Envelope sem fechamento: usa o que veio depois da abertura.
+    const start = src.search(AI_TASK_OPEN_RE);
+    if (start >= 0) {
+      const after = src.slice(start).replace(AI_TASK_OPEN_RE, '');
+      return parseAiBlockLines(after);
+    }
+    return parseAiBlockLines(src);
+  }
+  const specs = [];
+  bodies.forEach(b => specs.push(...parseAiBlockLines(b)));
+  return specs.slice(0, AI_MAX_TASKS);
+}
+
+function buildAiTask(spec, d) {
+  if (!spec || !spec.titleLine) return null;
+  const t = parseQuickLine(spec.titleLine, d);
+  if (!t) return null;
+  t.subs = (spec.subs || []).slice(0, AI_MAX_SUBS).map((s, i) => ({
+    id: uid(), t: String(s), d: false, xpClaimed: false, est: 0, order: i, logs: [], deletedAt: null
+  }));
+  return t;
+}
+
+function addAiTasks(d, specs) {
+  const created = [];
+  (specs || []).forEach(spec => {
+    const t = buildAiTask(spec, d);
+    if (!t) return;
+    t.order = dayTasks(d).length;
+    S.tasks.push(t);
+    created.push(t);
+  });
+  return created;
+}
+
+/* Contexto copiável + formato de resposta. Texto puro: o usuário cola no AI
+   que preferir; nada sai do app automaticamente. */
+/* Prompt genérico para a Fila: a pessoa copia, troca o tema e pede ao AI uma
+   tarefa nova em qualquer assunto, já no formato que o app lê de volta. */
+function aiNewTaskPrompt() {
+  return [
+    'Você vai criar uma tarefa para o app Ateliê.',
+    'Tema: [substitua por qualquer tema, projeto ou objetivo que você quer transformar em tarefa]',
+    '',
+    'Transforme o tema em UMA tarefa concreta, com subtarefas acionáveis.',
+    'Responda apenas com o bloco abaixo, sem explicações:',
+    '[ATELIER:TAREFA]',
+    '- [ ] Título da tarefa ~45 !a',
+    '  - [ ] Primeira subtarefa',
+    '  - [ ] Segunda subtarefa',
+    '[/ATELIER:TAREFA]',
+    '',
+    'Use !a (alta), !m (média) ou !b (baixa) e ~N para minutos. Máximo 8 subtarefas. Não inclua projeto, prazo ou hora.'
+  ].join('\n');
+}
+
+function aiTaskContext(t) {
+  if (!t) return '';
+  const pr = PR[t.pr] || PR[1];
+  const subs = activeSubs(t);
+  const proj = t.proj ? ((alive(S.projects).find(p => p.id === t.proj) || {}).n || '') : '';
+  const labels = (t.labels || []).map(id => (S.labels.find(l => l.id === id) || {}).n).filter(Boolean);
+  const skills = (t.skills || []).map(id => (S.skills.find(s => s.id === id) || {}).n).filter(Boolean);
+  const L = [];
+  L.push('Contexto da tarefa (Ateliê)');
+  L.push('Título: ' + t.t);
+  if (proj) L.push('Projeto: ' + proj);
+  L.push('Área: ' + areaLabel(t.area));
+  L.push('Prioridade: ' + pr);
+  L.push('Estimativa: ' + (t.est ? fmtMin(t.est) : 'não definida'));
+  L.push('Status: ' + (isDone(t) ? 'concluída' : 'pendente'));
+  if (t.due) L.push('Prazo: ' + fmtDate(t.due));
+  if (t.time) L.push('Hora: ' + t.time);
+  if (labels.length) L.push('Labels: ' + labels.join(', '));
+  if (skills.length) L.push('Habilidades: ' + skills.join(', '));
+  if (t.desc) { L.push('Descrição:'); L.push(t.desc); }
+  L.push('Subtarefas:');
+  if (subs.length) subs.forEach(s => L.push('- [' + (s.d ? 'x' : ' ') + '] ' + s.t));
+  else L.push('- (nenhuma)');
+  L.push('');
+  L.push('Com base nesse contexto, proponha uma nova tarefa concreta (a próxima ação).');
+  L.push('Substitua o exemplo abaixo pelo título e pelas subtarefas reais; ajuste a estimativa e a prioridade.');
+  L.push('Responda apenas com o bloco abaixo, sem explicações:');
+  L.push('[ATELIER:TAREFA]');
+  L.push('- [ ] Título da nova tarefa ~45 !a');
+  L.push('  - [ ] Primeira subtarefa');
+  L.push('  - [ ] Segunda subtarefa');
+  L.push('[/ATELIER:TAREFA]');
+  L.push('Use !a (alta), !m (média) ou !b (baixa) e ~N para minutos. Não inclua projeto, prazo ou hora.');
+  return L.join('\n');
+}
 function postponeTask(t, offset) {if (!t) return; const oldDay = t.day; let newDay; if (offset === 'queue') newDay = null; else if (oldDay === null) newDay = (todayI() + (+offset)) % 7; else newDay = (oldDay + (+offset)) % 7; t.day = newDay; t.postponedCount = (t.postponedCount || 0) + 1; t.lastPostponedAt = Date.now(); touch(t); if (newDay !== null) t.order = dayTasks(newDay).length; toast((newDay === null ? 'Fila' : DAYS[newDay]) + ' · adiada ' + t.postponedCount + 'x'); save(); render();}
 function reorderTask(t, delta) {
   const list = dayTasks(t.day);

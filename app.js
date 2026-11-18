@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave']);
 
 /* --- NAVEGAÇÃO POR ÁREA (R3) ---
    A área não é um destino novo: abre a última tela usada do grupo (D9) ou o padrão.
@@ -47,6 +47,21 @@ function focusNavSelector(selector) {
   }, 0);
 }
 
+/* v160 — confirma a prévia e cria as tarefas do bloco da IA. O snapshot é
+   feito pelo roteador (aiTaskSave está em MUTATING_ACTIONS). */
+function saveAiTasks() {
+  const ta = document.getElementById('aiTaskInput');
+  const specs = (ta && typeof parseAiTaskBlocks === 'function') ? parseAiTaskBlocks(ta.value) : [];
+  const d = aiTaskDraft ? aiTaskDraft.d : null;
+  const created = (typeof addAiTasks === 'function') ? addAiTasks(d, specs) : [];
+  if (!created.length) {toast('Nenhuma tarefa válida no bloco', true); return;}
+  const subs = created.reduce((n, t) => n + (t.subs || []).length, 0);
+  save();
+  render();
+  closeAiTaskSheet();
+  toast(`${created.length} tarefa${created.length === 1 ? '' : 's'} criada${created.length === 1 ? '' : 's'}${subs ? ` · ${subs} subtarefa${subs === 1 ? '' : 's'}` : ''}`);
+}
+
 /* --- RASTREAR <details> ABERTOS (para persistir após render) --- */
 // 💡 Sem isso, cada re-render fecharia o painel "Editar" que o usuário abriu.
 document.addEventListener('toggle', ev => {
@@ -59,6 +74,7 @@ document.addEventListener('toggle', ev => {
 /* --- CLIQUE (grande roteador de ações) --- */
 document.addEventListener('click', ev => {
   // Fechar overlays ao clicar fora deles
+  if (ev.target.id === 'aiTaskModal') {closeAiTaskSheet(); return;}
   if (ev.target.classList.contains('shortcuts-modal')) {
     if (ev.target.id === 'focusCompleteModal' && window.__focusCompletePausedTimer) {
       window.__focusCompletePausedTimer = false;
@@ -602,6 +618,11 @@ document.addEventListener('click', ev => {
     case 'subDown': {if (!t) break; moveSubTo(t, sub, subIndex(t, sub) + 1); break;}
     case 'qa': {const el = $('#qa'); if (el && el.value.trim()) {const t = addQuick(dv(el.dataset.d), el.value); if (t) el.value = '';} break;}
     case 'bulk': {const el = $('#bulk'); if (el && el.value.trim()) {addBulk(dv(btn.dataset.d), el.value); el.value = '';} break;}
+    case 'copyAiPrompt': copyTxt(aiNewTaskPrompt()); return;
+    case 'openAiPaste': showAiTaskSheet('', btn.dataset.d); return;
+    case 'closeAiTask': closeAiTaskSheet(); return;
+    case 'aiTaskSave': saveAiTasks(); return;
+    case 'copyTaskForAI': {const tt = T(id); if (!tt) return; copyTxt(aiTaskContext(tt)); return;}
     case 'setEnergy': setEnergy(currentEnergySlot(), btn.dataset.e); break;
     case 'toggleLabelsFilter': filterState.showLabels = !filterState.showLabels; render(); return;
     case 'toggleLabelFilter': {const lid = btn.dataset.id; if (filterState.labels.includes(lid)) filterState.labels = filterState.labels.filter(x => x !== lid); else filterState.labels.push(lid); render(); return;}
@@ -927,6 +948,18 @@ document.addEventListener('click', ev => {
   if (keyboardNav) focusNavActive(btn.dataset.t);
 });
 
+/* --- COLAR BLOCO DA IA NA BARRA RÁPIDA (v160) ---
+   Só intercepta quando o texto tem envelope/checklist com subtarefas; um
+   título normal continua sendo colado no input como antes. */
+document.addEventListener('paste', ev => {
+  const qa = ev.target;
+  if (!qa || qa.id !== 'qa') return;
+  const text = ev.clipboardData && ev.clipboardData.getData('text');
+  if (!text || typeof looksLikeAiTaskBlock !== 'function' || !looksLikeAiTaskBlock(text)) return;
+  ev.preventDefault();
+  showAiTaskSheet(text, qa.dataset.d);
+}, true);
+
 /* --- MUDANÇA EM INPUTS/SELECTS (inclusive os data-p) --- */
 document.addEventListener('change', ev => {
   const el = ev.target;
@@ -1144,6 +1177,8 @@ document.addEventListener('keydown', ev => {
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z' && !ev.shiftKey) {if (isTyping) return; ev.preventDefault(); undo(); return;}
   // Esc fecha a busca mesmo com o foco no input (o overlay abre com autofocus).
   if (ev.key === 'Escape' && document.getElementById('searchModal')) {ev.preventDefault(); closeSearch(); return;}
+  // v160 — Esc fecha a prévia da IA mesmo com o foco no textarea.
+  if (ev.key === 'Escape' && document.getElementById('aiTaskModal')) {ev.preventDefault(); closeAiTaskSheet(); return;}
   if (isTyping) return;
   // v159 — Ctrl+B expande/recolhe o menu lateral no desktop. Fica depois do
   // guard de digitação para não roubar o negrito de um campo contenteditable.

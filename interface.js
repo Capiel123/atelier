@@ -92,6 +92,92 @@ function showShortcutsHelp() {
   document.body.appendChild(el);
 }
 
+/* --- TAREFA DA IA (v160) ---
+   Cola um bloco de checklist, mostra a prévia e cria a tarefa + subtarefas.
+   O texto é sempre escapado; nenhum HTML do AI vira markup. */
+let aiTaskDraft = null;
+let aiTaskOpener = null;
+let aiTaskPreviewTimer = null;
+const AI_TEMPLATE_TITLE_RE = /^t[ií]tulo (?:da|de) (?:nova )?tarefa$/i;
+
+function aiDestLabel(d) {
+  return d == null ? 'Fila' : (DAYS[d] || 'Fila');
+}
+function aiTaskPreviewHtml(t) {
+  const warn = AI_TEMPLATE_TITLE_RE.test(String(t.t || '').trim())
+    ? `<div class="msg" style="color:var(--wr);margin:0 0 4px">Parece o exemplo do prompt — troque pelo bloco que a IA devolveu.</div>`
+    : '';
+  return `<div class="ai-task-card">
+    ${warn}
+    <div><b>${esc(t.t)}</b></div>
+    <div class="ai-task-meta">${esc(PR[t.pr] || PR[1])} · ${t.est ? esc(fmtMin(t.est)) : 'sem estimativa'} · ${t.subs.length} subtarefa${t.subs.length === 1 ? '' : 's'}</div>
+    ${t.subs.length ? `<ul>${t.subs.map(s => `<li>${esc(s.t)}</li>`).join('')}</ul>` : ''}
+  </div>`;
+}
+function renderAiTaskPreview() {
+  const ta = document.getElementById('aiTaskInput');
+  const box = document.getElementById('aiTaskPreview');
+  const btn = document.getElementById('aiTaskSaveBtn');
+  if (!ta || !box || !btn) return;
+  const specs = (typeof parseAiTaskBlocks === 'function') ? parseAiTaskBlocks(ta.value) : [];
+  const built = [];
+  specs.forEach(spec => {
+    const t = (typeof buildAiTask === 'function') ? buildAiTask(spec, aiTaskDraft ? aiTaskDraft.d : null) : null;
+    if (t) built.push(t);
+  });
+  if (aiTaskDraft) aiTaskDraft.tasks = built;
+  const dest = aiDestLabel(aiTaskDraft ? aiTaskDraft.d : null);
+  btn.textContent = 'Adicionar à ' + dest;
+  if (!built.length) {
+    btn.disabled = true;
+    box.innerHTML = '<div class="msg">Nenhum bloco válido. Cole o bloco <b>[ATELIER:TAREFA]</b> com o título e as subtarefas.</div>';
+    return;
+  }
+  btn.disabled = false;
+  box.innerHTML = `<div class="msg">${built.length} tarefa${built.length === 1 ? '' : 's'} para ${esc(dest)}. Confira antes de adicionar.</div>` + built.map(aiTaskPreviewHtml).join('');
+}
+function showAiTaskSheet(text, d) {
+  let el = document.getElementById('aiTaskModal');
+  if (el) el.remove();
+  aiTaskOpener = document.activeElement;
+  aiTaskDraft = {d: dv(d), tasks: []};
+  el = document.createElement('div');
+  el.id = 'aiTaskModal';
+  el.className = 'shortcuts-modal';
+  el.innerHTML = `<div class="shortcuts-content ai-task-sheet" role="dialog" aria-modal="true" aria-labelledby="aiTaskTitle" tabindex="-1">
+    <div class="big" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b id="aiTaskTitle">Tarefa da IA</b><button type="button" data-a="closeAiTask" aria-label="Fechar" title="Fechar">${ico('x')}</button></div>
+    <div class="msg">Cole o bloco proposto pela IA. O título usa <b>~minutos</b> e <b>!a/!m/!b</b>; as subtarefas vão indentadas com <b>- [ ]</b>.</div>
+    <textarea id="aiTaskInput" class="ai-task-input" rows="9" aria-label="Bloco da IA" placeholder="[ATELIER:TAREFA]\n- [ ] Revisar proposta ~45 !a\n  - [ ] Ler briefing\n  - [ ] Escrever esboço\n[/ATELIER:TAREFA]">${esc(text || '')}</textarea>
+    <div id="aiTaskPreview" class="ai-task-preview" aria-live="polite"></div>
+    <div class="acts" style="margin-top:12px;display:flex;gap:8px"><button type="button" id="aiTaskSaveBtn" data-a="aiTaskSave" disabled style="flex:1;background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac)">Adicionar</button><button type="button" data-a="closeAiTask">Cancelar</button></div>
+  </div>`;
+  document.body.appendChild(el);
+  renderAiTaskPreview();
+  const panel = el.querySelector('.shortcuts-content');
+  if (panel) {
+    try {panel.focus({preventScroll: true});} catch (e) {try {panel.focus();} catch (e2) {}}
+  }
+}
+function closeAiTaskSheet() {
+  clearTimeout(aiTaskPreviewTimer);
+  aiTaskPreviewTimer = null;
+  const el = document.getElementById('aiTaskModal');
+  if (el) el.remove();
+  const op = aiTaskOpener;
+  aiTaskOpener = null;
+  aiTaskDraft = null;
+  if (op && op.focus && op.isConnected !== false) {
+    try {op.focus({preventScroll: true});} catch (e) {try {op.focus();} catch (e2) {}}
+  }
+}
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('input', ev => {
+    if (!ev.target || ev.target.id !== 'aiTaskInput') return;
+    clearTimeout(aiTaskPreviewTimer);
+    aiTaskPreviewTimer = setTimeout(renderAiTaskPreview, 120);
+  }, true);
+}
+
 /* --- RECUPERAR EXCLUÍDAS DO SERVIDOR (v101) ---
    Sem SQL: lista as linhas com deleted_at recente e restaura as marcadas. */
 function openRecoverSheet() {
@@ -1213,7 +1299,7 @@ function adder(d) {
       <button data-a="qa" data-d="${dd}" aria-label="Adicionar tarefa">${ico('plus')}</button>
       <button data-a="toggleQuickAdd" title="Fechar" aria-label="Fechar" style="background:transparent; border-color:transparent; color:var(--mu); width:auto; padding:0 8px;">${ico('x')}</button>
     </div>
-    <details><summary style="font-size:11px;opacity:0.8">${ico('sparkle')} Dica: atalhos e múltiplas tarefas</summary>
+    <details><summary style="font-size:11px;opacity:0.8">${ico('sparkle')} Dica: atalhos, várias tarefas e IA</summary>
       <div style="font-size:11.5px;color:var(--mu);padding:8px;background:var(--s2);border-radius:8px;margin-top:4px;margin-bottom:8px;line-height:1.5">
         <b>!a</b>, <b>!m</b>, <b>!b</b> → Prioridade (Alta, Média, Baixa)<br>
         <b>~30</b> → Estimativa de tempo (minutos)<br>
@@ -1222,6 +1308,7 @@ function adder(d) {
       </div>
       <textarea id="bulk" rows="3" placeholder="Adicionar várias (uma por linha):\nTarefa 1\nTarefa 2 ~45 !a"></textarea>
       <button data-a="bulk" data-d="${dd}" style="width:100%;margin-top:4px">Criar várias</button>
+      <button data-a="openAiPaste" data-d="${dd}" style="width:100%;margin-top:4px">${ico('sparkle')} Colar bloco da IA</button>
     </details>
   </div>`;
 }
@@ -1544,7 +1631,8 @@ function cardTask(t, score) {
     ${subsCollapsedNow ? '' : `<details data-eid="${t.id}" ${openEdits.has(t.id)?'open':''}>
       <summary>Editar detalhes</summary>
       <div class="form"><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions([['','—'],...alive(S.projects).map(p=>[p.id,p.n])], t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades${pillPicker(alive(S.skills).filter(s=>!s.archived), t.skills||[], 'skill', t.id)}</label><label class="full">Labels${pillPicker(S.labels, t.labels||[], 'label', t.id)}</label><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label></div>
-    </details>`}
+    </details>
+      ${aiContextDetailsHtml(t)}`}
   </div>`;
 }
 
@@ -1596,8 +1684,24 @@ function renderSubs(t) {
   </div>`;
 }
 
+/* v160 — ponte de contexto para uma IA externa. Fica recolhida no card
+   completo; copia texto puro, sem enviar nada e sem API. */
+function aiContextDetailsHtml(t) {
+  return `<details class="ai-ctx">
+    <summary>${ico('sparkle')} Conversar com IA</summary>
+    <div class="ai-ctx-body">
+      <div class="msg">Copie o contexto, peça uma nova tarefa na sua IA e cole o bloco de volta na barra de adicionar (Hoje ou Fila).</div>
+      <button type="button" data-a="copyTaskForAI" data-id="${t.id}" style="width:100%">${ico('copy')} Copiar contexto + formato</button>
+    </div>
+  </details>`;
+}
+
 function viewQueue() {
   return `<div class="msg" style="margin-bottom:12px">Registre ideias e tarefas rapidamente, sem precisar de data.</div>${adder(null)}
+  <div class="queue-ai-bar">
+    <button type="button" class="queue-ai-btn" data-a="copyAiPrompt" title="Copia um prompt pronto; troque o Tema: no seu AI">${ico('sparkle')} Copiar prompt para IA</button>
+    <span class="msg">Crie uma tarefa sobre qualquer tema e cole o bloco de volta na barra acima.</span>
+  </div>
   <div id="queueList">
     ${dayTasks(null).length ? dayTasks(null).map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>'}
   </div>`;
@@ -1663,6 +1767,7 @@ function cardQueue(t) {
           <label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label>
         </div>
       </details>
+      ${aiContextDetailsHtml(t)}
     </div>`;
   }
   html += `</div>`;
