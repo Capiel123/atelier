@@ -9,6 +9,10 @@
    💡 Altere max-width para deixar o app mais estreito/largo no desktop. */
 .wrap{max-width:960px;margin:auto;padding:12px}
 
+/* --- SHELL COM MENU LATERAL (só ≥1024 px; o visual está em responsivo.css) --- */
+.app-shell{display:block}
+.side-nav{display:none}
+
 /* --- TOPO / HEADER ---
    💡 Para mudar o espaçamento do topo, mexa aqui. */
 header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}

@@ -42,6 +42,24 @@
   for (var k in t) h.style.setProperty(k, t[k]);
 })();
 </script>
+<script>
+/* v157 — menu lateral desktop: lado e recolhimento antes do primeiro paint.
+   Preferências ficam por aparelho, fora de S; sem preferência, o rail entra em 1024–1199. */
+(function () {
+  var h = document.documentElement;
+  var side = 'left';
+  var collapsed = false;
+  try {
+    if (localStorage.getItem('atelier_sidebar_side_v1') === 'right') side = 'right';
+    var stored = localStorage.getItem('atelier_sidebar_collapsed_v1');
+    collapsed = (stored === null || stored === '') ? (window.innerWidth || 0) < 1200 : stored === '1';
+  } catch (e) {
+    collapsed = (window.innerWidth || 0) < 1200;
+  }
+  h.setAttribute('data-sb-side', side);
+  h.setAttribute('data-sb-collapsed', collapsed ? 'true' : 'false');
+})();
+</script>
 <style>html.theme-booting body{visibility:hidden}html.theme-booting{background:#181713}</style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -501,7 +519,16 @@
   <symbol id="o-chamfer" viewBox="-1.2 -1.2 2.4 2.4"><path d="M-.45-1.05H1.05V.45L.45 1.05H-1.05V-.45Z"/></symbol>
   <symbol id="o-planet" viewBox="-1.2 -1.2 2.4 2.4"><circle r=".62"/><ellipse rx="1.15" ry=".38" transform="rotate(-20)"/></symbol>
 </svg>
-<div class="wrap">
+<div class="app-shell" id="appShell">
+  <aside class="side-nav" id="sideNav" aria-label="Navegação principal">
+    <a class="side-brand" id="sideBrand" href="#/week" data-a="tab" data-t="week" aria-label="Atelier — Hoje">
+      <span class="side-brand-mark" aria-hidden="true">A</span>
+      <span class="side-brand-logo" id="sideLogo"><span class="logo-text">ATELIER</span></span>
+    </a>
+    <nav class="side-menu" id="sideMenu" aria-label="Áreas"></nav>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+  <div class="wrap">
   <header>
     <div class="logo" id="logo"></div>
     <div class="header-right">
@@ -521,6 +548,7 @@
   <nav id="nav" aria-label="Áreas"></nav>
   <nav id="subnav" aria-label="Telas da área" hidden></nav>
   <main id="app"></main>
+  </div>
 </div>
 <nav class="bottom-nav" id="bottomNav"></nav>
 <div class="more-sheet" id="moreSheet"></div>

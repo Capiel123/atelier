@@ -93,7 +93,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
 
 /* --- DESKTOP (≥ 1024px) --- */
 @media(min-width:1024px){
-  .wrap{max-width:1080px;padding:20px 28px 48px}
+  .wrap{max-width:960px;padding:20px 28px 48px}
   header{margin-bottom:14px}.logo-text{font-size:28px}
   /* 20 temas em 5×4 no desktop; nenhum card sobra na última linha. */
   .theme-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
@@ -1237,4 +1237,148 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .orbit-mini-actions button{min-height:44px}
   .orbit-svg .orbit-ring-hit{stroke-width:20}
   .orbit-svg .node-label{font-size:10px}
+}
+
+/* =========================================================
+   v157 — MENU LATERAL DESKTOP (≥1024 px)
+   ≥1200 expandido (224 px) · 1024–1199 rail (64 px).
+   Abaixo de 1024 o topo atual (#nav + #subnav) continua.
+   A sidebar nasce recolhida só quando o viewport pede; um
+   clique em Recolher/Expandir grava a preferência local.
+   ========================================================= */
+@media(min-width:1024px){
+  .app-shell{display:flex;align-items:flex-start;min-height:100vh}
+
+  .side-nav{
+    display:flex;flex-direction:column;flex:none;
+    width:224px;height:100vh;height:100dvh;
+    position:sticky;top:0;align-self:flex-start;z-index:35;
+    background:var(--s1);border-right:1px solid var(--bd);
+    padding:14px 10px 12px;overflow:visible;
+    transition:width .16s var(--ease),padding .16s var(--ease);
+  }
+  html[data-sb-side="right"] .side-nav{order:2;border-right:0;border-left:1px solid var(--bd)}
+  html[data-sb-side="right"] .wrap{order:1}
+  .wrap{flex:1 1 auto;min-width:0;max-width:960px;margin:0 auto;padding:20px 28px 48px}
+
+  /* Marca no topo: logo customizada + wordmark; no rail, monograma. */
+  .side-brand{display:flex;align-items:center;gap:9px;min-height:38px;padding:2px 6px 14px;color:var(--ac);text-decoration:none;cursor:pointer}
+  .side-brand:hover,.side-brand:focus-visible{color:var(--ac)}
+  .side-brand-logo{display:flex;align-items:center;gap:8px;min-width:0}
+  .side-brand-logo img{max-height:30px;max-width:170px;object-fit:contain;flex:none}
+  .side-brand-logo .logo-text{font-size:20px;letter-spacing:.12em;line-height:1;white-space:nowrap}
+  .side-brand-mark{display:none;width:30px;height:30px;place-items:center;border:1px solid var(--ac);border-radius:var(--radius-sm);color:var(--ac);font-weight:700;font-size:14px;line-height:1;flex:none}
+
+  /* Áreas + accordion guiado pela rota. */
+  .side-menu{display:flex;flex-direction:column;gap:2px;min-height:0}
+  .side-group{display:flex;flex-direction:column;min-width:0;position:relative}
+  .side-group-btn,.side-tool{
+    position:relative;display:flex;align-items:center;gap:10px;width:100%;
+    min-height:38px;padding:8px;border:0;border-radius:var(--radius-sm);
+    background:none;color:var(--mu);font:inherit;font-size:13.5px;font-weight:500;
+    text-align:left;cursor:pointer;text-decoration:none;
+  }
+  .side-group-btn.has-menu{padding-right:34px}
+  .side-tool{min-height:34px;font-size:12.5px;font-weight:400}
+  .side-group-btn:hover,.side-tool:hover{background:var(--s2);color:var(--tx)}
+  .side-group-btn.on{background:color-mix(in srgb,var(--ac) 10%,transparent);color:var(--ac);font-weight:600}
+  .side-group-btn.on::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:2px;background:var(--ac)}
+  html[data-sb-side="right"] .side-group-btn.on::before{left:auto;right:0}
+  .side-tool.on{background:color-mix(in srgb,var(--ac) 10%,transparent);color:var(--ac)}
+  .side-ico{width:17px;height:17px}
+  .side-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .side-chev{width:12px;height:12px;opacity:.55;transition:transform .16s var(--ease)}
+  /* v158 — chevron próprio: clique abre/fecha os destinos sem trocar de tela. */
+  .side-chev-btn{
+    position:absolute;top:4px;right:3px;z-index:1;width:26px;height:30px;padding:0;
+    display:grid;place-items:center;border:0;border-radius:var(--radius-sm);
+    background:none;color:var(--mu);cursor:pointer;
+  }
+  .side-chev-btn:hover{background:var(--s3,var(--s2));color:var(--tx)}
+  .side-chev-btn[aria-expanded="true"] .side-chev{transform:rotate(180deg)}
+  .side-collapse-ico{transition:transform .16s var(--ease)}
+  html[data-sb-side="left"] .side-collapse-ico{transform:rotate(90deg)}
+  html[data-sb-side="left"][data-sb-collapsed="true"] .side-collapse-ico{transform:rotate(-90deg)}
+  html[data-sb-side="right"] .side-collapse-ico{transform:rotate(-90deg)}
+  html[data-sb-side="right"][data-sb-collapsed="true"] .side-collapse-ico{transform:rotate(90deg)}
+
+  .side-sub{display:flex;flex-direction:column;gap:1px;margin:2px 0 7px 18px;padding-left:10px;border-left:1px solid var(--bd)}
+  .side-subitem{
+    width:100%;min-height:30px;padding:5px 8px;border:0;border-radius:var(--radius-sm);
+    background:none;color:var(--mu);font:inherit;font-size:12.5px;text-align:left;
+    cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .side-subitem:hover{background:var(--s2);color:var(--tx)}
+  .side-subitem.on{background:color-mix(in srgb,var(--ac) 8%,transparent);color:var(--ac);font-weight:600}
+
+  /* Rodapé: Config e os dois controles rápidos. */
+  .side-foot{margin-top:auto;padding-top:10px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:2px}
+  .side-toggle{display:flex;gap:2px}
+  .side-toggle .side-tool{flex:1;min-width:0}
+
+  /* Tooltip fora do recorte: no rail mostra nome + descrição; expandido, só a descrição. */
+  .side-tip{
+    position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);
+    background:var(--surface-panel,var(--s1));border:1px solid var(--bd);color:var(--tx);
+    border-radius:var(--radius-sm);padding:6px 9px;font-size:11.5px;font-weight:400;line-height:1.35;
+    white-space:nowrap;box-shadow:var(--sh);opacity:0;pointer-events:none;z-index:80;
+    transition:opacity .1s ease;
+  }
+  html[data-sb-side="right"] .side-tip{left:auto;right:calc(100% + 10px)}
+  .side-tip b{display:none;color:var(--ac);font-weight:600;margin-right:4px}
+  html[data-sb-collapsed="true"] .side-tip b{display:inline}
+  .side-group-btn:hover .side-tip,.side-group-btn:focus-visible .side-tip,
+  .side-tool:hover .side-tip,.side-tool:focus-visible .side-tip{opacity:1;transition-delay:.22s}
+
+  /* Rail: 64 px, só ícones, filhos fechados. */
+  html[data-sb-collapsed="true"] .side-nav{width:64px;padding:14px 8px 12px}
+  html[data-sb-collapsed="true"] .side-brand{padding:2px 0 14px;justify-content:center}
+  html[data-sb-collapsed="true"] .side-brand-logo{display:none}
+  html[data-sb-collapsed="true"] #sideBrand:not(.has-custom-logo) .side-brand-mark{display:grid}
+  html[data-sb-collapsed="true"] #sideBrand.has-custom-logo .side-brand-logo{display:flex}
+  html[data-sb-collapsed="true"] #sideBrand.has-custom-logo .side-brand-logo .logo-text{display:none}
+  html[data-sb-collapsed="true"] #sideBrand.has-custom-logo .side-brand-logo img{max-width:30px;max-height:30px}
+  html[data-sb-collapsed="true"] .side-label,
+  html[data-sb-collapsed="true"] .side-chev,
+  html[data-sb-collapsed="true"] .side-chev-btn{display:none}
+  html[data-sb-collapsed="true"] .side-group-btn,
+  html[data-sb-collapsed="true"] .side-tool{justify-content:center;padding:9px 0}
+  html[data-sb-collapsed="true"] .side-sub{display:none}
+  html[data-sb-collapsed="true"] .side-toggle{flex-direction:column}
+  html[data-sb-collapsed="true"] .side-group-btn.on::before{top:9px;bottom:9px}
+
+  /* Header compacto: sem logo/engrenagem; busca depois do nível e sempre curta.
+     O nível cede espaço e o timer cresce quando está em execução. */
+  header{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;margin:0 0 16px}
+  .logo,.gear-btn{display:none}
+  .header-right{display:contents}
+  #syncPill{order:1;flex:none}
+  #timerWidget{order:2;flex:0 1 auto;min-width:0;max-width:280px;transition:max-width .2s var(--ease),flex-grow .2s var(--ease)}
+  #timerWidget.run{flex:1 1 260px;max-width:380px}
+  #timerWidget #tlabel{max-width:110px;transition:max-width .2s var(--ease)}
+  #timerWidget.run #tlabel{max-width:200px}
+  #lvl{order:3;flex:1 1 140px;min-width:90px;max-width:none;margin:0;font-size:11.5px}
+  #lvl .lb{margin-top:2px}
+  .header-right .search-btn{order:4;width:30px;height:30px;flex:none}
+
+  #nav,#subnav{display:none!important}
+  #backupBanner{margin-bottom:10px}
+
+  /* v159 — flyout do rail: os destinos da área flutuam ao lado da sidebar,
+     sem expandir o menu. #subnav.nav-dropdown-open vence o display:none
+     acima por especificidade (id + classe) e mantém a mesma fonte de abas. */
+  #subnav.nav-dropdown-open{display:flex!important}
+  #subnav.side-flyout{
+    width:200px;max-width:min(70vw,240px);
+    flex-direction:column;gap:2px;
+    max-height:calc(100vh - 16px);overflow-y:auto;
+  }
+  #subnav.side-flyout .nav-sub{flex-direction:column;width:100%;gap:2px}
+  #subnav.side-flyout .nav-subitem{width:100%;text-align:left}
+  /* Com o flyout aberto, o tooltip do rail não pode cobrir o painel. */
+  html[data-sb-collapsed="true"] .side-group-btn[aria-expanded="true"] .side-tip{display:none}
+}
+
+@media(min-width:1024px) and (prefers-reduced-motion:reduce){
+  .side-nav,#timerWidget,#timerWidget #tlabel,.side-chev,.side-collapse-ico{transition:none}
 }

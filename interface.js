@@ -80,6 +80,7 @@ function showShortcutsHelp() {
     <h3 style="margin-top:0">Atalhos de teclado</h3>
     <div class="shortcut-row"><span><kbd>Ctrl</kbd> + <kbd>K</kbd></span><span>Buscar global</span></div>
     <div class="shortcut-row"><span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span><span>Desfazer (30 estados)</span></div>
+    <div class="shortcut-row"><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>Expandir / recolher o menu lateral</span></div>
     <div class="shortcut-row"><span><kbd>N</kbd></span><span>Focar em nova tarefa</span></div>
     <div class="shortcut-row"><span><kbd>F</kbd></span><span>Modo foco</span></div>
     <div class="shortcut-row"><span><kbd>Esc</kbd></span><span>Sair do foco / fechar painel</span></div>
@@ -350,6 +351,16 @@ const NAV_GROUPS = [
   {id: 'progress', n: 'Progresso', icon: 'clock',     def: 'stats',  tabs: ['stats', 'history']},
   {id: 'review',   n: 'Revisar',   icon: 'check',     def: 'review', tabs: ['review', 'cmds']}
 ];
+/* v157 — descrição curta de cada área: tooltip do rail e apoio do aria-label. */
+const NAV_DESC = {
+  today:    'Semana e tarefas do dia',
+  plan:     'Fila, prazos e metas',
+  work:     'Projetos, clientes, vagas e rendimento',
+  people:   'Rede, pessoal e órbitas',
+  progress: 'Estatísticas e histórico',
+  review:   'Revisão semanal e comandos',
+  config:   'Tema, logo, backup e preferências'
+};
 const TAB_META = {
   week:    {n: 'Hoje',        group: 'today',    icon: 'calendar',  aliases: ['hoje', 'dia', 'semana', 'tarefas', 'week']},
   q:       {n: 'Fila',        group: 'plan',     icon: 'inbox',     aliases: ['fila', 'backlog', 'inbox', 'queue']},
@@ -473,6 +484,159 @@ function navDropdownHtml(gid) {
   }).join('')}</div>`;
 }
 
+/* --- MENU LATERAL DESKTOP (v157) ---
+   Acordeão guiado pela rota: só o grupo ativo mostra os filhos. A marca fica
+   no topo e o Config no rodapé; lado/recolhimento vivem no <html> (pré-paint). */
+function sidebarSideState() {
+  try {
+    const h = document.documentElement;
+    if (h && typeof h.getAttribute === 'function') {
+      const v = h.getAttribute('data-sb-side');
+      if (v === 'right' || v === 'left') return v;
+    }
+    if (h && h.dataset && (h.dataset.sbSide === 'right' || h.dataset.sbSide === 'left')) return h.dataset.sbSide;
+  } catch (e) {}
+  return (typeof getSidebarSide === 'function') ? getSidebarSide() : 'left';
+}
+function isSidebarCollapsed() {
+  try {
+    const h = document.documentElement;
+    if (h && typeof h.getAttribute === 'function') {
+      const v = h.getAttribute('data-sb-collapsed');
+      if (v === 'true') return true;
+      if (v === 'false') return false;
+    }
+    if (h && h.dataset && (h.dataset.sbCollapsed === 'true' || h.dataset.sbCollapsed === 'false')) return h.dataset.sbCollapsed === 'true';
+  } catch (e) {}
+  return (typeof getSidebarCollapsed === 'function') ? getSidebarCollapsed() : false;
+}
+function sideTip(name, desc) {
+  return `<span class="side-tip" aria-hidden="true">${desc ? `<b>${esc(name)}</b> ` : ''}${esc(desc || name)}</span>`;
+}
+function sideSubHtml(g) {
+  if (g.id === 'people') {
+    const seg = peopleMode === 'personal' ? 'personal' : 'pro';
+    return `<button class="side-subitem${seg === 'pro' ? ' on' : ''}" data-a="peopleSeg" data-type="pro" aria-pressed="${seg === 'pro'}">Rede</button><button class="side-subitem${seg === 'personal' ? ' on' : ''}" data-a="peopleSeg" data-type="personal" aria-pressed="${seg === 'personal'}">Pessoal</button>`;
+  }
+  return g.tabs.map(id => {
+    const on = id === tab;
+    return `<button class="side-subitem${on ? ' on' : ''}" data-a="tab" data-t="${id}"${on ? ' aria-current="page"' : ''}>${esc(TAB_META[id].n)}</button>`;
+  }).join('');
+}
+/* v158 — o chevron abre/fecha os destinos de qualquer grupo sem trocar de tela.
+   O mapa guarda só as exceções ao acordeão da rota; é zerado quando a aba muda. */
+let sideGroupToggles = {};
+let sideTogglesTab = null;
+/* v159 — flyout do rail: estado compartilhado pelo markup da sidebar, pelo
+   painel #subnav e pelo render. */
+let sideFlyoutGroup = '';
+let sideFlyoutTimer = null;
+let sideFlyoutFocusLock = 0;
+function lockSideFlyoutFocus(ms) { sideFlyoutFocusLock = Date.now() + (ms || 400); }
+function sideGroupIsOpen(g) {
+  if (!g || !groupHasMenu(g)) return false;
+  if (Object.prototype.hasOwnProperty.call(sideGroupToggles, g.id)) return !!sideGroupToggles[g.id];
+  return g.id === (GROUP_OF_TAB[tab] || '');
+}
+function setSideGroupOpen(gid, open) {
+  if (!gid) return;
+  sideGroupToggles[gid] = !!open;
+}
+function resetSideGroupToggles() { sideGroupToggles = {}; }
+function toggleSideGroup(gid) {
+  const g = NAV_GROUPS.find(x => x.id === gid);
+  if (g) setSideGroupOpen(gid, !sideGroupIsOpen(g));
+}
+/* v159 — no rail o aria-expanded da área representa o flyout, não o
+   acordeão inline (que fica oculto pelo CSS). */
+function sideGroupAriaExpanded(g, expanded) {
+  if (!g || !groupHasMenu(g)) return false;
+  if (isSidebarCollapsed()) return sideFlyoutGroup === g.id;
+  return !!expanded;
+}
+function sideNavHtml() {
+  const active = GROUP_OF_TAB[tab] || '';
+  return NAV_GROUPS.map(g => {
+    const on = g.id === active;
+    const menu = groupHasMenu(g);
+    const expanded = menu && sideGroupIsOpen(g);
+    const rail = isSidebarCollapsed();
+    const ariaExpanded = sideGroupAriaExpanded(g, expanded);
+    const desc = NAV_DESC[g.id] || '';
+    const chev = menu
+      ? `<button class="side-chev-btn" data-a="sidePeek" data-group="${g.id}" tabindex="-1" aria-expanded="${expanded}" aria-label="${esc((expanded ? 'Fechar' : 'Abrir') + ' os destinos de ' + g.n)}">${ico('chevron-down', 'side-chev')}</button>`
+      : '';
+    const head = `<button class="side-group-btn${on ? ' on' : ''}${menu ? ' has-menu' : ''}" data-a="navArea" data-group="${g.id}"${on ? ' aria-current="true"' : ''}${menu ? ` aria-expanded="${ariaExpanded}"` : ''}${menu && rail ? ' aria-haspopup="true"' : ''} aria-label="${esc(g.n + (desc ? ': ' + desc : ''))}">${ico(g.icon, 'side-ico')}<span class="side-label">${esc(g.n)}</span>${sideTip(g.n, desc)}</button>`;
+    const sub = expanded ? `<div class="side-sub" role="group" aria-label="${esc(g.n)}">${sideSubHtml(g)}</div>` : '';
+    return `<div class="side-group">${head}${chev}${sub}</div>`;
+  }).join('');
+}
+function sideFootHtml() {
+  const collapsed = isSidebarCollapsed();
+  const side = sidebarSideState();
+  const cfgOn = tab === 'config';
+  const collapseLabel = collapsed ? 'Expandir' : 'Recolher';
+  const collapseDesc = collapsed ? 'Mostrar os nomes' : 'Deixar só os ícones';
+  const flipLabel = side === 'left' ? 'Direita' : 'Esquerda';
+  const flipDesc = 'Mover o menu para a ' + (side === 'left' ? 'direita' : 'esquerda');
+  return `<button class="side-tool${cfgOn ? ' on' : ''}" data-a="tab" data-t="config"${cfgOn ? ' aria-current="page"' : ''} aria-label="Config: ${esc(NAV_DESC.config)}">${ico('sliders', 'side-ico')}<span class="side-label">Config</span>${sideTip('Config', NAV_DESC.config)}</button>
+  <div class="side-toggle">
+    <button class="side-tool" data-a="sideCollapse" aria-label="${esc(collapseLabel)} o menu — ${esc(collapseDesc)}">${ico('chevron-down', 'side-ico side-collapse-ico')}<span class="side-label">${esc(collapseLabel)}</span>${sideTip(collapseLabel, collapseDesc)}</button>
+    <button class="side-tool" data-a="sideFlip" aria-label="${esc(flipDesc)}">${ico('repeat', 'side-ico')}<span class="side-label">${esc(flipLabel)}</span>${sideTip(flipLabel, flipDesc)}</button>
+  </div>`;
+}
+/* Aplica o estado visual no <html> e, ao trocar de lado, move o <aside> no DOM
+   para a ordem de tabulação acompanhar o lado escolhido. */
+function applySidebarLayout(side, collapsed) {
+  side = side === 'right' ? 'right' : 'left';
+  const h = document.documentElement;
+  try {
+    if (h && typeof h.setAttribute === 'function') {
+      h.setAttribute('data-sb-side', side);
+      h.setAttribute('data-sb-collapsed', collapsed ? 'true' : 'false');
+    } else if (h && h.dataset) {
+      h.dataset.sbSide = side;
+      h.dataset.sbCollapsed = collapsed ? 'true' : 'false';
+    }
+  } catch (e) {}
+  try {
+    const shell = document.getElementById('appShell');
+    const aside = document.getElementById('sideNav');
+    const wrap = (shell && typeof shell.querySelector === 'function') ? shell.querySelector('.wrap') : null;
+    if (!shell || !aside || !wrap || typeof shell.insertBefore !== 'function') return;
+    const first = shell.firstElementChild;
+    if (side === 'right') {
+      if (first !== wrap) shell.insertBefore(wrap, aside);
+    } else if (first !== aside) {
+      shell.insertBefore(aside, wrap);
+    }
+  } catch (e) {}
+}
+function renderSideNav() {
+  const menu = document.getElementById('sideMenu');
+  if (menu) menu.innerHTML = sideNavHtml();
+  const foot = document.getElementById('sideFoot');
+  if (foot) foot.innerHTML = sideFootHtml();
+  applySidebarLayout(sidebarSideState(), isSidebarCollapsed());
+}
+/* Sem preferência salva, o rail acompanha o viewport (1024–1199). Com escolha
+   do usuário, o resize não mexe — a preferência manda. */
+if (typeof window !== 'undefined' && window.addEventListener) {
+  let _sbResize = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_sbResize);
+    _sbResize = setTimeout(() => {
+      let saved = null;
+      try { saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY); } catch (e) {}
+      if (saved === '1' || saved === '0') return;
+      const want = ((window.innerWidth || 0) > 0) && window.innerWidth < 1200;
+      if (want === isSidebarCollapsed()) return;
+      applySidebarLayout(sidebarSideState(), want);
+      renderSideNav();
+    }, 120);
+  });
+}
+
 /* --- Dropdown de área no desktop (v143) ---
    Só ≥1024 px e só com ponteiro fino; no tablet a segunda fileira é fixa.
    A área continua abrindo a última tela do grupo (D9); o painel flutua por
@@ -498,6 +662,7 @@ function positionAreaMenu(anchor) {
 }
 function showAreaMenu(gid, anchor) {
   if (!desktopNav() || !anchor) return;
+  if (sideFlyoutIsOpen()) hideSideFlyout();
   const sub = document.getElementById('subnav');
   if (!sub) return;
   const html = navDropdownHtml(gid);
@@ -516,6 +681,7 @@ function hideAreaMenu() {
   areaMenuTimer = null;
   areaMenuGroup = '';
   document.querySelectorAll('#nav .nav-area').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  hideSideFlyout();
   const sub = document.getElementById('subnav');
   if (!sub || !sub.classList || !sub.classList.contains('nav-dropdown-open')) return;
   sub.classList.remove('nav-dropdown-open');
@@ -531,6 +697,86 @@ function scheduleHideAreaMenu(delay) {
     const ae = document.activeElement;
     if (ae && ae.closest && (ae.closest('#nav') || ae.closest('#subnav'))) return;
     hideAreaMenu();
+  }, delay == null ? 160 : delay);
+}
+
+/* --- FLYOUT DO RAIL (v159) ---
+   No desktop recolhido, hover/foco numa área mostra os destinos num painel
+   flutuante. Reaproveita #subnav + navDropdownHtml (fonte única de abas) e
+   abre para o lado oposto ao da sidebar. Clicar na área continua indo para a
+   última tela do grupo (D9); o flyout é só o atalho para os demais destinos. */
+function sideFlyoutIsOpen() {
+  const sub = document.getElementById('subnav');
+  return !!(sub && sub.classList && sub.classList.contains('side-flyout'));
+}
+function positionSideFlyout(anchor) {
+  const sub = document.getElementById('subnav');
+  if (!sub || !anchor || !anchor.getBoundingClientRect) return;
+  const r = anchor.getBoundingClientRect();
+  const nav = document.getElementById('sideNav');
+  const nr = (nav && nav.getBoundingClientRect) ? nav.getBoundingClientRect() : null;
+  const vw = window.innerWidth || 1024;
+  const vh = window.innerHeight || 768;
+  const w = sub.offsetWidth || 196;
+  const h = sub.offsetHeight || 0;
+  const gap = 8;
+  let left = sidebarSideState() === 'right'
+    ? ((nr ? nr.left : r.left) - w - gap)
+    : ((nr ? nr.right : r.right) + gap);
+  left = Math.max(8, Math.min(left, vw - w - 8));
+  let top = r.top;
+  top = Math.max(8, Math.min(top, vh - h - 8));
+  sub.style.left = Math.round(left) + 'px';
+  sub.style.top = Math.round(top) + 'px';
+}
+function showSideFlyout(gid, anchor) {
+  if (!desktopNav() || !isSidebarCollapsed() || !anchor) return;
+  const g = GROUP_BY_ID[gid];
+  if (!g || !groupHasMenu(g)) return;
+  const sub = document.getElementById('subnav');
+  if (!sub) return;
+  if (areaMenuIsOpen() && !sideFlyoutIsOpen()) hideAreaMenu();
+  if (sideFlyoutIsOpen() && sideFlyoutGroup === gid) { positionSideFlyout(anchor); return; }
+  clearTimeout(sideFlyoutTimer);
+  sideFlyoutTimer = null;
+  sideFlyoutGroup = gid;
+  sub.innerHTML = navDropdownHtml(gid);
+  sub.hidden = false;
+  sub.classList.add('nav-dropdown-open');
+  sub.classList.add('side-flyout');
+  sub.dataset.group = gid;
+  document.querySelectorAll('#sideNav .side-group-btn.has-menu').forEach(b => {
+    if (b.dataset && b.dataset.group) b.setAttribute('aria-expanded', b.dataset.group === gid ? 'true' : 'false');
+  });
+  positionSideFlyout(anchor);
+}
+function hideSideFlyout() {
+  clearTimeout(sideFlyoutTimer);
+  sideFlyoutTimer = null;
+  sideFlyoutGroup = '';
+  const sub = document.getElementById('subnav');
+  if (sub && sub.classList && sub.classList.contains('side-flyout')) {
+    sub.classList.remove('side-flyout');
+    sub.classList.remove('nav-dropdown-open');
+    sub.style.left = ''; sub.style.top = '';
+    delete sub.dataset.group;
+    const html = navSubHtml();
+    sub.innerHTML = html;
+    sub.hidden = !html;
+  }
+  // Devolve o aria-expanded ao acordeão inline quando a sidebar está aberta.
+  const rail = isSidebarCollapsed();
+  document.querySelectorAll('#sideNav .side-group-btn.has-menu').forEach(b => {
+    const g = GROUP_BY_ID[b.dataset.group];
+    b.setAttribute('aria-expanded', rail ? 'false' : String(!!(g && sideGroupIsOpen(g))));
+  });
+}
+function scheduleHideSideFlyout(delay) {
+  clearTimeout(sideFlyoutTimer);
+  sideFlyoutTimer = setTimeout(() => {
+    const ae = document.activeElement;
+    if (ae && ae.closest && (ae.closest('#sideNav .side-group-btn') || ae.closest('#subnav'))) return;
+    hideSideFlyout();
   }, delay == null ? 160 : delay);
 }
 
@@ -551,14 +797,18 @@ if (typeof document !== 'undefined' && document.addEventListener) {
     scheduleHideAreaMenu();
   });
   document.addEventListener('mouseover', ev => {
-    if (ev.target && ev.target.closest && ev.target.closest('#subnav')) clearTimeout(areaMenuTimer);
+    if (ev.target && ev.target.closest && ev.target.closest('#subnav')) {
+      clearTimeout(areaMenuTimer);
+      clearTimeout(sideFlyoutTimer);
+    }
   });
   document.addEventListener('mouseout', ev => {
     const sub = ev.target && ev.target.closest ? ev.target.closest('#subnav') : null;
     if (!sub) return;
     const to = ev.relatedTarget;
-    if (to && to.closest && (to.closest('#subnav') || to.closest('#nav .nav-area'))) return;
+    if (to && to.closest && (to.closest('#subnav') || to.closest('#nav .nav-area') || to.closest('#sideNav .side-group-btn'))) return;
     scheduleHideAreaMenu();
+    if (sideFlyoutIsOpen()) scheduleHideSideFlyout();
   });
   document.addEventListener('focusin', ev => {
     const area = areaOf(ev.target);
@@ -581,6 +831,39 @@ if (typeof document !== 'undefined' && document.addEventListener) {
     if (t && t.closest && (t.closest('#nav') || t.closest('#subnav'))) return;
     hideAreaMenu();
   }, true);
+  /* v159 — rail: hover abre o flyout depois de um respiro; foco abre direto.
+     O clique na área não é interceptado: continua indo para a última tela (D9). */
+  const sideAreaOf = el => (el && el.closest) ? el.closest('#sideNav .side-group-btn') : null;
+  document.addEventListener('mouseover', ev => {
+    const g = sideAreaOf(ev.target);
+    if (!g || !desktopNav() || !isSidebarCollapsed()) return;
+    clearTimeout(sideFlyoutTimer);
+    sideFlyoutTimer = setTimeout(() => showSideFlyout(g.dataset.group, g), 130);
+  });
+  document.addEventListener('mouseout', ev => {
+    const g = sideAreaOf(ev.target);
+    if (!g || !desktopNav() || !isSidebarCollapsed()) return;
+    const to = ev.relatedTarget;
+    if (to && to.closest && (to.closest('#sideNav .side-group-btn') || to.closest('#subnav'))) return;
+    scheduleHideSideFlyout(170);
+  });
+  document.addEventListener('focusin', ev => {
+    const g = sideAreaOf(ev.target);
+    if (!g || !desktopNav() || !isSidebarCollapsed()) return;
+    // Escolher um destino devolve o foco à área; não reabre o flyout na sequência.
+    if (Date.now() < sideFlyoutFocusLock) return;
+    showSideFlyout(g.dataset.group, g);
+  });
+  document.addEventListener('focusout', ev => {
+    if (!sideFlyoutIsOpen()) return;
+    const t = ev.target;
+    if (!t || !t.closest || (!t.closest('#sideNav .side-group-btn') && !t.closest('#subnav'))) return;
+    setTimeout(() => {
+      const ae = document.activeElement;
+      if (ae && ae.closest && (ae.closest('#sideNav') || ae.closest('#subnav'))) return;
+      scheduleHideSideFlyout(0);
+    }, 0);
+  });
   if (typeof window !== 'undefined' && window.addEventListener) {
     window.addEventListener('scroll', () => { if (areaMenuIsOpen()) hideAreaMenu(); }, { passive: true });
     window.addEventListener('resize', () => { if (areaMenuIsOpen()) hideAreaMenu(); });
@@ -748,6 +1031,12 @@ function renderBottomNav() {
 
 /* --- RENDER MESTRE --- */
 function render() {
+  // v158 — trocar de tela devolve o acordeão ao grupo da rota.
+  if (tab !== sideTogglesTab) { resetSideGroupToggles(); sideTogglesTab = tab; }
+  // v159 — qualquer render invalida o flyout do rail.
+  sideFlyoutGroup = '';
+  clearTimeout(sideFlyoutTimer);
+  sideFlyoutTimer = null;
   const gxp = globalXp();
   const info = levelInfo(gxp);
   $('#lvl').innerHTML = `Nível <b>${info.lv}</b> · ${Math.round(gxp)} XP<div class="lb"><div style="width:${info.progress*100}%"></div></div>`;
@@ -756,12 +1045,14 @@ function render() {
   if (subnav) {
     // Um render novo invalida o dropdown flutuante: ele pertence à fileira antiga.
     subnav.classList.remove('nav-dropdown-open');
+    subnav.classList.remove('side-flyout');
     subnav.style.left = ''; subnav.style.top = '';
     delete subnav.dataset.group;
     const sub = navSubHtml();
     subnav.innerHTML = sub;
     subnav.hidden = !sub;
   }
+  renderSideNav();
   applyLogo();
   renderBackupBanner();
   $('#app').innerHTML = VIEWS[tab] ? VIEWS[tab]() : '<div class="empty">Aba não encontrada</div>';
@@ -773,7 +1064,16 @@ function render() {
 function applyLogo() {
   const el = $('#logo');
   if (!el) return;
-  el.innerHTML = (S.cfg.logo ? `<img src="${esc(S.cfg.logo)}" alt="">` : '') + '<span class="logo-text">ATELIER</span>';
+  const markup = (S.cfg.logo ? `<img src="${esc(S.cfg.logo)}" alt="">` : '') + '<span class="logo-text">ATELIER</span>';
+  el.innerHTML = markup;
+  // v157 — a marca da sidebar repete a logo; no rail vira monograma sem logo.
+  const side = document.getElementById('sideLogo');
+  if (side) side.innerHTML = markup;
+  const brand = document.getElementById('sideBrand');
+  if (brand && brand.classList) {
+    if (S.cfg.logo) brand.classList.add('has-custom-logo');
+    else brand.classList.remove('has-custom-logo');
+  }
   if (S.cfg.logo) {
     // Favicon dinâmico: usa a logo customizada como ícone da aba
     let fav = document.querySelector('link[rel="icon"]');

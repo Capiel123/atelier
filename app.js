@@ -21,7 +21,23 @@ function goToNavGroup(gid, restoreFocus) {
   render();
   // Enter/Espaço na área recria a fileira; devolve o foco à nova área ativa.
   // O setTimeout deixa o clique terminar antes: o botão antigo saiu do DOM.
-  if (restoreFocus) focusNavSelector('#nav .nav-area[data-group="' + gid + '"]');
+  if (restoreFocus) {
+    const desktop = (typeof desktopNav === 'function') && desktopNav();
+    focusNavSelector((desktop ? '#sideNav .side-group-btn' : '#nav .nav-area') + '[data-group="' + gid + '"]');
+  }
+}
+
+/* v157 — devolve o foco ao item equivalente na navegação visível (sidebar no
+   desktop, fileiras no tablet). */
+function focusNavActive(tabId) {
+  if (typeof desktopNav === 'function' && desktopNav()) {
+    if (tabId === 'config') { focusNavSelector('#sideNav [data-a="tab"][data-t="config"]'); return; }
+    const gid = (typeof GROUP_OF_TAB !== 'undefined' && GROUP_OF_TAB[tabId]) || '';
+    if (gid) { focusNavSelector('#sideNav .side-group-btn[data-group="' + gid + '"]'); return; }
+    focusNavSelector('#sideNav .side-subitem.on');
+    return;
+  }
+  focusNavSelector('#subnav .nav-subitem.on');
 }
 
 function focusNavSelector(selector) {
@@ -61,7 +77,7 @@ document.addEventListener('click', ev => {
   const a = btn.dataset.a; const id = btn.dataset.id; const i = btn.dataset.i; const sub = btn.dataset.sub;
   // detail 0 = clique gerado por teclado (Enter/Espaço): as fileiras são recriadas
   // pelo render, então devolvemos o foco ao item ativo equivalente.
-  const keyboardNav = ev.detail === 0 && !!btn.closest('#nav, #subnav');
+  const keyboardNav = ev.detail === 0 && !!btn.closest('#nav, #subnav, #sideNav');
   const t = id && T(id); const c = id && S.contacts.find(x => x.id === id);
 
   // Card da Fila: alterna só quando o clique não é em controle interno nem no corpo expandido
@@ -71,14 +87,31 @@ document.addEventListener('click', ev => {
   if (MUTATING_ACTIONS.has(a)) snapshot();
 
   switch (a) {
-    case 'tab': if (btn.dataset.t === 'people' && btn.dataset.seg) peopleMode = btn.dataset.seg === 'personal' ? 'personal' : 'pro'; goToTab(btn.dataset.t); hideMoreSheet(); hideAreaMenu(); break;
-    case 'navArea': hideAreaMenu(); goToNavGroup(btn.dataset.group, keyboardNav); return;
+    case 'tab': if (btn.closest && btn.closest('#subnav.side-flyout') && typeof lockSideFlyoutFocus === 'function') lockSideFlyoutFocus(400); if (btn.dataset.t === 'people' && btn.dataset.seg) peopleMode = btn.dataset.seg === 'personal' ? 'personal' : 'pro'; goToTab(btn.dataset.t); hideMoreSheet(); hideAreaMenu(); break;
+    case 'navArea': hideAreaMenu(); setSideGroupOpen(btn.dataset.group, true); goToNavGroup(btn.dataset.group, keyboardNav); return;
+    case 'sidePeek': toggleSideGroup(btn.dataset.group); renderSideNav(); focusNavSelector('#sideNav .side-group-btn[data-group="' + btn.dataset.group + '"]'); return;
     case 'peopleSeg': {
       peopleMode = btn.dataset.type === 'personal' ? 'personal' : 'pro';
       revealedContacts.clear();
       orbitSelectedId = null;
       render();
-      if (keyboardNav) focusNavSelector('#subnav .nav-subitem.on');
+      if (keyboardNav) focusNavSelector((typeof desktopNav === 'function' && desktopNav()) ? '#sideNav .side-subitem.on' : '#subnav .nav-subitem.on');
+      return;
+    }
+    case 'sideCollapse': {
+      const next = !isSidebarCollapsed();
+      setSidebarCollapsed(next);
+      applySidebarLayout(sidebarSideState(), next);
+      renderSideNav();
+      focusNavSelector('#sideNav [data-a="sideCollapse"]');
+      return;
+    }
+    case 'sideFlip': {
+      const next = sidebarSideState() === 'left' ? 'right' : 'left';
+      setSidebarSide(next);
+      applySidebarLayout(next, isSidebarCollapsed());
+      renderSideNav();
+      focusNavSelector('#sideNav [data-a="sideFlip"]');
       return;
     }
     case 'toggleDiscreet': setDiscreet(!discreet); revealedContacts.clear(); render(); return;
@@ -891,7 +924,7 @@ document.addEventListener('click', ev => {
     default: return;
   }
   save(); render();
-  if (keyboardNav) focusNavSelector('#subnav .nav-subitem.on');
+  if (keyboardNav) focusNavActive(btn.dataset.t);
 });
 
 /* --- MUDANÇA EM INPUTS/SELECTS (inclusive os data-p) --- */
@@ -1112,10 +1145,88 @@ document.addEventListener('keydown', ev => {
   // Esc fecha a busca mesmo com o foco no input (o overlay abre com autofocus).
   if (ev.key === 'Escape' && document.getElementById('searchModal')) {ev.preventDefault(); closeSearch(); return;}
   if (isTyping) return;
+  // v159 — Ctrl+B expande/recolhe o menu lateral no desktop. Fica depois do
+  // guard de digitação para não roubar o negrito de um campo contenteditable.
+  if ((ev.ctrlKey || ev.metaKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'b') {
+    if (!desktopNav()) return;
+    ev.preventDefault();
+    const next = !isSidebarCollapsed();
+    setSidebarCollapsed(next);
+    applySidebarLayout(sidebarSideState(), next);
+    hideAreaMenu();
+    renderSideNav();
+    focusNavSelector('#sideNav [data-a="sideCollapse"]');
+    return;
+  }
   // R3 — Alt+1..6 salta para as 6 áreas (abre a última tela do grupo ou o padrão).
   if (ev.altKey && !ev.ctrlKey && !ev.metaKey) {
     const dm = /^(?:Digit|Numpad)([1-6])$/.exec(ev.code || '') || /^([1-6])$/.exec(ev.key || '');
     if (dm && NAV_GROUPS[+dm[1] - 1]) {ev.preventDefault(); goToNavGroup(NAV_GROUPS[+dm[1] - 1].id); return;}
+  }
+  // v157 — sidebar desktop: ↑/↓/Home/End percorrem os botões na ordem visual.
+  if (['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(ev.key) && tgt && tgt.closest && tgt.closest('#sideNav')) {
+    const sbuttons = [...document.querySelectorAll('#sideNav button:not([disabled]):not([tabindex="-1"])')];
+    const sat = sbuttons.indexOf(tgt.closest('button'));
+    if (sat >= 0) {
+      ev.preventDefault();
+      const snext = ev.key === 'Home' ? 0 : ev.key === 'End' ? sbuttons.length - 1
+        : (sat + (ev.key === 'ArrowDown' ? 1 : -1) + sbuttons.length) % sbuttons.length;
+      sbuttons[snext].focus();
+      return;
+    }
+  }
+  // v158 — →/← abrem/fecham os destinos do grupo focado sem trocar de tela.
+  if ((ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') && tgt && tgt.closest && tgt.closest('#sideNav')) {
+    const gbtn = tgt.closest('.side-group-btn');
+    const sitem = tgt.closest('.side-subitem');
+    if (gbtn) {
+      // v159 — no rail os filhos inline estão ocultos: → abre o flyout.
+      if (isSidebarCollapsed()) {
+        if (ev.key === 'ArrowRight' && typeof showSideFlyout === 'function') {
+          ev.preventDefault();
+          showSideFlyout(gbtn.dataset.group, gbtn);
+          focusNavSelector('#subnav.side-flyout .nav-subitem');
+        }
+        return;
+      }
+      const g = NAV_GROUPS.find(x => x.id === gbtn.dataset.group);
+      if (ev.key === 'ArrowRight' && sideGroupIsOpen(g)) {
+        const first = gbtn.parentElement && gbtn.parentElement.querySelector('.side-sub .side-subitem');
+        if (first) {ev.preventDefault(); first.focus(); return;}
+      }
+      ev.preventDefault();
+      setSideGroupOpen(gbtn.dataset.group, ev.key === 'ArrowRight');
+      renderSideNav();
+      focusNavSelector('#sideNav .side-group-btn[data-group="' + gbtn.dataset.group + '"]');
+      return;
+    }
+    if (sitem && ev.key === 'ArrowLeft') {
+      const grp = sitem.closest('.side-group');
+      const gb = grp && grp.querySelector('.side-group-btn');
+      if (gb) {ev.preventDefault(); gb.focus(); return;}
+    }
+  }
+  // v159 — flyout do rail: ↑/↓/Home/End percorrem os destinos; ←/Esc volta à área.
+  if (typeof sideFlyoutIsOpen === 'function' && sideFlyoutIsOpen() && tgt && tgt.closest && tgt.closest('#subnav')) {
+    const items = [...document.querySelectorAll('#subnav.side-flyout .nav-subitem')];
+    const at = items.indexOf(tgt.closest('.nav-subitem'));
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(ev.key)) {
+      if (items.length) {
+        ev.preventDefault();
+        const ni = ev.key === 'Home' ? 0 : ev.key === 'End' ? items.length - 1
+          : (at + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        items[ni].focus();
+      }
+      return;
+    }
+    if (ev.key === 'ArrowLeft' || ev.key === 'Escape') {
+      ev.preventDefault();
+      const gid = sideFlyoutGroup;
+      hideAreaMenu();
+      const gb = gid ? document.querySelector('#sideNav .side-group-btn[data-group="' + gid + '"]') : null;
+      if (gb) gb.focus();
+      return;
+    }
   }
   // Setas movem o foco dentro da fileira de áreas ou da subnav.
   if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key) && tgt && tgt.closest) {
@@ -1200,6 +1311,8 @@ document.addEventListener('keydown', ev => {
       noticeEl.remove();
       return;
     }
+    // v159 — flyout do rail aberto sem foco dentro dele (hover): Esc fecha.
+    if (typeof sideFlyoutIsOpen === 'function' && sideFlyoutIsOpen()) {hideAreaMenu(); return;}
     if (document.getElementById('searchModal')) {closeSearch(); return;}
     if (document.getElementById('closeFocusModal')) {document.getElementById('closeFocusModal').remove(); return;}
     if (focusTaskId) {closeFocus(); return;}

@@ -568,7 +568,7 @@ function mkWorkLog(o={}) {return {id: uid(), date:'', ts: Date.now(), taskId:'',
 function defaultLabels() {return [{id:'l_easy',n:'fácil',color:'#6a8560',order:0},{id:'l_quick',n:'rápida',color:'#8fa5b8',order:1},{id:'l_creative',n:'criativa',color:'#c9764a',order:2},{id:'l_admin',n:'burocrática',color:'#7a7580',order:3},{id:'l_deep',n:'profunda',color:'#9d6bb5',order:4},{id:'l_comm',n:'comunicação',color:'#d4a84b',order:5},{id:'l_learn',n:'aprendizado',color:'#b8a9c4',order:6},{id:'l_maint',n:'manutenção',color:'#8b2942',order:7}];}
 function defaultCommands() {
   return [
-    mkCommand('Atalhos de teclado','Ritual','Ctrl+Z desfaz · Ctrl+K busca · N nova tarefa · F modo foco · Esc sair · Espaço inicia/pausa · ? este painel',''),
+    mkCommand('Atalhos de teclado','Ritual','Ctrl+Z desfaz · Ctrl+K busca · Ctrl+B menu lateral · N nova tarefa · F modo foco · Esc sair · Espaço inicia/pausa · ? este painel',''),
     mkCommand('Criar tarefa','Tarefas','Digite no campo. Tokens: ~30 (min), !a (alta), #projeto','Editar teaser ~45 !a'),
     mkCommand('Play / Foco','Tarefas','Clique no ▶ do card para iniciar o timer normal. No card expandido, o ⛶ ao lado entra no modo foco. O mesmo botão vira ⏸ quando a tarefa está rodando.',''),
     mkCommand('Editar rápido','Tarefas','No card expandido, clique no tempo estimado (ex.: 30min) para editá-lo inline. O ✎ ao lado do título edita o título. Enter salva; Esc cancela.',''),
@@ -1012,6 +1012,30 @@ function getEnergyCollapsed() {
 }
 function setEnergyCollapsed(v) {
   try { localStorage.setItem(ENERGY_COLLAPSED_KEY, v ? '1' : '0'); return true; } catch (e) { return false; }
+}
+/* v157 — menu lateral desktop: lado e recolhimento são preferências do aparelho,
+   fora de S (como energia), então não viajam no sync. Sem valor salvo, o
+   recolhimento segue o viewport: 1024–1199 em rail, ≥1200 expandido. */
+const SIDEBAR_SIDE_KEY = 'atelier_sidebar_side_v1';
+const SIDEBAR_COLLAPSED_KEY = 'atelier_sidebar_collapsed_v1';
+function getSidebarSide() {
+  try { return localStorage.getItem(SIDEBAR_SIDE_KEY) === 'right' ? 'right' : 'left'; } catch (e) { return 'left'; }
+}
+function setSidebarSide(side) {
+  const v = side === 'right' ? 'right' : 'left';
+  try { localStorage.setItem(SIDEBAR_SIDE_KEY, v); return true; } catch (e) { return false; }
+}
+function getSidebarCollapsed() {
+  try {
+    const v = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    if (v === '1') return true;
+    if (v === '0') return false;
+  } catch (e) {}
+  const w = (typeof window !== 'undefined' && window.innerWidth) || 0;
+  return w > 0 && w < 1200;
+}
+function setSidebarCollapsed(v) {
+  try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? '1' : '0'); return true; } catch (e) { return false; }
 }
 // v107: ferramentas começam SEMPRE fechadas (mobile e desktop) e não persistem;
 // abrem só por clique e voltam a fechar ao recarregar.
