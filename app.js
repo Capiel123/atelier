@@ -490,7 +490,7 @@ document.addEventListener('click', ev => {
     case 'gotoProject': {tab = 'proj'; render(); setTimeout(() => {const el = document.querySelector(`[data-p="projects:${id}:n"]`)?.closest('.card'); if (el) {el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('highlight'); setTimeout(() => el.classList.remove('highlight'), 2100);}}, 100); return;}
     case 'clientAdd': {const n = V('clientN'); if (!n) return; S.clients.push(mkClient({n})); break;}
     case 'clientDel': if (!confirm('Excluir cliente? Ele vai para o lixo. Projetos vinculados ficam sem cliente.')) return; softDelete('clients', id); alive(S.projects).forEach(p => {if (p.clientId === id) {p.clientId = ''; touch(p);}}); alive(S.contacts).forEach(ct => {if (ct.clientId === id) {ct.clientId = null; touch(ct);}}); break;
-    case 'pcomplete': {const p = S.projects.find(x => x.id === id); if (p && !p.completedAt) {p.completedAt = Date.now(); touch(p); toast('Projeto concluído');} break;}
+    case 'pcomplete': {const p = S.projects.find(x => x.id === id); if (p && !p.completedAt) {if (!confirm('Marcar este projeto como concluído? Você pode reabrir depois.')) return; p.completedAt = Date.now(); touch(p); toast('Projeto concluído');} break;}
     case 'puncomplete': {const p = S.projects.find(x => x.id === id); if (p) {p.completedAt = null; touch(p); toast('Reaberto');} break;}
     case 'pgadd': {
       const p = S.projects.find(x => x.id === id); if (!p) break;

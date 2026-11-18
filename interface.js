@@ -1697,13 +1697,14 @@ function aiContextDetailsHtml(t) {
 }
 
 function viewQueue() {
+  const queueTasks = dayTasks(null).filter(t => !isDone(t));
   return `<div class="msg" style="margin-bottom:12px">Registre ideias e tarefas rapidamente, sem precisar de data.</div>${adder(null)}
   <div class="queue-ai-bar">
     <button type="button" class="queue-ai-btn" data-a="copyAiPrompt" title="Copia um prompt pronto; troque o Tema: no seu AI">${ico('sparkle')} Copiar prompt para IA</button>
     <span class="msg">Crie uma tarefa sobre qualquer tema e cole o bloco de volta na barra acima.</span>
   </div>
   <div id="queueList">
-    ${dayTasks(null).length ? dayTasks(null).map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>'}
+    ${queueTasks.length ? queueTasks.map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>'}
   </div>`;
 }
 
@@ -1718,6 +1719,7 @@ function cardQueue(t) {
 
   let html = `<div class="card ${isExpanded?'':'compact'} queue-card ${isSelected?'selected':''}" style="--c:${borderColor}" data-card="${t.id}" data-a="toggleQueueCard" data-id="${t.id}">
     <div class="row" style="align-items:center;cursor:pointer;flex:1;min-width:0">
+      <button class="chk" data-a="tog" data-id="${t.id}" aria-label="${isDone(t)?'Reabrir tarefa':'Concluir tarefa'}">${isDone(t)?'✓':''}</button>
       <div class="ti" style="min-width:0">
         <div class="tt">${esc(t.t)}</div>
         <div class="meta">
@@ -1939,7 +1941,7 @@ function projectCard(p) {
     </div>
     <div class="acts">
       ${p.reward && pctTasks===100 ? (p.claimed ? `<span class="badge">${ico('check')} ${esc(p.reward)}</span>` : `<button data-a="claim" data-id="${p.id}" style="background:var(--ac);color:#000">Resgatar</button>`) : (p.reward ? `<span class="badge">${ico('flag')} ${esc(p.reward)}</span>` : '')}
-      ${!isComplete && pctTasks === 100 && total > 0 ? `<button data-a="pcomplete" data-id="${p.id}" style="background:var(--ok);color:#000">${ico('check')} Marcar concluído</button>` : ''}
+      ${!isComplete ? `<button data-a="pcomplete" data-id="${p.id}" style="background:var(--ok);color:#000">${ico('check')} Marcar concluído</button>` : ''}
       ${isComplete ? `<button data-a="puncomplete" data-id="${p.id}">Reabrir</button>` : ''}
       <button data-a="parch" data-id="${p.id}">${p.archived?'Restaurar':'Arquivar'}</button>
     </div>
