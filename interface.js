@@ -1389,8 +1389,8 @@ function renderFilteredTasks() {
   const plan = list.filter(t => inWeekScope(t));
   const hasFilter = !!(filterState.text || filterState.type || filterState.area || filterState.proj || (filterState.labels || []).length);
   // v165 — limpar é reversível: mostra quantas concluídas estão ocultas neste dia.
-  const hiddenDay = dayList.filter(t => isDone(t) && isClearedFromDone(t));
-  const hiddenNote = hiddenDay.length ? `<div class="msg done-hidden-note">${hiddenDay.length} concluída${hiddenDay.length === 1 ? '' : 's'} oculta${hiddenDay.length === 1 ? '' : 's'} neste dia. <button type="button" data-a="showClearedDone">Mostrar</button></div>` : '';
+  const hiddenDay = dayList.filter(t => isDone(t) && isClearedFromDone(t) && isRecentCompletion(t));
+  const hiddenNote = hiddenDay.length ? `<div class="msg done-hidden-note">${hiddenDay.length} concluída${hiddenDay.length === 1 ? '' : 's'} oculta${hiddenDay.length === 1 ? '' : 's'} neste dia (esta semana ou a anterior). <button type="button" data-a="showClearedDone" title="As concluídas mais antigas ficam no Histórico">Mostrar</button></div>` : '';
 
   // setTimeout(0) garante que a contagem (#taskCount) atualize após o HTML entrar no DOM
   setTimeout(() => {

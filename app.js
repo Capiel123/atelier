@@ -965,10 +965,11 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'showClearedDone': {
-      const hidden = dayTasks(day).filter(t => isDone(t) && isClearedFromDone(t));
-      if (!hidden.length) return;
+      // v166 — só devolve ao board a semana atual e a anterior; o resto fica no Histórico.
+      const hidden = dayTasks(day).filter(t => isDone(t) && isClearedFromDone(t) && isRecentCompletion(t));
+      if (!hidden.length) {toast('Nenhuma concluída oculta recente'); break;}
       hidden.forEach(t => { delete S.clearedDone[t.id]; });
-      toast('Concluídas restauradas');
+      toast('Concluídas recentes restauradas');
       break;
     }
     case 'imp': doImport(V('imp')); return;

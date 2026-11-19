@@ -119,6 +119,13 @@ function isClearedFromMetrics(t) {
   const at = S.clearedDone && S.clearedDone[t.id];
   return !sameLocalDay(at, t.doneAt);
 }
+/* v166 — “Mostrar ocultas” só olha a semana atual e a anterior. Conclusões
+   mais antigas continuam ocultas e vivem no Histórico; não voltam ao board. */
+function isRecentCompletion(t) {
+  if (!t || !t.doneAt) return false;
+  const cutoff = weekStart().getTime() - 7 * 86400000; // segunda da semana anterior
+  return t.doneAt >= cutoff;
+}
 // Escopo da semana (planejamento): pendentes + concluídas NESTA semana, menos as
 // ocultas por "Limpar concluídas". Concluídas de semanas anteriores ficam fora
 // dos números (o card continua marcado em "Concluídas" e no Histórico).
