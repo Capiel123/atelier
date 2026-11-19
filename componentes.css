@@ -1537,3 +1537,11 @@
 /* v163 — concluídas na Fila ficam visíveis em um bloco recolhido */
 .queue-done{margin-top:12px;border-top:1px solid var(--bd);padding-top:8px}
 .queue-done summary{cursor:pointer;font-size:12px;color:var(--mu)}
+/* v164 — aviso e ação quando o bloco da IA vem sem indentação */
+.ai-task-hint{color:var(--wr);font-size:11.5px;line-height:1.45;margin:0 0 6px}
+.ai-task-merge{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:36px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--radius-sm);font:inherit;font-size:12px;font-weight:600;cursor:pointer;margin:0 0 8px}
+.ai-task-merge:hover{border-color:var(--ac);color:var(--ac)}
+/* v165 — nota de concluídas ocultas + Mostrar */
+.done-hidden-note{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 2px}
+.done-hidden-note button{padding:3px 9px;font-size:11px;background:transparent;border:1px solid var(--bd);border-radius:6px;color:var(--mu);cursor:pointer}
+.done-hidden-note button:hover{border-color:var(--ac);color:var(--ac)}

@@ -134,7 +134,23 @@ function renderAiTaskPreview() {
     return;
   }
   btn.disabled = false;
-  box.innerHTML = `<div class="msg">${built.length} tarefa${built.length === 1 ? '' : 's'} para ${esc(dest)}. Confira antes de adicionar.</div>` + built.map(aiTaskPreviewHtml).join('');
+  const flatList = built.length > 1 && built.every(t => !t.subs.length);
+  box.innerHTML = `<div class="msg">${built.length} tarefa${built.length === 1 ? '' : 's'} para ${esc(dest)}. Confira antes de adicionar.</div>`
+    + (flatList ? `<div class="ai-task-hint">O bloco veio com ${built.length} itens no mesmo nível. Se era uma tarefa com subtarefas, o primeiro vira o título e os outros ${built.length - 1} viram subtarefas.</div><button type="button" class="ai-task-merge" data-a="aiTaskMergeFlat">Juntar em 1 tarefa + ${built.length - 1} subtarefa${built.length - 1 === 1 ? '' : 's'}</button>` : '')
+    + built.map(aiTaskPreviewHtml).join('');
+}
+/* v164 — a IA às vezes devolve a tarefa e as subtarefas no mesmo nível.
+   Este botão reorganiza a prévia em 1 tarefa + os demais itens como subs. */
+function mergeAiTaskPreviewAsSubtasks() {
+  const ta = document.getElementById('aiTaskInput');
+  if (!ta) return;
+  const specs = (typeof parseAiTaskBlocks === 'function') ? parseAiTaskBlocks(ta.value) : [];
+  if (specs.length < 2) return;
+  const lines = ['[ATELIER:TAREFA]', '- [ ] ' + specs[0].titleLine];
+  specs.slice(1).forEach(s => lines.push('  - [ ] ' + s.titleLine));
+  lines.push('[/ATELIER:TAREFA]');
+  ta.value = lines.join('\n');
+  renderAiTaskPreview();
 }
 function showAiTaskSheet(text, d) {
   let el = document.getElementById('aiTaskModal');
@@ -146,7 +162,7 @@ function showAiTaskSheet(text, d) {
   el.className = 'shortcuts-modal';
   el.innerHTML = `<div class="shortcuts-content ai-task-sheet" role="dialog" aria-modal="true" aria-labelledby="aiTaskTitle" tabindex="-1">
     <div class="big" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b id="aiTaskTitle">Tarefa da IA</b><button type="button" data-a="closeAiTask" aria-label="Fechar" title="Fechar">${ico('x')}</button></div>
-    <div class="msg">Cole o bloco proposto pela IA. O título usa <b>~minutos</b> e <b>!a/!m/!b</b>; as subtarefas vão indentadas com <b>- [ ]</b>.</div>
+    <div class="msg">Cole o bloco proposto pela IA. O título usa <b>~minutos</b> e <b>!a/!m/!b</b>; as subtarefas precisam começar com <b>dois espaços</b> — sem indentação, cada linha vira uma tarefa separada.</div>
     <textarea id="aiTaskInput" class="ai-task-input" rows="9" aria-label="Bloco da IA" placeholder="[ATELIER:TAREFA]\n- [ ] Revisar proposta ~45 !a\n  - [ ] Ler briefing\n  - [ ] Escrever esboço\n[/ATELIER:TAREFA]">${esc(text || '')}</textarea>
     <div id="aiTaskPreview" class="ai-task-preview" aria-live="polite"></div>
     <div class="acts" style="margin-top:12px;display:flex;gap:8px"><button type="button" id="aiTaskSaveBtn" data-a="aiTaskSave" disabled style="flex:1;background:var(--ac);color:var(--on-ac,#000);border-color:var(--ac)">Adicionar</button><button type="button" data-a="closeAiTask">Cancelar</button></div>
@@ -1217,7 +1233,10 @@ function viewWeek() {
   const total = activeDayTasks.length;
   const done = activeDayTasks.filter(t => isDoneThisWeek(t)).length;
   const allProg = sectionProgress(activeDayTasks);
-  const totalSpent = activeDayTasks.reduce((a,t) => a + taskMinutesThisWeek(t), 0);
+  // v165 — o Gasto é tempo real: continua contando mesmo quando a tarefa foi
+  // ocultada da lista. O progresso/Est. seguem o escopo ativo.
+  const spentTasks = ts.filter(t => !isDone(t) || isDoneThisWeek(t));
+  const totalSpent = spentTasks.reduce((a,t) => a + taskMinutesThisWeek(t), 0);
   const dayDate = iso(weekDateForDay(day)).split('-').reverse().join('/');
   const cap = S.cfg.cap || 360;
   const full = allProg.totalWeight > cap;
@@ -1369,6 +1388,9 @@ function renderFilteredTasks() {
   // Concluídas de semanas anteriores não entram nos números (ficam em "Concluídas").
   const plan = list.filter(t => inWeekScope(t));
   const hasFilter = !!(filterState.text || filterState.type || filterState.area || filterState.proj || (filterState.labels || []).length);
+  // v165 — limpar é reversível: mostra quantas concluídas estão ocultas neste dia.
+  const hiddenDay = dayList.filter(t => isDone(t) && isClearedFromDone(t));
+  const hiddenNote = hiddenDay.length ? `<div class="msg done-hidden-note">${hiddenDay.length} concluída${hiddenDay.length === 1 ? '' : 's'} oculta${hiddenDay.length === 1 ? '' : 's'} neste dia. <button type="button" data-a="showClearedDone">Mostrar</button></div>` : '';
 
   // setTimeout(0) garante que a contagem (#taskCount) atualize após o HTML entrar no DOM
   setTimeout(() => {
@@ -1377,7 +1399,7 @@ function renderFilteredTasks() {
   }, 0);
 
   if (!dayList.length) return `<div class="msg empty-motif">${motif()}<span>Nada ainda.</span></div>`;
-  if (!list.length) return '<div class="msg">Nada com esses filtros.</div>';
+  if (!list.length) return '<div class="msg">Nada com esses filtros.</div>' + hiddenNote;
 
   // "Concluídas" lista o que está concluído e não foi limpo — inclusive semanas
   // anteriores (é o histórico do board). Os números usam `plan`/inWeekScope.
@@ -1446,9 +1468,13 @@ function renderFilteredTasks() {
       ${doneCardsHtml}`;
   }
 
-  return (sectionsHtml + doneSectionHtml) || (hasFilter
-    ? '<div class="msg">Nada com esses filtros.</div>'
-    : `<div class="msg empty-motif">${motif()}<span>Nada planejado para esta semana.</span></div>`);
+  const bodyHtml = sectionsHtml + doneSectionHtml;
+  if (!bodyHtml) {
+    return (hasFilter
+      ? '<div class="msg">Nada com esses filtros.</div>'
+      : `<div class="msg empty-motif">${motif()}<span>Nada planejado para esta semana.</span></div>`) + hiddenNote;
+  }
+  return bodyHtml + hiddenNote;
 }
 
 function refreshTaskList() {const el = document.getElementById('taskList'); if (el) el.innerHTML = renderFilteredTasks();}

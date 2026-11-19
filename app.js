@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave','showClearedDone']);
 
 /* --- NAVEGAÇÃO POR ÁREA (R3) ---
    A área não é um destino novo: abre a última tela usada do grupo (D9) ou o padrão.
@@ -623,6 +623,7 @@ document.addEventListener('click', ev => {
     case 'copyAiPrompt': copyTxt(aiNewTaskPrompt()); return;
     case 'openAiPaste': showAiTaskSheet('', btn.dataset.d); return;
     case 'closeAiTask': closeAiTaskSheet(); return;
+    case 'aiTaskMergeFlat': mergeAiTaskPreviewAsSubtasks(); return;
     case 'aiTaskSave': saveAiTasks(); return;
     case 'copyTaskForAI': {const tt = T(id); if (!tt) return; copyTxt(aiTaskContext(tt)); return;}
     case 'setEnergy': setEnergy(currentEnergySlot(), btn.dataset.e); break;
@@ -948,7 +949,28 @@ document.addEventListener('click', ev => {
       fallbackDownload();
       return;
     }
-    case 'clrDone': if (confirm('Ocultar as tarefas concluídas deste dia da seção "Concluídas"? Elas continuam no Histórico.')) { S.clearedDone = S.clearedDone || {}; dayTasks(day).filter(t => isDone(t) && !isClearedFromDone(t)).forEach(t => { S.clearedDone[t.id] = Date.now(); }); } break;
+    case 'clrDone': {
+      const targets = dayTasks(day).filter(t => isDone(t) && !isClearedFromDone(t));
+      if (!targets.length) {toast('Nenhuma concluída para ocultar'); break;}
+      const now = Date.now();
+      const sameDay = targets.filter(t => t.doneAt && sameLocalDay(t.doneAt, now)).length;
+      const older = targets.length - sameDay;
+      let msg = 'Ocultar as tarefas concluídas deste dia?';
+      if (sameDay && !older) msg += '\nElas saem da lista, mas continuam contando no tempo e no progresso de hoje. O Histórico não muda.';
+      else if (!sameDay && older) msg += '\nElas saem da lista e do progresso/estimativa da semana. O Gasto real e o Histórico continuam.';
+      else msg += '\nAs concluídas hoje continuam nos números; as de dias anteriores saem do progresso/estimativa. O Gasto real e o Histórico continuam.';
+      if (!confirm(msg)) return;
+      S.clearedDone = S.clearedDone || {};
+      targets.forEach(t => { S.clearedDone[t.id] = now; });
+      break;
+    }
+    case 'showClearedDone': {
+      const hidden = dayTasks(day).filter(t => isDone(t) && isClearedFromDone(t));
+      if (!hidden.length) return;
+      hidden.forEach(t => { delete S.clearedDone[t.id]; });
+      toast('Concluídas restauradas');
+      break;
+    }
     case 'imp': doImport(V('imp')); return;
     default: return;
   }

@@ -106,11 +106,24 @@ function isDoneThisWeek(t) { return !!(t && t.done && t.doneAt && t.doneAt >= we
 // Tarefa oculta da seção "Concluídas" por "Limpar concluídas" (sem tocar em done/doneAt).
 // Só vale para tarefa CONCLUÍDA: pendente nunca é "limpa" (reabrir não deixa resíduo).
 function isClearedFromDone(t) { return !!(t && t.done && t.doneAt && S.clearedDone && S.clearedDone[t.id] && S.clearedDone[t.id] >= t.doneAt); }
+/* v165 — “limpar” é visual no mesmo dia da conclusão: o trabalho de hoje
+   continua nos números. Limpar depois (outro dia) também tira a tarefa do
+   progresso/estimativa daquela semana. Histórico/logs/XP nunca mudam. */
+function sameLocalDay(a, b) {
+  if (a == null || b == null) return false;
+  const da = new Date(+a), db = new Date(+b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+function isClearedFromMetrics(t) {
+  if (!isClearedFromDone(t)) return false;
+  const at = S.clearedDone && S.clearedDone[t.id];
+  return !sameLocalDay(at, t.doneAt);
+}
 // Escopo da semana (planejamento): pendentes + concluídas NESTA semana, menos as
 // ocultas por "Limpar concluídas". Concluídas de semanas anteriores ficam fora
 // dos números (o card continua marcado em "Concluídas" e no Histórico).
 // Usado por faixa dos dias, seções, contador da lista e resumo do dia.
-function inWeekScope(t) { return !!(t && !isClearedFromDone(t) && (!isDone(t) || isDoneThisWeek(t))); }
+function inWeekScope(t) { return !!(t && !isClearedFromMetrics(t) && (!isDone(t) || isDoneThisWeek(t))); }
 // Minutos registrados nesta semana (logs com `end` dentro da semana atual).
 function taskMinutesThisWeek(t) { const ws = weekStart().getTime(); return ((t && t.logs) || []).filter(l => l.end != null && l.end >= ws).reduce((a,l) => a + (+l.minutes || 0), 0); }
 
@@ -979,6 +992,7 @@ function aiNewTaskPrompt() {
     'Tema: [substitua por qualquer tema, projeto ou objetivo que você quer transformar em tarefa]',
     '',
     'Transforme o tema em UMA tarefa concreta, com subtarefas acionáveis.',
+    'As subtarefas DEVEM começar com dois espaços; sem essa indentação, cada linha vira uma tarefa separada.',
     'Responda apenas com o bloco abaixo, sem explicações:',
     '[ATELIER:TAREFA]',
     '- [ ] Título da tarefa ~45 !a',
@@ -1016,6 +1030,7 @@ function aiTaskContext(t) {
   L.push('');
   L.push('Com base nesse contexto, proponha uma nova tarefa concreta (a próxima ação).');
   L.push('Substitua o exemplo abaixo pelo título e pelas subtarefas reais; ajuste a estimativa e a prioridade.');
+  L.push('As subtarefas DEVEM começar com dois espaços; sem essa indentação, cada linha vira uma tarefa separada.');
   L.push('Responda apenas com o bloco abaixo, sem explicações:');
   L.push('[ATELIER:TAREFA]');
   L.push('- [ ] Título da nova tarefa ~45 !a');
