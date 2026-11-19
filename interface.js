@@ -1374,6 +1374,15 @@ function firstPendingTaskInList() {
   return null;
 }
 
+function doneGroupKey(t) {
+  if (!t || !t.doneAt) return '';
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (t.doneAt >= todayStart) return 'today';
+  if (t.doneAt >= weekStart().getTime()) return 'week';
+  return 'last';
+}
+
 function renderFilteredTasks() {
   const ctx = buildCtx();
   const dayList = dayTasks(day);
@@ -1403,7 +1412,7 @@ function renderFilteredTasks() {
 
   // "Concluídas" lista o que está concluído e não foi limpo — inclusive semanas
   // anteriores (é o histórico do board). Os números usam `plan`/inWeekScope.
-  const doneTasks = list.filter(t => isDone(t) && !isClearedFromDone(t));
+  const doneTasks = list.filter(t => isDone(t) && !isClearedFromDone(t) && isRecentCompletion(t));
   const compact = getTaskCompactMode();
   const sectionsCollapsed = S.cfg.sectionsCollapsed || {};
 
@@ -1449,16 +1458,28 @@ function renderFilteredTasks() {
   let doneSectionHtml = '';
   if (doneTasks.length) {
     const doneCollapsed = S.cfg.sectionsCollapsed?.done ?? true;
+    const doneGroupCounts = {today:0, week:0, last:0};
+    doneTasks.forEach(t => {const k = doneGroupKey(t); if (doneGroupCounts[k] != null) doneGroupCounts[k]++;});
+    const doneSummary = `Hoje ${doneGroupCounts.today} · Esta semana ${doneGroupCounts.week} · Semana passada ${doneGroupCounts.last}`;
+    const doneGroups = [
+      {id:'today', label:'Hoje'},
+      {id:'week', label:'Esta semana'},
+      {id:'last', label:'Semana passada'}
+    ].map(g => ({...g, items: doneTasks.filter(t => doneGroupKey(t) === g.id).sort((a,b) => (b.doneAt||0) - (a.doneAt||0) || (a.order||0) - (b.order||0))}))
+      .filter(g => g.items.length);
     const doneCardsHtml = doneCollapsed ? '' : `
       <div class="done-tasks-list">
-        ${doneTasks.map(t => compact && !expandedTasks.has(t.id) ? cardTaskCompact(t, null) : cardTask(t, null)).join('')}
+        ${doneGroups.map(g => `<div class="done-group">
+          <div class="done-group-head"><span>${g.label}</span><span class="done-group-count">${g.items.length}</span></div>
+          ${g.items.map(t => compact && !expandedTasks.has(t.id) ? cardTaskCompact(t, null) : cardTask(t, null)).join('')}
+        </div>`).join('')}
       </div>`;
     doneSectionHtml = `
       <div class="section-header done-section-header" data-a="toggleSection" data-section="done" role="button" tabindex="0" aria-expanded="${!doneCollapsed}" style="margin-top:20px;">
         <div class="section-header-title">
           <span style="color:var(--ok);font-size:14px">✓</span>
           <b style="color:var(--tx)">Concluídas <span class="done-count">(${doneTasks.length})</span></b>
-          <span class="section-header-meta">${doneTasks.length} ${doneTasks.length === 1 ? 'concluída' : 'concluídas'}</span>
+          <span class="done-summary">${doneSummary}</span>
         </div>
         <div class="section-header-right">
           <button data-a="clrDone" title="Ocultar concluídas da lista" style="padding:3px 9px;font-size:11px;background:transparent;border:1px solid var(--bd);border-radius:6px;color:var(--mu);cursor:pointer">Limpar concluídas</button>

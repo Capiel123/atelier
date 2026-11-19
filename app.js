@@ -950,7 +950,7 @@ document.addEventListener('click', ev => {
       return;
     }
     case 'clrDone': {
-      const targets = dayTasks(day).filter(t => isDone(t) && !isClearedFromDone(t));
+      const targets = dayTasks(day).filter(t => isDone(t) && !isClearedFromDone(t) && isRecentCompletion(t));
       if (!targets.length) {toast('Nenhuma concluída para ocultar'); break;}
       const now = Date.now();
       const sameDay = targets.filter(t => t.doneAt && sameLocalDay(t.doneAt, now)).length;
