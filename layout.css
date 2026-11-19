@@ -42,6 +42,8 @@ header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:sp
 .timer b,
 .timer #tlabel{font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--mu)}
 .timer button{padding:2px 6px; font-size: 11px;}
+.timer #tpause,.timer #tcomplete,.timer #tstop{display:inline-flex;align-items:center;justify-content:center;min-width:24px;padding:3px 5px}
+.timer #tcomplete{color:var(--ok)}
 .timer-bank{font:10px/1 var(--font-mono);color:var(--mu);white-space:nowrap;letter-spacing:.02em}
 
 /* --- NAVEGAÇÃO PRINCIPAL (desktop/tablet) ---

@@ -539,7 +539,9 @@
         <span id="tlabel">Pronto</span>
         <b id="ttime">00:00</b>
         <span id="tbank" class="timer-bank" aria-live="polite"></span>
-        <button id="tstop" style="display:none"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-soft-pause"/></svg> Parar</button>
+        <button id="tpause" data-a="toggleTimerPause" style="display:none" title="Pausar timer" aria-label="Pausar timer"></button>
+        <button id="tcomplete" data-a="completeActiveTask" style="display:none" title="Concluir tarefa" aria-label="Concluir tarefa"></button>
+        <button id="tstop" data-a="stopTimer" style="display:none" title="Parar timer" aria-label="Parar timer"></button>
       </div>
     </div>
     <div id="lvl"></div>

@@ -63,8 +63,12 @@ function refreshStaticIcons() {
   if (search) search.innerHTML = ico('search');
   const gear = document.querySelector('.gear-btn');
   if (gear) gear.innerHTML = ico('sliders');
+  const pause = document.getElementById('tpause');
+  if (pause) pause.innerHTML = ico(typeof S !== 'undefined' && S.timer && S.timer.paused ? 'play' : 'pause');
+  const complete = document.getElementById('tcomplete');
+  if (complete) complete.innerHTML = ico('check');
   const stop = document.getElementById('tstop');
-  if (stop) stop.innerHTML = ico('pause') + ' Parar';
+  if (stop) stop.innerHTML = ico('stop');
   const fab = document.getElementById('fab');
   if (fab) fab.innerHTML = ico('plus');
 }
@@ -1400,6 +1404,8 @@ function renderFilteredTasks() {
   // v165 — limpar é reversível: mostra quantas concluídas estão ocultas neste dia.
   const hiddenDay = dayList.filter(t => isDone(t) && isClearedFromDone(t) && isRecentCompletion(t));
   const hiddenNote = hiddenDay.length ? `<div class="msg done-hidden-note">${hiddenDay.length} concluída${hiddenDay.length === 1 ? '' : 's'} oculta${hiddenDay.length === 1 ? '' : 's'} neste dia (esta semana ou a anterior). <button type="button" data-a="showClearedDone" title="As concluídas mais antigas ficam no Histórico">Mostrar</button></div>` : '';
+  const olderDone = dayList.filter(t => isDone(t) && !isClearedFromDone(t) && !isRecentCompletion(t));
+  const olderDoneNote = olderDone.length ? `<div class="msg done-hidden-note">${olderDone.length} concluída${olderDone.length === 1 ? '' : 's'} anterior${olderDone.length === 1 ? '' : 'es'} à semana passada ${olderDone.length === 1 ? 'está' : 'estão'} no Histórico. <button type="button" data-a="tab" data-t="history">Abrir Histórico</button></div>` : '';
 
   // setTimeout(0) garante que a contagem (#taskCount) atualize após o HTML entrar no DOM
   setTimeout(() => {
@@ -1408,7 +1414,7 @@ function renderFilteredTasks() {
   }, 0);
 
   if (!dayList.length) return `<div class="msg empty-motif">${motif()}<span>Nada ainda.</span></div>`;
-  if (!list.length) return '<div class="msg">Nada com esses filtros.</div>' + hiddenNote;
+  if (!list.length) return '<div class="msg">Nada com esses filtros.</div>' + hiddenNote + olderDoneNote;
 
   // "Concluídas" lista o que está concluído e não foi limpo — inclusive semanas
   // anteriores (é o histórico do board). Os números usam `plan`/inWeekScope.
@@ -1493,9 +1499,9 @@ function renderFilteredTasks() {
   if (!bodyHtml) {
     return (hasFilter
       ? '<div class="msg">Nada com esses filtros.</div>'
-      : `<div class="msg empty-motif">${motif()}<span>Nada planejado para esta semana.</span></div>`) + hiddenNote;
+      : `<div class="msg empty-motif">${motif()}<span>Nada planejado para esta semana.</span></div>`) + hiddenNote + olderDoneNote;
   }
-  return bodyHtml + hiddenNote;
+  return bodyHtml + hiddenNote + olderDoneNote;
 }
 
 function refreshTaskList() {const el = document.getElementById('taskList'); if (el) el.innerHTML = renderFilteredTasks();}
@@ -1573,10 +1579,31 @@ function pillPicker(items, selectedIds, kind, taskId) {
   return `<div class="pill-stack">${visible.map(pill).join('')}</div>${rest.length ? `<details class="pill-more" data-pill-group="${group}"${open}><summary>+ Editar (${rest.length})</summary><div class="pill-stack">${rest.map(pill).join('')}</div></details>` : ''}`;
 }
 
+/* v168 — tempo vivo no card: o segmento em andamento ainda não está nos logs,
+   então soma o timer atual para o número não ficar congelado em 0min. */
+function liveTaskMinutes(t) {
+  const base = taskMinutes(t);
+  if (!S.timer || !t || S.timer.taskId !== t.id || S.timer.phase !== 'focus') return base;
+  return base + timerElapsedSec() / 60;
+}
+function updateLiveTaskTime() {
+  if (!S.timer) return;
+  const t = S.tasks.find(x => x.id === S.timer.taskId);
+  if (!t) return;
+  const mins = liveTaskMinutes(t);
+  document.querySelectorAll('[data-live-spent]').forEach(el => {
+    if (el.dataset.liveSpent === t.id) el.textContent = fmtMin(mins);
+  });
+  const pct = t.est ? Math.min(100, Math.round(mins / t.est * 100)) : 0;
+  document.querySelectorAll('[data-live-bar]').forEach(el => {
+    if (el.dataset.liveBar === t.id) el.style.width = pct + '%';
+  });
+}
+
 function cardTaskCompact(t, score) {
   const skillObjs = (t.skills || []).map(id => S.skills.find(s => s.id === id)).filter(Boolean);
   const borderColor = themeColor(t.color || (skillObjs[0]?.color) || areaColor(t.area));
-  const spent = taskMinutes(t);
+  const spent = liveTaskMinutes(t);
   const isQuick = t.est && t.est <= 10;
   const runningThis = S.timer && S.timer.taskId === t.id;
   const _as = activeSubs(t); const subsTotal = _as.length; const subsDone = _as.filter(s => s.d).length;
@@ -1589,7 +1616,7 @@ function cardTaskCompact(t, score) {
         <div class="compact-tt">${t.time?`<span style="color:var(--wr)">${ico('clock')} ${esc(t.time)} </span>`:''}${esc(t.t)}</div>
         <div class="compact-meta">
           ${prMark(t.pr)}
-          <span>${fmtMin(spent)}${t.est?'/'+fmtMin(t.est):''}</span>
+          <span><span data-live-spent="${t.id}">${fmtMin(spent)}</span>${t.est?'/'+fmtMin(t.est):''}</span>
           ${subsTotal?`<span>· ${subsDone}/${subsTotal} sub</span>`:''}
           ${isQuick?`<span style="color:var(--mu)">${ico('bolt')}</span>`:''}
           ${t.next?`<span style="color:var(--ac)">${ico('star', 'ico--on')}</span>`:''}
@@ -1605,10 +1632,10 @@ function cardTask(t, score) {
   const skillObjs = (t.skills || []).map(id => S.skills.find(s => s.id === id)).filter(Boolean);
   const borderColor = themeColor(t.color || (skillObjs[0]?.color) || areaColor(t.area));
   const type = TASK_TYPES.find(x => x.id === t.type); const proj = S.projects.find(p => p.id === t.proj);
-  const spent = taskMinutes(t); const pctT = t.est ? Math.min(100, Math.round(spent / t.est * 100)) : 0;
+  const spent = liveTaskMinutes(t); const pctT = t.est ? Math.min(100, Math.round(spent / t.est * 100)) : 0;
   const subsTotal = activeSubs(t).length;
-  const runningThis = S.timer && S.timer.taskId === t.id && !S.timer.subId;
   const timerOnTask = !!(S.timer && S.timer.taskId === t.id);
+  const timerPaused = timerOnTask && !!S.timer.paused;
   const isQuick = t.est && t.est <= 10;
   const labels = (t.labels||[]).map(lid => S.labels.find(l => l.id === lid)).filter(Boolean);
   const stuck = isStuck(t); const urgentStuck = isUrgentStuck(t); const over = isOverEstimate(t);
@@ -1632,8 +1659,8 @@ function cardTask(t, score) {
         <div class="meta">${prMark(t.pr)}${PR[t.pr]}<span class="tag tag-area" style="--c:${areaColor(t.area)}">${esc(areaLabel(t.area))}</span>${flagsHtml ? `<span class="task-flags task-flags--inline">${flagsHtml}</span>` : ''}${skillObjs.map(s => `<span class="tag tag-skill" style="--c:${themeColor(s.color)}">${esc(s.n)}</span>`).join('')}${proj ? `<span class="tag">${esc(proj.n)}</span>` : ''}${t.due ? `<span class="tag">prazo ${fmtDate(t.due)}</span>` : ''}${t.next ? `<span class="tag" style="color:var(--ac)">${ico('star', 'ico--on')}</span>` : ''}${labels.slice(0,4).map(l => `<span class="label-pill" style="--lc:${themeColor(l.color)}">${esc(l.n)}</span>`).join('')}${labels.length>4 ? `<span class="label-pill">+${labels.length-4}</span>` : ''}</div>
       </div>
       <div class="tm" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
-        <div class="tm-time"><b>${fmtMin(spent)}</b><span class="tm-sep">/</span><button type="button" class="tm-est" data-a="editInline" data-kind="est" data-id="${t.id}" title="Editar tempo estimado" aria-label="Editar tempo estimado">${t.est ? fmtMin(t.est) : '—'}</button><span class="tm-chev" aria-hidden="true">${ico('chevron-up')}</span></div>
-        <div class="mini"><div style="width:${pctT}%;--bar-span:${pctT>0?(10000/pctT).toFixed(2):100}%"></div></div>
+        <div class="tm-time"><b data-live-spent="${t.id}">${fmtMin(spent)}</b><span class="tm-sep">/</span><button type="button" class="tm-est" data-a="editInline" data-kind="est" data-id="${t.id}" title="Editar tempo estimado" aria-label="Editar tempo estimado">${t.est ? fmtMin(t.est) : '—'}</button><span class="tm-chev" aria-hidden="true">${ico('chevron-up')}</span></div>
+        <div class="mini"><div data-live-bar="${t.id}" style="width:${pctT}%;--bar-span:${pctT>0?(10000/pctT).toFixed(2):100}%"></div></div>
       </div>
     </div>
 
@@ -1642,12 +1669,14 @@ function cardTask(t, score) {
       <div class="acts">
       <div class="timer-segmented-bar">
         <div class="act-group act-play">
-          ${runningThis ? `<button data-a="stopTimer" class="act-main" style="background:var(--bu)" title="Pausar timer" aria-label="Pausar timer">${ico('pause')}</button>` : `<button data-a="startTimer" data-id="${t.id}" class="act-main" ${S.timer?'disabled':''} title="Iniciar timer" aria-label="Iniciar timer">${ico('play')}</button>`}
+          ${timerOnTask
+            ? `<button data-a="toggleTimerPause" class="act-main" style="background:var(--bu)" title="${timerPaused?'Retomar timer':'Pausar timer'}" aria-label="${timerPaused?'Retomar timer':'Pausar timer'}">${ico(timerPaused?'play':'pause')}</button>`
+            : `<button data-a="startTimer" data-id="${t.id}" class="act-main" ${S.timer?'disabled':''} title="Iniciar timer" aria-label="Iniciar timer">${ico('play')}</button>`}
           <button data-a="focusMode" data-id="${t.id}" class="act-icon" title="Modo foco" aria-label="Modo foco">${ico('focus')}</button>
         </div>
         <div class="time-stepper" role="group" aria-label="Ajustar tempo">
           <button data-a="log" data-id="${t.id}" data-m="-5" title="Menos 5 minutos">−5m</button>
-          <span class="time-stepper-value" title="Gasto / estimado">${fmtMin(spent)}${t.est?'/'+fmtMin(t.est):''}</span>
+          <span class="time-stepper-value" title="Gasto / estimado"><span data-live-spent="${t.id}">${fmtMin(spent)}</span>${t.est?'/'+fmtMin(t.est):''}</span>
           <button data-a="log" data-id="${t.id}" data-m="5" title="Mais 5 minutos">+5m</button>
         </div>
         <select class="postpone-sel" data-a="postpone" data-id="${t.id}" aria-label="Adiar tarefa"><option value="">→ adiar</option><option value="1">amanhã</option><option value="7">+7d</option><option value="queue">fila</option></select>
@@ -1667,6 +1696,7 @@ function cardTask(t, score) {
           <button data-a="moveUp" data-id="${t.id}" title="Subir">${ico('arrow-up')} Subir</button>
           <button data-a="moveDown" data-id="${t.id}" title="Descer">${ico('arrow-down')} Descer</button>
           ${doneNow ? `<button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo do trabalho">${ico('edit')} Resumo</button>` : ''}
+          ${timerOnTask ? `<button data-a="stopTimer" data-id="${t.id}" title="Parar timer">${ico('stop')} Parar timer</button>` : ''}
           <button data-a="openTaskDetails" data-id="${t.id}">${ico('edit')} Editar detalhes</button>
         </div>
       </details>
@@ -1724,7 +1754,7 @@ function renderSubs(t) {
   const canHide = !collapsed && subsTotal > SUBS_VISIBLE_LIMIT && showAll;
   const rowsHtml = visibleSubs.map((s) => {
     const mins = subMinutes(t, s.id); const isRunning = runningSub === s.id;
-    return `<div class="sub ${isRunning?'run':''}" data-subrow="${t.id}:${s.id}"><span class="sub-drag" draggable="true" data-dragsub="${t.id}:${s.id}" title="Arrastar para reordenar" aria-hidden="true">${ico('more','ico--drag')}</span><button class="chk s" data-a="stog" data-id="${t.id}" data-sub="${s.id}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?`<span contenteditable="false" class="sub-run-ico">${ico('play')}</span> `:''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="stopTimer" title="Pausar subtarefa" aria-label="Pausar subtarefa">${ico('pause')}</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" title="Iniciar subtarefa" aria-label="Iniciar subtarefa" ${S.timer?'disabled':''}>${ico('play')}</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-sub="${s.id}" title="Subir" aria-label="Subir">${ico('arrow-up')}</button><button class="btn-sm" data-a="subDown" data-id="${t.id}" data-sub="${s.id}" title="Descer" aria-label="Descer">${ico('arrow-down')}</button><button class="btn-sm sub-del" data-a="sdel" data-id="${t.id}" data-sub="${s.id}" title="Excluir subtarefa" aria-label="Excluir subtarefa">${ico('trash')}</button></div>`;
+    return `<div class="sub ${isRunning?'run':''}" data-subrow="${t.id}:${s.id}"><span class="sub-drag" draggable="true" data-dragsub="${t.id}:${s.id}" title="Arrastar para reordenar" aria-hidden="true">${ico('more','ico--drag')}</span><button class="chk s" data-a="stog" data-id="${t.id}" data-sub="${s.id}">${s.d?'✓':''}</button><span class="sub-txt ${s.d?'x':''}" contenteditable="true" data-subedit="${t.id}:${s.id}">${isRunning?`<span contenteditable="false" class="sub-run-ico">${ico('play')}</span> `:''}${esc(s.t)}</span><span class="sub-time">${mins?fmtMin(mins):''}</span>${isRunning ? `<button class="btn-sm run" data-a="toggleTimerPause" title="${S.timer && S.timer.paused ? 'Retomar subtarefa' : 'Pausar subtarefa'}" aria-label="${S.timer && S.timer.paused ? 'Retomar subtarefa' : 'Pausar subtarefa'}">${ico(S.timer && S.timer.paused ? 'play' : 'pause')}</button>` : `<button class="btn-sm" data-a="startSubTimer" data-id="${t.id}" data-sub="${s.id}" title="Iniciar subtarefa" aria-label="Iniciar subtarefa" ${S.timer?'disabled':''}>${ico('play')}</button>`}<button class="btn-sm" data-a="subUp" data-id="${t.id}" data-sub="${s.id}" title="Subir" aria-label="Subir">${ico('arrow-up')}</button><button class="btn-sm" data-a="subDown" data-id="${t.id}" data-sub="${s.id}" title="Descer" aria-label="Descer">${ico('arrow-down')}</button><button class="btn-sm sub-del" data-a="sdel" data-id="${t.id}" data-sub="${s.id}" title="Excluir subtarefa" aria-label="Excluir subtarefa">${ico('trash')}</button></div>`;
   }).join('');
   const addHtml = collapsed ? '' : `<div class="sub-add">
       <input data-a="sadd" data-id="${t.id}" placeholder="+ Adicionar subtarefa" aria-label="Adicionar subtarefa">
@@ -2677,8 +2707,14 @@ function closeReportSheet() {document.getElementById('reportSheet')?.remove();}
 /* --- TIMER (widget do topo) --- */
 function renderTimer() {
   const el = $('#timerWidget'), lbl = $('#tlabel'), time = $('#ttime'), stopBtn = $('#tstop'), bankEl = $('#tbank');
+  const pauseBtn = $('#tpause'), completeBtn = $('#tcomplete');
   if (!el) return;
-  if (!S.timer) {el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00'; stopBtn.style.display = 'none'; if (bankEl) {const b = ensureFocusBank(); const bc = Math.max(b.count || 0, pomodorosTodayCount()); const inBlock = Math.floor((b.sec || 0) % (25 * 60) / 60); bankEl.innerHTML = ico('tomato') + ' ' + bc + ' hoje' + ((b.sec || 0) > 0 ? ' · ' + inBlock + '/25' : '');} return;}
+  if (!S.timer) {
+    el.classList.remove('run'); lbl.textContent = 'Pronto'; time.textContent = '00:00';
+    [pauseBtn, completeBtn, stopBtn].forEach(b => {if (b) b.style.display = 'none';});
+    if (bankEl) {const b = ensureFocusBank(); const bc = Math.max(b.count || 0, pomodorosTodayCount()); const inBlock = Math.floor((b.sec || 0) % (25 * 60) / 60); bankEl.innerHTML = ico('tomato') + ' ' + bc + ' hoje' + ((b.sec || 0) > 0 ? ' · ' + inBlock + '/25' : '');}
+    return;
+  }
   const t = S.tasks.find(x => x.id === S.timer.taskId);
   el.classList.add('run');
   time.textContent = fmtClock(timerElapsedSec());
@@ -2694,7 +2730,25 @@ function renderTimer() {
     const inBlock = Math.floor((focusBankSec() % (25 * 60)) / 60);
     bankEl.innerHTML = (S.timer.phase === 'rest' ? ico('tomato') + ' ' + bc + ' hoje' : ico('tomato') + ' ' + bc + ' · ' + inBlock + '/25');
   }
-  stopBtn.style.display = '';
+  if (pauseBtn) {
+    pauseBtn.style.display = '';
+    pauseBtn.innerHTML = ico(S.timer.paused ? 'play' : 'pause');
+    pauseBtn.title = S.timer.paused ? 'Retomar timer' : 'Pausar timer';
+    pauseBtn.setAttribute('aria-label', pauseBtn.title);
+  }
+  if (completeBtn) {
+    completeBtn.style.display = '';
+    completeBtn.innerHTML = ico('check');
+    completeBtn.title = 'Concluir tarefa';
+    completeBtn.setAttribute('aria-label', completeBtn.title);
+  }
+  if (stopBtn) {
+    stopBtn.style.display = '';
+    stopBtn.innerHTML = ico('stop');
+    stopBtn.title = 'Parar timer';
+    stopBtn.setAttribute('aria-label', stopBtn.title);
+  }
+  updateLiveTaskTime();
 }
 
 /* --- MODO FOCO (overlay fullscreen) --- */
@@ -2800,8 +2854,9 @@ function focusRingDefs(t) {
   const hexes = (t.progressGradient || '').match(/#[0-9a-f]{3,8}/gi) || [];
   let stops = '';
   if (brutalMetal) {
-    // Mesma receita de `--bar-metal` (componentes.css), sem as hairlines de 1px.
-    stops = '<stop offset="0%" style="stop-color:color-mix(in srgb, var(--ac) 82%, var(--bu))"/><stop offset="50%" style="stop-color:color-mix(in srgb, var(--ac) 35%, var(--bu))"/><stop offset="100%" style="stop-color:color-mix(in srgb, var(--ac) 82%, var(--bu))"/>';
+    // v169 — mais bandas de luz/sombra que o --bar-metal original para o metal
+    // aparecer também em arcos curtos (um bloco de 25min começa com ~7%).
+    stops = '<stop offset="0%" style="stop-color:color-mix(in srgb, var(--ac) 95%, white)"/><stop offset="16%" style="stop-color:color-mix(in srgb, var(--ac) 55%, var(--bu))"/><stop offset="34%" style="stop-color:color-mix(in srgb, var(--bu) 82%, black)"/><stop offset="52%" style="stop-color:color-mix(in srgb, var(--ac) 78%, var(--bu))"/><stop offset="70%" style="stop-color:color-mix(in srgb, var(--bu) 68%, black)"/><stop offset="86%" style="stop-color:color-mix(in srgb, var(--ac) 48%, var(--bu))"/><stop offset="100%" style="stop-color:color-mix(in srgb, var(--ac) 92%, white)"/>';
   } else if (brutalLight) {
     // Brutal claro não tem metal: a barra é o gradiente base bu→ac.
     stops = '<stop offset="0%" style="stop-color:var(--bu)"/><stop offset="100%" style="stop-color:var(--ac)"/>';
@@ -2820,9 +2875,10 @@ function focusRingDefs(t) {
   } else {
     stops = '<stop offset="0%" style="stop-color:var(--bu)"/><stop offset="100%" style="stop-color:var(--ac)"/>';
   }
-  // Metal e bronze brilham de cima para baixo na barra; o anel segue a mesma luz.
-  const vertical = brutalMetal || type === 'metal' || type === 'bronze';
-  const dir = vertical ? 'x1="0" y1="0" x2="0" y2="1"'
+  // v169 — no anel, um gradiente vertical deixava o arco do topo todo claro
+  // (sem bandas visíveis). Metal/bronze usam diagonal para a luz percorrer o arco.
+  const diagonal = brutalMetal || type === 'metal' || type === 'bronze';
+  const dir = diagonal ? 'x1="0" y1="0" x2="1" y2="1"'
     : (brutalLight ? 'x1="0" y1="0" x2="1" y2="0"' : 'x1="0" y1="0" x2="1" y2="1"');
   return `<defs><linearGradient id="focusRingGrad" ${dir}>${stops}</linearGradient></defs>`;
 }
@@ -2985,10 +3041,10 @@ function renderFocus() {
     </div>`;
   }
 
-  // v153: tarefa sem subtarefas não tinha como ser concluída antes do timer
-  // acabar. O botão só aparece com o timer NESTA tarefa (evita concluir A
-  // enquanto B está rodando e misturar referências).
-  const canFinishNow = !subs.length && timerOnThisTask;
+  // v169: concluir a tarefa inteira pertence ao modo foco (e ao timer do topo).
+  // Antes o botão só aparecia sem subtarefas; agora aparece sempre que o timer
+  // está NESTA tarefa, inclusive com subtarefas pendentes.
+  const canFinishNow = !!timerOnThisTask;
   const finishNowBtn = canFinishNow
     ? `<button data-a="focusDone" data-id="${t.id}" class="focus-btn ghost" title="Concluir a tarefa e voltar para Hoje">${ico('check')} Concluir tarefa</button>`
     : '';

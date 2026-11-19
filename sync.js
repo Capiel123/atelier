@@ -161,6 +161,7 @@
     if (typeof S === 'undefined' || !S) return;
     var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
     var seen = readJSON(SEEN_KEY, null) || {};
+    var reconciled = false;
     if (!store.ops.length) { setStatus('synced'); return; }
 
     var now = Date.now();
@@ -233,6 +234,19 @@
               var merged = window.__merge.mergeEntity('tasks', it.ent, rr);
               if (merged && merged.action === 'set' && merged.entity && window.__importer && window.__importer.mapOne) {
                 it.row = window.__importer.mapOne('tasks', merged.entity, user.id);
+                // v168: o merge do push já resolveu a tarefa (ex.: remoto concluído,
+                // local pendente sem reabertura). Antes isso só ia para a row enviada;
+                // o S local ficava "vivo" no celular enquanto o PC já a mostrava concluída.
+                if (typeof S !== 'undefined' && S && Array.isArray(S.tasks)) {
+                  var li = -1;
+                  for (var si = 0; si < S.tasks.length; si++) { if (S.tasks[si].id === merged.entity.id) { li = si; break; } }
+                  if (li >= 0) {
+                    S.tasks[li] = merged.entity;
+                    reconciled = true;
+                    seen.tasks = seen.tasks || {};
+                    seen.tasks[merged.entity.id] = { h: versionOf('tasks', S, merged.entity), flushed: true };
+                  }
+                }
               }
             } catch (e) {}
           });
@@ -259,6 +273,10 @@
       }
     }
 
+    if (reconciled) {
+      try { if (typeof save === 'function') save(); } catch (e) {}
+      try { if (typeof render === 'function') render(); } catch (e) {}
+    }
     state.lastFlushAt = Date.now();
     if (!writeJSON(OUTBOX_KEY, store)) setStatus('error', 'Falha ao gravar a fila');
     writeJSON(SEEN_KEY, seen);
