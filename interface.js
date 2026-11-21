@@ -53,6 +53,10 @@ function sectionIcon(section) {return ico(SECTION_ICON[section] || 'briefcase');
 // v100: mapas dos glifos guardados nas constantes de domínio (estado.js).
 // A geometria continua no sprite; aqui só traduzimos o dado antigo para o nome.
 const TASK_TYPE_ICON = {criativa:'sparkle',profunda:'focus',admin:'briefcase',comunicacao:'mail',aprendizado:'star',manutencao:'repeat'};
+function taskTypeOption(x) {
+  const e = (typeof ENERGY_LEVELS !== 'undefined' ? ENERGY_LEVELS : []).find(v => v.id === x.energy);
+  return x.n + (e ? ' · ' + e.n.toLowerCase() : '');
+}
 const ENERGY_ICON = {low:'clock',med:'timer',high:'bolt'};
 const INTERACTION_ICON = {msg:'mail',call:'bell',email:'mail',meet:'calendar',other:'more'};
 const TRASH_ICON = {task:'check',project:'briefcase',client:'user',contact:'mail',application:'mail',skill:'sparkle',goal:'flag'};
@@ -85,6 +89,7 @@ function showShortcutsHelp() {
     <div class="shortcut-row"><span><kbd>Ctrl</kbd> + <kbd>K</kbd></span><span>Buscar global</span></div>
     <div class="shortcut-row"><span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span><span>Desfazer (30 estados)</span></div>
     <div class="shortcut-row"><span><kbd>Ctrl</kbd> + <kbd>B</kbd></span><span>Expandir / recolher o menu lateral</span></div>
+    <div class="shortcut-row"><span><kbd>←</kbd> <kbd>→</kbd></span><span>Fechar / abrir os destinos da área no menu</span></div>
     <div class="shortcut-row"><span><kbd>N</kbd></span><span>Focar em nova tarefa</span></div>
     <div class="shortcut-row"><span><kbd>F</kbd></span><span>Modo foco</span></div>
     <div class="shortcut-row"><span><kbd>Esc</kbd></span><span>Sair do foco / fechar painel</span></div>
@@ -1341,7 +1346,7 @@ function filterBar() {
   const areaOpts = getAreas().map(a => [a.id, a.n]);
   return `<div class="filter-bar" style="margin-bottom:12px;">
     <input id="filterText" placeholder="Filtrar…" value="${esc(filterState.text)}">
-    <select id="filterType"><option value="">Tipo</option>${TASK_TYPES.map(tt => `<option value="${tt.id}" ${filterState.type===tt.id?'selected':''}>${tt.n}</option>`).join('')}</select>
+    <select id="filterType"><option value="">Demanda</option>${TASK_TYPES.map(tt => `<option value="${tt.id}" ${filterState.type===tt.id?'selected':''}>${tt.n}</option>`).join('')}</select>
     <select id="filterArea"><option value="">Área</option>${areaOpts.map(a => `<option value="${esc(a[0])}" ${filterState.area===a[0]?'selected':''}>${esc(a[1])}</option>`).join('')}</select>
     <select id="filterProj"><option value="">Projeto</option>${alive(S.projects).filter(p=>!p.archived).map(p => `<option value="${p.id}" ${filterState.proj===p.id?'selected':''}>${esc(p.n)}</option>`).join('')}</select>
     <button data-a="toggleLabelsFilter" class="${hasLabels?'on':''}">Labels${hasLabels?' · '+filterState.labels.length:''}</button>
@@ -1654,7 +1659,7 @@ function cardTask(t, score) {
     <div class="row task-header" data-a="expandTask" data-id="${t.id}">
       <button class="chk" data-a="tog" data-id="${t.id}">${doneNow?'✓':''}</button>
       <div class="ti" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
-        <div class="tt">${type ? `<span class="type-icon ${type.id}" aria-hidden="true">${ico(TASK_TYPE_ICON[type.id] || 'flag')}</span>` : ''}<span class="tt-title-text">${esc(t.t)}</span><button type="button" class="tt-edit" data-a="editInline" data-kind="title" data-id="${t.id}" title="Editar título" aria-label="Editar título">${ico('edit')}</button>${isQuick ? `<span class="quick-ind">${ico('bolt')}</span>` : ''}${t.time ? `<span class="tag" style="color:var(--wr)">${ico('clock')} ${esc(t.time)}</span>` : ''}</div>
+        <div class="tt">${type ? `<span class="type-icon ${type.id}" title="${esc(taskTypeOption(type))}" aria-hidden="true">${ico(TASK_TYPE_ICON[type.id] || 'flag')}</span>` : ''}<span class="tt-title-text">${esc(t.t)}</span><button type="button" class="tt-edit" data-a="editInline" data-kind="title" data-id="${t.id}" title="Editar título" aria-label="Editar título">${ico('edit')}</button>${isQuick ? `<span class="quick-ind">${ico('bolt')}</span>` : ''}${t.time ? `<span class="tag" style="color:var(--wr)">${ico('clock')} ${esc(t.time)}</span>` : ''}</div>
         ${t.desc ? `<div class="tdesc">${esc(t.desc)}</div>` : ''}
         <div class="meta">${prMark(t.pr)}${PR[t.pr]}<span class="tag tag-area" style="--c:${areaColor(t.area)}">${esc(areaLabel(t.area))}</span>${flagsHtml ? `<span class="task-flags task-flags--inline">${flagsHtml}</span>` : ''}${skillObjs.map(s => `<span class="tag tag-skill" style="--c:${themeColor(s.color)}">${esc(s.n)}</span>`).join('')}${proj ? `<span class="tag">${esc(proj.n)}</span>` : ''}${t.due ? `<span class="tag">prazo ${fmtDate(t.due)}</span>` : ''}${t.next ? `<span class="tag" style="color:var(--ac)">${ico('star', 'ico--on')}</span>` : ''}${labels.slice(0,4).map(l => `<span class="label-pill" style="--lc:${themeColor(l.color)}">${esc(l.n)}</span>`).join('')}${labels.length>4 ? `<span class="label-pill">+${labels.length-4}</span>` : ''}</div>
       </div>
@@ -1707,7 +1712,7 @@ function cardTask(t, score) {
 
     ${subsCollapsedNow ? '' : `<details data-eid="${t.id}" ${openEdits.has(t.id)?'open':''}>
       <summary>Editar detalhes</summary>
-      <div class="form"><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions(taskProjectOptions(t), t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades${pillPicker(alive(S.skills).filter(s=>!s.archived), t.skills||[], 'skill', t.id)}</label><label class="full">Labels${pillPicker(S.labels, t.labels||[], 'label', t.id)}</label><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label></div>
+      <div class="form"><label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label><label class="full" title="Energia e tipo de esforço; entra no score automático">Demanda<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,taskTypeOption(x)])], t.type)}</select></label><label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label><label>Projeto<select data-p="${esc(k('proj'))}">${selOptions(taskProjectOptions(t), t.proj)}</select></label><label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label><label>Hora (compromisso)<input type="time" data-p="${esc(k('time'))}" value="${esc(t.time||'')}"></label><label>Seção<select data-p="${esc(k('section'))}">${selOptions([['','Auto'],['work','Trabalho'],['commitment','Compromisso'],['personal','Pessoal']], t.section||'')}</select></label><label>Dia<select data-p="${esc(k('day'))}">${selOptions([['','Fila'],...DAYS.map((d,i)=>[i,d])], t.day??'')}</select></label><label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(t.due||'')}"></label><label class="full">Habilidades${pillPicker(alive(S.skills).filter(s=>!s.archived), t.skills||[], 'skill', t.id)}</label><label class="full" title="Contexto e filtros; não define a energia da tarefa">Labels${pillPicker(S.labels, t.labels||[], 'label', t.id)}</label><div class="full form-hint">Demanda = energia/esforço. Labels = contexto e filtros.</div><label class="full">Título${inp(k('t'), t.t)}</label><label class="full">Descrição<textarea data-p="${esc(k('desc'))}" rows="2">${esc(t.desc||'')}</textarea></label><label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label></div>
     </details>
       ${aiContextDetailsHtml(t)}`}
   </div>`;
@@ -1853,12 +1858,12 @@ function cardQueue(t) {
         <div class="form">
           <label class="full">Título${inp(k('t'), t.t)}</label>
           <label>Prioridade<select data-p="${esc(k('pr'))}">${selOptions(PR.map((x,i)=>[i,x]), t.pr)}</select></label>
-          <label>Tipo<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,x.n])], t.type)}</select></label>
+          <label class="full" title="Energia e tipo de esforço; entra no score automático">Demanda<select data-p="${esc(k('type'))}">${selOptions([['','—'],...TASK_TYPES.map(x=>[x.id,taskTypeOption(x)])], t.type)}</select></label>
           <label>Área<select data-p="${esc(k('area'))}">${selOptions(taskAreaOptions(t), t.area)}</select></label>
           <label>Projeto<select data-p="${esc(k('proj'))}">${selOptions(taskProjectOptions(t), t.proj)}</select></label>
           <label>Estimativa<input type="number" data-p="${esc(k('est'))}" value="${t.est||0}"></label>
           <label class="full">Habilidades<div class="pill-stack">${alive(S.skills).filter(s=>!s.archived).map(s => `<label><input type="checkbox" data-skill-task="${t.id}" data-skill-id="${s.id}" ${(t.skills||[]).includes(s.id)?'checked':''}><span style="--pc:${s.color}">${esc(s.n)}</span></label>`).join('')}</div></label>
-          <label class="full">Labels<div class="pill-stack">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="--pc:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label>
+          <label class="full" title="Contexto e filtros; não define a energia da tarefa">Labels<div class="pill-stack">${S.labels.map(l => `<label><input type="checkbox" data-label-task="${t.id}" data-label-id="${l.id}" ${(t.labels||[]).includes(l.id)?'checked':''}><span style="--pc:${l.color}">${esc(l.n)}</span></label>`).join('')}</div></label><div class="full form-hint">Demanda = energia/esforço. Labels = contexto e filtros.</div>
           <label class="full">Cor<div class="color-picker-row"><div class="color-dot ${!t.color?'selected':''}" style="background:transparent;border:1px dashed var(--bd)" data-a="setTaskColor" data-id="${t.id}" data-color="">⊘</div>${COLOR_PALETTE.map(p => `<div class="color-dot ${t.color===p.c?'selected':''}" style="background:${p.c}" title="${p.n}" data-a="setTaskColor" data-id="${t.id}" data-color="${p.c}"></div>`).join('')}</div></label>
         </div>
       </details>
@@ -1978,6 +1983,21 @@ function viewProjects() {
   const active = alive(S.projects).filter(p => !p.archived);
   const archived = alive(S.projects).filter(p => p.archived);
   const clients = alive(S.clients);
+  const statusById = new Map(active.map(p => [p.id, projectStatus(p)]));
+  const nActive = active.filter(p => statusById.get(p.id).id === 'active').length;
+  const nFuture = active.filter(p => statusById.get(p.id).id === 'future').length;
+  const nSoon = active.filter(p => ['soon','late'].includes(statusById.get(p.id).id)).length;
+  const nLate = active.filter(p => statusById.get(p.id).id === 'late').length;
+  const statusRank = {late:0, soon:1, active:2, future:3};
+  const sorted = active.slice().sort((a,b) => {
+    const sa = statusById.get(a.id), sb = statusById.get(b.id);
+    return (statusRank[sa.id] ?? 9) - (statusRank[sb.id] ?? 9) || String(a.due || '9999').localeCompare(String(b.due || '9999')) || (a.n || '').localeCompare(b.n || '', 'pt-BR');
+  });
+  const summary = active.length ? `<div class="proj-summary" role="status" aria-label="Resumo dos projetos">
+    <span class="proj-chip proj-chip--active"><i></i>Em andamento <b>${nActive}</b></span>
+    <span class="proj-chip proj-chip--future"><i></i>Futuros <b>${nFuture}</b></span>
+    <span class="proj-chip proj-chip--soon" title="${nLate ? nLate + ' atrasado(s)' : 'Prazo de até 7 dias'}"><i></i>Prazo próximo <b>${nSoon}</b>${nLate ? `<em>${nLate} atrasado${nLate === 1 ? '' : 's'}</em>` : ''}</span>
+  </div>` : '';
   return `<div class="card proj-add${projAddOpen ? ' open' : ''}">
     <button type="button" class="proj-add-toggle" data-a="toggleProjAdd" aria-expanded="${projAddOpen}" aria-controls="projAddBody">${ico(projAddOpen ? 'x' : 'plus')} ${projAddOpen ? 'Fechar' : 'Adicionar projeto'}</button>
     <div class="proj-add-body" id="projAddBody">
@@ -1985,10 +2005,11 @@ function viewProjects() {
       <button data-a="padd" style="margin-top:8px">Criar projeto</button>
     </div>
   </div>
-    ${active.map(projectCard).join('')}
-    ${archived.length ? `<details><summary>Arquivados (${archived.length})</summary>${archived.map(projectCard).join('')}</details>` : ''}`;
+    ${summary}
+    ${sorted.length ? sorted.map(projectCard).join('') : '<div class="msg">Nenhum projeto ativo. Use “Adicionar projeto” acima.</div>'}
+    ${archived.length ? `<details class="proj-archived" data-eid="projArchived" ${openEdits.has('projArchived') ? 'open' : ''}><summary>Arquivados (${archived.length})</summary>${archived.map(projectCard).join('')}</details>` : ''}`;
 }
-function renderProjectGoals(p) {
+function renderProjectGoals(p, flat) {
   const goals = (p.goals || []).slice().sort((a,b) => (a.order||0) - (b.order||0));
   const done = goals.filter(g => g.d).length;
   const total = goals.length;
@@ -1999,47 +2020,82 @@ function renderProjectGoals(p) {
       <button class="btn-sm" data-a="pgdown" data-id="${p.id}" data-g="${g.id}" data-i="${i}" title="Descer" aria-label="Descer etapa">${ico('arrow-down')}</button>
       <button class="btn-sm" data-a="pgdel" data-id="${p.id}" data-g="${g.id}" title="Excluir" aria-label="Excluir etapa">${ico('x')}</button>
     </div>`).join('');
-  return `<details class="proj-goals" data-eid="pg_${p.id}" ${openEdits.has('pg_' + p.id) ? 'open' : ''}>
-    <summary>${ico('flag')} Etapas <span class="badge">${done}/${total}</span></summary>
-    ${total ? `<div class="subs">${rows}</div>` : '<div class="msg" style="margin:6px 0">Nenhuma etapa ainda.</div>'}
+  const body = `${total ? `<div class="subs">${rows}</div>` : '<div class="msg" style="margin:6px 0">Nenhuma etapa ainda.</div>'}
     <div class="add" style="margin-top:8px">
       <input data-pgadd="${p.id}" placeholder="Nova etapa (Enter)">
       <button data-a="pgadd" data-id="${p.id}" title="Adicionar etapa" aria-label="Adicionar etapa">${ico('plus')}</button>
-    </div>
+    </div>`;
+  if (flat) return `<div class="proj-goals-body"><div class="proj-edit-subhead">${ico('flag')} Etapas <span class="badge">${done}/${total}</span></div>${body}</div>`;
+  return `<details class="proj-goals" data-eid="pg_${p.id}" ${openEdits.has('pg_' + p.id) ? 'open' : ''}>
+    <summary>${ico('flag')} Etapas <span class="badge">${done}/${total}</span></summary>
+    ${body}
   </details>`;
 }
 function projectCard(p) {
-  const ts = S.tasks.filter(t => t.proj === p.id); const done = ts.filter(t => t.done).length, total = ts.length;
-  const pctTasks = total ? Math.round(done/total*100) : 0;
-  const estTotal = projEstTotal(p.id), estDone = projEstDone(p.id); const pctTime = estTotal > 0 ? Math.round(estDone/estTotal*100) : 0;
-  const mins = projMinutes(p.id); const color = areaColor(p.area); const k = f => `projects:${p.id}:${f}`;
+  const ts = S.tasks.filter(t => t.proj === p.id);
+  const done = ts.filter(t => t.done).length, total = ts.length;
+  const goals = p.goals || [];
+  const goalsDone = goals.filter(g => g.d).length;
+  const stepsTotal = goals.length || total;
+  const stepsDone = goals.length ? goalsDone : done;
+  const stepsLabel = goals.length ? 'Etapas' : 'Tarefas';
+  const isComplete = !!p.completedAt;
+  const pct = isComplete ? 100 : (stepsTotal ? Math.round(stepsDone / stepsTotal * 100) : 0);
+  const color = areaColor(p.area);
+  const status = projectStatus(p);
+  const k = f => `projects:${p.id}:${f}`;
   const earnings = projectEarnings(p);
   const clients = alive(S.clients);
-  const isComplete = !!p.completedAt;
+  const client = p.clientId ? clients.find(c => c.id === p.clientId) : null;
+  const clientName = (client && client.n) || p.client || 'Sem cliente';
   const cur = p.currency || 'BRL';
   const valUnit = p.billingType === 'hourly' ? `${CURRENCIES[cur].sym}/h` : p.billingType === 'minute' ? `${CURRENCIES[cur].sym}/min` : CURRENCIES[cur].sym;
-  return `<div class="card" style="--c:${color}">
-    <div class="big"><input data-p="${esc(k('n'))}" value="${esc(p.n)}" style="font-weight:600"><button data-a="pdel" data-id="${p.id}" aria-label="Excluir projeto" title="Excluir projeto">${ico('x')}</button></div>
-    ${isComplete ? `<div class="msg" style="color:var(--ok)">✓ Concluído em ${fmtDate(iso(new Date(p.completedAt)))}${earnings.total>0?` · ${fmtMoney(earnings.total, cur)}`:''}${earnings.ratePerHour>0?` · ${fmtMoney(earnings.ratePerHour, cur)}/h`:''}</div>` : ''}
-    ${estTotal ? `<div class="proj-progress"><div class="pp-row"><span class="pp-label">Tarefas</span><div class="pp-bar"><div style="width:${pctTasks}%;background:${color}"></div></div><span class="pp-val">${pctTasks}%</span></div><div class="pp-row"><span class="pp-label">Tempo</span><div class="pp-bar"><div style="width:${pctTime}%;background:${color}88"></div></div><span class="pp-val">${pctTime}%</span></div></div>` : ''}
-    ${renderProjectGoals(p)}
-    <div class="form">
-      <label>Área<select data-p="${esc(k('area'))}">${selOptions(getAreas().map(a=>[a.id,a.n]), p.area)}</select></label>
-      <label>Cliente<select data-p="${esc(k('clientId'))}"><option value="">—</option>${clients.map(c => `<option value="${c.id}" ${p.clientId===c.id?'selected':''}>${esc(c.n)}</option>`).join('')}</select></label>
-      <label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(p.due||'')}"></label>
-      <label>Cobrança<select data-p="${esc(k('billingType'))}">${selOptions(BILLING_TYPES, p.billingType)}</select></label>
-      <label>Moeda<select data-p="${esc(k('currency'))}">${selOptions(Object.keys(CURRENCIES).map(c=>[c,CURRENCIES[c].sym+' '+c]), cur)}</select></label>
-      <label>Valor (${valUnit})<input type="number" step="0.01" data-p="${esc(k('billingValue'))}" value="${p.billingValue||0}"></label>
-      <label>Valor real (override)<input type="number" step="0.01" data-p="${esc(k('actualValue'))}" value="${p.actualValue ?? ''}"></label>
-      <label>Horas manuais (override)<input type="number" step="0.1" data-p="${esc(k('manualHours'))}" value="${p.manualHours ?? ''}"></label>
-      <label>Recompensa<input data-p="${esc(k('reward'))}" value="${esc(p.reward||'')}"></label>
+  const money = earnings.total > 0
+    ? fmtMoney(earnings.total, cur)
+    : (Number(p.billingValue) > 0 ? `${fmtMoney(p.billingValue, cur)}${p.billingType === 'hourly' ? '/h' : p.billingType === 'minute' ? '/min' : ''}` : (p.reward ? esc(p.reward) : '—'));
+  const dueLabel = p.due ? fmtDate(p.due) : 'Sem prazo';
+  const completeBtn = isComplete
+    ? `<button type="button" class="proj-done-btn is-done" data-a="puncomplete" data-id="${p.id}" title="Reabrir projeto">${ico('repeat')} Reabrir</button>`
+    : `<button type="button" class="proj-done-btn" data-a="pcomplete" data-id="${p.id}" title="Marcar projeto como concluído">${ico('check')} Concluir</button>`;
+  return `<div class="card proj-card proj-card--${status.id}" style="--c:${color};--pc:${status.color}">
+    <div class="proj-card-head">
+      <div class="proj-heading">
+        <div class="proj-kicker"><span class="proj-status">${status.label}</span>${isComplete ? `<span class="proj-status-note">${fmtDate(iso(new Date(p.completedAt)))}</span>` : ''}</div>
+        <h3 class="proj-name">${esc(p.n)}</h3>
+        <div class="proj-meta">
+          <span class="proj-client">${ico('user')} ${esc(clientName)}</span>
+          <span class="proj-due">${ico('calendar')} ${esc(dueLabel)}</span>
+          <span>${ico('flag')} ${stepsLabel} ${stepsDone}/${stepsTotal}</span>
+          <span class="proj-money">${money}</span>
+        </div>
+      </div>
+      ${completeBtn}
     </div>
-    <div class="acts">
-      ${p.reward && pctTasks===100 ? (p.claimed ? `<span class="badge">${ico('check')} ${esc(p.reward)}</span>` : `<button data-a="claim" data-id="${p.id}" style="background:var(--ac);color:#000">Resgatar</button>`) : (p.reward ? `<span class="badge">${ico('flag')} ${esc(p.reward)}</span>` : '')}
-      ${!isComplete ? `<button data-a="pcomplete" data-id="${p.id}" style="background:var(--ok);color:#000">${ico('check')} Marcar concluído</button>` : ''}
-      ${isComplete ? `<button data-a="puncomplete" data-id="${p.id}">Reabrir</button>` : ''}
-      <button data-a="parch" data-id="${p.id}">${p.archived?'Restaurar':'Arquivar'}</button>
+    <div class="proj-pct-row" aria-label="Progresso ${pct}%">
+      <div class="proj-pct-bar"><i style="width:${pct}%"></i></div>
+      <span class="proj-pct">${pct}%</span>
     </div>
+    <details class="proj-edit" data-eid="pe_${p.id}" ${openEdits.has('pe_' + p.id) ? 'open' : ''}>
+      <summary>${ico('chevron-down','proj-edit-chev')} Editar projeto</summary>
+      <div class="form">
+        <label class="full">Nome<input data-p="${esc(k('n'))}" value="${esc(p.n)}"></label>
+        <label>Área<select data-p="${esc(k('area'))}">${selOptions(getAreas().map(a=>[a.id,a.n]), p.area)}</select></label>
+        <label>Cliente<select data-p="${esc(k('clientId'))}"><option value="">—</option>${clients.map(c => `<option value="${c.id}" ${p.clientId===c.id?'selected':''}>${esc(c.n)}</option>`).join('')}</select></label>
+        <label>Prazo<input type="date" data-p="${esc(k('due'))}" value="${esc(p.due||'')}"></label>
+        <label>Cobrança<select data-p="${esc(k('billingType'))}">${selOptions(BILLING_TYPES, p.billingType)}</select></label>
+        <label>Moeda<select data-p="${esc(k('currency'))}">${selOptions(Object.keys(CURRENCIES).map(c=>[c,CURRENCIES[c].sym+' '+c]), cur)}</select></label>
+        <label>Valor (${valUnit})<input type="number" step="0.01" data-p="${esc(k('billingValue'))}" value="${p.billingValue||0}"></label>
+        <label>Valor real (override)<input type="number" step="0.01" data-p="${esc(k('actualValue'))}" value="${p.actualValue ?? ''}"></label>
+        <label>Horas manuais (override)<input type="number" step="0.1" data-p="${esc(k('manualHours'))}" value="${p.manualHours ?? ''}"></label>
+        <label>Recompensa<input data-p="${esc(k('reward'))}" value="${esc(p.reward||'')}"></label>
+      </div>
+      ${renderProjectGoals(p, true)}
+      <div class="acts proj-edit-actions">
+        ${p.reward && pct===100 ? (p.claimed ? `<span class="badge">${ico('check')} ${esc(p.reward)}</span>` : `<button data-a="claim" data-id="${p.id}" style="background:var(--ac);color:#000">Resgatar</button>`) : (p.reward ? `<span class="badge">${ico('flag')} ${esc(p.reward)}</span>` : '')}
+        <button data-a="parch" data-id="${p.id}">${p.archived?'Restaurar':'Arquivar'}</button>
+        <button data-a="pdel" data-id="${p.id}" class="proj-del" aria-label="Excluir projeto" title="Excluir projeto">${ico('x')} Excluir</button>
+      </div>
+    </details>
   </div>`;
 }
 
@@ -2294,9 +2350,12 @@ function viewContacts(type, segHtml) {
     else if (filt.status === 'overdue') filtered = filtered.filter(c => contactStatus(c).k === 'atrasado');
   }
   if (filt.cat) filtered = filtered.filter(c => c.cat === filt.cat);
+  if (filt.priority !== 'all' && filt.priority != null) filtered = filtered.filter(c => String(c.priority) === String(filt.priority));
+  if (filt.fav) filtered = filtered.filter(c => isOrbitFavorite(c.id));
   if (filt.text) {const q = filt.text.toLowerCase(); filtered = filtered.filter(c => (c.n||'').toLowerCase().includes(q) || (c.notes||'').toLowerCase().includes(q) || (c.context||'').toLowerCase().includes(q) || (c.lastConversation||'').toLowerCase().includes(q) || tagList(c.tags).some(t => t.includes(q)));}
   const beforeTags = filtered;
   if (filt.tags.length) filtered = filtered.filter(c => filt.tags.every(t => tagList(c.tags).includes(t)));
+  const filtCount = (filt.cat ? 1 : 0) + (filt.status !== 'all' ? 1 : 0) + (filt.priority !== 'all' ? 1 : 0) + (filt.fav ? 1 : 0) + filt.tags.length + (filt.text ? 1 : 0);
   const scored = filtered.map(c => ({c, score: contactScore(c)}));
   if (filt.sort === 'score') scored.sort((a,b) => {if (a.c.archived !== b.c.archived) return a.c.archived ? 1 : -1; return b.score - a.score;});
   else if (filt.sort === 'name') scored.sort((a,b) => (a.c.n||'').localeCompare(b.c.n||''));
@@ -2308,23 +2367,37 @@ function viewContacts(type, segHtml) {
   const snoozed = all.filter(c => c.snoozedUntil && c.snoozedUntil > iso(new Date())).length;
   const active30 = all.filter(c => !c.archived && c.lastContact && daysBetween(c.lastContact, iso(new Date())) <= 30).length;
   const categories = isPro ? CAT_PRO : CAT_PERSONAL;
-  const filterPills = `<div class="filter-bar"><span class="filter-ico" aria-hidden="true">${ico('search')}</span><input id="contactSearch_${type}" placeholder="Buscar…" value="${esc(filt.text)}"><select id="contactCatFilter_${type}"><option value="">Categoria</option>${categories.map(c => `<option value="${esc(c)}" ${filt.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select><select id="contactStatusFilter_${type}"><option value="active" ${filt.status==='active'?'selected':''}>Ativos</option><option value="all" ${filt.status==='all'?'selected':''}>Todos</option><option value="overdue" ${filt.status==='overdue'?'selected':''}>Atrasados</option><option value="waiting" ${filt.status==='waiting'?'selected':''}>Aguardando</option><option value="snoozed" ${filt.status==='snoozed'?'selected':''}>Adiados</option><option value="archived" ${filt.status==='archived'?'selected':''}>Arquivados</option></select><select id="contactSortFilter_${type}"><option value="score" ${filt.sort==='score'?'selected':''}>Score</option><option value="name" ${filt.sort==='name'?'selected':''}>Nome</option><option value="last" ${filt.sort==='last'?'selected':''}>Último</option><option value="next" ${filt.sort==='next'?'selected':''}>Próximo</option></select></div>`;
+  const priorityOptions = [['all','Prioridade'],['0','Alta'],['1','Média'],['2','Baixa']]
+    .map(([v,n]) => `<option value="${v}" ${String(filt.priority)===v?'selected':''}>${n}</option>`).join('');
+  const filterPills = `<div class="filter-bar contact-filter-bar">
+    <span class="filter-ico" aria-hidden="true">${ico('search')}</span>
+    <input id="contactSearch_${type}" placeholder="Buscar…" value="${esc(filt.text)}">
+    <select id="contactCatFilter_${type}"><option value="">Categoria</option>${categories.map(c => `<option value="${esc(c)}" ${filt.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <select id="contactStatusFilter_${type}"><option value="active" ${filt.status==='active'?'selected':''}>Ativos</option><option value="all" ${filt.status==='all'?'selected':''}>Todos</option><option value="overdue" ${filt.status==='overdue'?'selected':''}>Atrasados</option><option value="waiting" ${filt.status==='waiting'?'selected':''}>Aguardando</option><option value="snoozed" ${filt.status==='snoozed'?'selected':''}>Adiados</option><option value="archived" ${filt.status==='archived'?'selected':''}>Arquivados</option></select>
+    <select id="contactPriorityFilter_${type}" title="Filtrar por prioridade">${priorityOptions}</select>
+    <select id="contactSortFilter_${type}"><option value="score" ${filt.sort==='score'?'selected':''}>Score</option><option value="name" ${filt.sort==='name'?'selected':''}>Nome</option><option value="last" ${filt.sort==='last'?'selected':''}>Último</option><option value="next" ${filt.sort==='next'?'selected':''}>Próximo</option></select>
+    <button type="button" class="filter-fav ${filt.fav?'on':''}" data-a="contactFavFilter" data-type="${type}" aria-pressed="${filt.fav}" title="Mostrar só favoritos">${filt.fav?'★':'☆'} Favoritos</button>
+    ${filtCount ? `<button type="button" class="filter-clear" data-a="clearContactFilters" data-type="${type}" title="Limpar todos os filtros">Limpar</button>` : ''}
+  </div>`;
   const allTags = contactAllTags().filter(t => all.some(c => tagList(c.tags).includes(t)));
   const tagCounts = new Map();
-  all.forEach(c => tagList(c.tags).forEach(t => tagCounts.set(t, (tagCounts.get(t) || 0) + 1)));
-  const tagOrder = allTags.slice().sort((a,b) => (tagCounts.get(b) - tagCounts.get(a)) || a.localeCompare(b, 'pt-BR'));
+  beforeTags.forEach(c => tagList(c.tags).forEach(t => tagCounts.set(t, (tagCounts.get(t) || 0) + 1)));
+  const tagOrder = Array.from(tagCounts.keys())
+    .filter(t => (tagCounts.get(t) || 0) > 0 || filt.tags.includes(t))
+    .sort((a,b) => (tagCounts.get(b) - tagCounts.get(a)) || a.localeCompare(b, 'pt-BR'));
   const tagOptions = contactAllTags();
   const tagDatalist = `<datalist id="contactTags">${tagOptions.map(t => `<option value="${esc(t)}">`).join('')}</datalist>`;
-  const tagFilter = allTags.length ? `<div class="tag-filter">${tagOrder.map(t => `<button class="tag-pill ${filt.tags.includes(t)?'on':''}" data-a="toggleTagFilter" data-type="${type}" data-tag="${esc(t)}">${esc(t)}<span class="tag-n">${tagCounts.get(t) || 0}</span></button>`).join('')}${filt.tags.length ? `<button class="tag-pill" data-a="clearTagFilter" data-type="${type}" style="color:var(--mu)" aria-label="Limpar filtro de tags" title="Limpar filtro de tags">${ico('x')}</button>` : ''}</div>` : '';
+  const tagFilter = tagOrder.length ? `<div class="tag-filter"><span class="tag-filter-label">Tags</span>${tagOrder.map(t => `<button class="tag-pill ${filt.tags.includes(t)?'on':''}" data-a="toggleTagFilter" data-type="${type}" data-tag="${esc(t)}" title="${tagCounts.get(t) || 0} contato${(tagCounts.get(t)||0)===1?'':'s'} com esta tag nos filtros atuais" aria-pressed="${filt.tags.includes(t)}">${esc(t)}<span class="tag-n">${tagCounts.get(t) || 0}</span></button>`).join('')}${filt.tags.length ? `<button class="tag-pill" data-a="clearTagFilter" data-type="${type}" style="color:var(--mu)" aria-label="Limpar filtro de tags" title="Limpar filtro de tags">${ico('x')}</button>` : ''}</div>` : '';
   const viewToggle = `<div class="view-toggle"><button class="${view==='list'?'on':''}" data-a="contactView" data-type="${type}" data-mode="list">${ico('menu')} Lista</button><button class="${view==='orbit'?'on':''}" data-a="contactView" data-type="${type}" data-mode="orbit">${ico('focus')} Órbita</button></div>`;
   const kpiBtn = (label, value, sub, st, extra) => `<button class="kpi${filt.status === st ? ' on' : ''}" data-a="contactKpi" data-type="${type}" data-status="${st}" aria-pressed="${filt.status === st}"><div class="kpi-label">${label}</div><div class="kpi-value ${extra || ''}">${value}</div><div class="kpi-sub">${sub}</div></button>`;
   const kpis = `<div class="contact-kpis">${kpiBtn('Contatos', all.filter(c => !c.archived).length, `${active30} ativos (30d)`, 'all')}${kpiBtn('Atrasados', overdue, `${todayCount} hoje`, 'overdue', overdue ? 'late' : '')}${kpiBtn('Aguardando', waiting, 'resposta deles', 'waiting')}${kpiBtn('Adiados', snoozed, 'com motivo', 'snoozed')}</div>`;
   // v135 — filtros retráteis no mobile (padrão da Semana); no desktop a barra fica sempre visível.
-  const filtCount = (filt.cat ? 1 : 0) + (filt.status !== 'all' ? 1 : 0) + filt.tags.length + (filt.text ? 1 : 0);
   const filtersToggle = `<button class="filter-toggle${showContactFilters ? ' on' : ''}" data-a="toggleContactFilters" data-type="${type}" aria-expanded="${showContactFilters}" aria-controls="contactFilters_${type}">${ico('search')} Filtros${filtCount ? ` <span class="filter-count">${filtCount}</span>` : ''}</button>`;
   // v139 — modo discreto: esconde nomes, notas e números (tela compartilhada).
   const controls = `<div class="contact-controls">${viewToggle}${filtersToggle}</div>`;
   const filtersWrap = `<div class="contact-filters${showContactFilters ? ' open' : ''}" id="contactFilters_${type}">${filterPills}${discreet ? '' : tagFilter}</div>`;
+  const scopeTotal = all.filter(c => filt.status === 'archived' ? c.archived : !c.archived).length;
+  const resultSummary = filtCount ? `<div class="contact-filter-summary" role="status" aria-live="polite">${filtered.length} de ${scopeTotal} contato${scopeTotal === 1 ? '' : 's'} passam nos filtros atuais</div>` : '';
   const dcKey = k => draftGet('contact:' + type + ':' + k);
   const dc = k => esc(dcKey(k));
   const form = `<details class="contact-add" data-eid="contactForm_${type}" ${openEdits.has('contactForm_' + type) ? 'open' : ''}>
@@ -2338,7 +2411,7 @@ function viewContacts(type, segHtml) {
   const cardsHtml = view === 'orbit' ? renderOrbit(type, orbitContacts, orbitKeep) : scored.map(({c, score}) => contactCard(c, score, type)).join('');
   const head = segHtml || `<h3 style="margin-top:0">${isPro ? 'Rede profissional' : 'Amizades e vínculos'}</h3>`;
   const shownCount = (view === 'orbit' && filt.tags.length) ? orbitContacts.length : filtered.length;
-  return `${discreet ? '' : tagDatalist}${head}<div class="msg">${isPro ? 'Score = urgência de retomar contato.' : 'Score gentil: contatos pessoais pesam × 0.75.'}</div>${kpis}${controls}${filtersWrap}${form}<h3>Contatos <span class="count">(${shownCount})</span></h3>${cardsHtml || '<div class="msg">Nenhum contato ainda. Use "Novo contato" acima para adicionar.</div>'}`;
+  return `${discreet ? '' : tagDatalist}${head}<div class="msg">${isPro ? 'Score = urgência de retomar contato.' : 'Score gentil: contatos pessoais pesam × 0.75.'}</div>${kpis}${controls}${filtersWrap}${resultSummary}${form}<h3>Contatos <span class="count">(${shownCount})</span></h3>${cardsHtml || '<div class="msg">Nenhum contato ainda. Use "Novo contato" acima para adicionar.</div>'}`;
 }
 /* v137 — aba Pessoas: um ponto de entrada, listas separadas por tipo (score e categorias continuam próprios). */
 function viewPeople() {
@@ -2362,7 +2435,7 @@ function contactCard(c, score, type) {
   const status = contactStatus(c); const scCls = scoreClass(score);
   const days = c.lastContact ? daysBetween(c.lastContact, iso(new Date())) : null;
   const rate = contactResponseRate(c); const rateCls = rate == null ? '' : rate >= 0.6 ? 'good' : rate < 0.2 ? 'bad' : '';
-  const depth = connectionDepth(c); const k = f => `contacts:${c.id}:${f}`;
+  const depth = connectionDepth(c); const fav = isOrbitFavorite(c.id); const k = f => `contacts:${c.id}:${f}`;
   const isSnoozed = c.snoozedUntil && c.snoozedUntil > iso(new Date());
   const cls = isSnoozed ? 'snoozed' : status.k === 'atrasado' ? 'overdue' : status.k === 'hoje' ? 'due' : c.waitingFor ? 'waiting' : '';
   const depthLabel = ['', '· interno', '· regular', '· distante'][depth];
@@ -2372,7 +2445,7 @@ function contactCard(c, score, type) {
   // v139 — no modo discreto o conteúdo sensível não é renderizado (não é só CSS).
   const vis = frag => hidden ? '' : frag;
   const clientBadge = linkedClient ? `<span class="tag contact-client" style="color:var(--ok);cursor:pointer" data-a="gotoClient" data-id="${linkedClient.id}">${ico('chevron-down','ico--next')} ${esc(linkedClient.n)}</span>` : '';
-  return `<div class="contact-card ${cls}${hidden ? ' discreet' : ''}" data-cid="${c.id}" style="--c:${themeColor(status.color)}"><div class="big" style="margin-bottom:2px"><input data-p="${esc(k('n'))}" value="${esc(hidden ? maskContactName(c.n) : c.n)}"${hidden ? ' readonly aria-label="Nome resumido"' : ''} style="font-weight:600;flex:1;min-width:0">${hidden ? '' : `<span class="contact-score ${scCls}" title="${esc(contactScoreBreakdown(c))}">${score >= 0 ? score : '—'}</span>`}<span class="badge" style="color:${themeColor(status.color)}">${hidden ? (STATUS_SHORT[status.k] || 'Em dia') : status.label}</span>${discreet ? `<button class="contact-reveal" data-a="contactReveal" data-id="${c.id}" title="${hidden ? 'Ver detalhes' : 'Ocultar'}" aria-label="${hidden ? 'Ver detalhes do contato' : 'Ocultar contato'}">${ico(hidden ? 'more' : 'x')}</button>` : ''}</div><div class="meta">${hidden ? '' : `<span class="tag">${esc(c.cat)}</span>`}${vis(c.where?`<span class="tag tag-extra">${esc(c.where)}</span>`:'')}${vis(c.role?`<span class="tag tag-extra">${esc(c.role)}</span>`:'')}${hidden ? '' : (days != null?`<span class="tag">${days}d atrás</span>`:'<span class="tag">sem contato</span>')}${c.waitingFor?`<span class="waiting-pill">${ico('clock')} ${!hidden && c.waitingSince ? Math.floor((Date.now()-c.waitingSince)/86400000)+'d' : ''}</span>`:''}${isSnoozed?`<span class="snoozed-pill">${ico('pause')} ${hidden ? '' : fmtDate(c.snoozedUntil)}</span>`:''}${vis(rate != null?`<span class="response-rate ${rateCls} tag-extra" title="Taxa de resposta">${ico('repeat')} ${Math.round(rate*100)}%</span>`:'')}${vis(depthLabel?`<span class="tag tag-extra" style="opacity:.7">${depthLabel}</span>`:'')}${vis(clientBadge)}${vis(c.url?`<a class="tag contact-url" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">perfil ↗</a>`:'')}</div>${vis((c.tags||[]).length?`<div class="meta contact-tags" style="margin-top:2px">${(c.tags||[]).map(t => `<span class="tag" style="background:color-mix(in srgb,var(--ac) 10%,var(--s2))">${esc(t)}</span>`).join('')}</div>`:'')}${vis(c.lastConversation?`<div class="contact-last-conv">"${esc(c.lastConversation)}"</div>`:'')}${vis(recentInter.length?`<details class="contact-inter"><summary>Interações (${(c.interactions||[]).length})</summary>${recentInter.map(i => {const it = INTERACTION_TYPES.find(t => t.id === i.type) || INTERACTION_TYPES[0]; return `<div class="interaction-row"><span class="dir ${i.direction}">${i.direction==='out'?ico('arrow-up'):ico('arrow-down')}</span><span style="flex:none">${ico(INTERACTION_ICON[it.id] || 'more')} ${it.n}</span><span class="note">${esc(i.note || '')}</span><span style="color:var(--mu);font-size:10px">${fmtDate(iso(new Date(i.at)))}</span></div>`;}).join('')}</details>`:'')}${vis(c.nextAction?`<div class="contact-next">${ico('flag')} ${esc(c.nextAction)}</div>`:'')}<div class="quick-actions"><button class="primary" data-a="contactSend" data-id="${c.id}">${ico('arrow-up')} Enviei</button><button class="secondary" data-a="contactReceive" data-id="${c.id}">${ico('arrow-down')} Recebi</button><button class="secondary" data-a="contactSnooze" data-id="${c.id}">${ico('pause')} Adiar</button>${!c.clientId?`<button class="secondary" data-a="contactConvert" data-id="${c.id}">→ Virou cliente</button>`:''}</div>${hidden ? '' : `<details data-eid="${c.id}" ${openEdits.has(c.id)?'open':''}><summary>Editar</summary><div class="form"><label>Categoria<select data-p="${esc(k('cat'))}">${selOptions((type==='pro'?CAT_PRO:CAT_PERSONAL).map(x=>[x,x]), c.cat)}</select></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), c.priority)}</select></label><label>Cadência<input type="number" data-p="${esc(k('cadence'))}" value="${c.cadence||30}"></label><label>Último<input type="date" data-p="${esc(k('lastContact'))}" value="${esc(c.lastContact||'')}"></label><label>Próximo<input type="date" data-p="${esc(k('nextContact'))}" value="${esc(c.nextContact||'')}"></label><label class="full">Próximo passo<input data-p="${esc(k('nextAction'))}" value="${esc(c.nextAction||'')}" placeholder="Ligar na terça sobre a proposta"></label><label>Aniversário<input type="date" data-p="${esc(k('birthday'))}" value="${esc(c.birthday||'')}"></label><label>Onde<input data-p="${esc(k('where'))}" value="${esc(c.where||'')}"></label><label>Link<input data-p="${esc(k('url'))}" value="${esc(c.url||'')}"></label><label>Cargo<input data-p="${esc(k('role'))}" value="${esc(c.role||'')}"></label><label class="full">Contexto<input data-p="${esc(k('context'))}" value="${esc(c.context||'')}"></label><label class="full">Última conversa<input data-p="${esc(k('lastConversation'))}" value="${esc(c.lastConversation||'')}"></label><label class="full">Tags<input data-p="${esc(k('tagsStr'))}" list="contactTags" value="${esc(tagList(c.tags).join(', '))}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="3">${esc(c.notes||'')}</textarea></label></div><div class="acts" style="margin-top:8px"><button data-a="contactLog" data-id="${c.id}">${ico('plus')} Log</button>${c.waitingFor?`<button data-a="contactClearWaiting" data-id="${c.id}">Cancelar aguardando</button>`:''}${isSnoozed?`<button data-a="contactUnsnooze" data-id="${c.id}">Cancelar adiamento</button>`:''}<button data-a="cArchive" data-id="${c.id}">${c.archived?'Restaurar':'Arquivar'}</button><button data-a="cDel" data-id="${c.id}" aria-label="Excluir contato" title="Excluir contato">${ico('x')} Excluir</button></div></details>`}</div>`;
+  return `<div class="contact-card ${cls}${hidden ? ' discreet' : ''}" data-cid="${c.id}" style="--c:${themeColor(status.color)}"><div class="big" style="margin-bottom:2px"><input data-p="${esc(k('n'))}" value="${esc(hidden ? maskContactName(c.n) : c.n)}"${hidden ? ' readonly aria-label="Nome resumido"' : ''} style="font-weight:600;flex:1;min-width:0">${hidden ? '' : `<span class="contact-score ${scCls}" title="${esc(contactScoreBreakdown(c))}">${score >= 0 ? score : '—'}</span>`}<span class="badge" style="color:${themeColor(status.color)}">${hidden ? (STATUS_SHORT[status.k] || 'Em dia') : status.label}</span><button type="button" class="contact-fav ${fav ? 'on' : ''}" data-a="contactOrbitFav" data-id="${c.id}" aria-pressed="${fav}" title="${fav ? 'Remover favorito' : 'Favoritar'}" aria-label="${fav ? 'Remover favorito' : 'Favoritar'}">${fav ? '★' : '☆'}</button>${discreet ? `<button class="contact-reveal" data-a="contactReveal" data-id="${c.id}" title="${hidden ? 'Ver detalhes' : 'Ocultar'}" aria-label="${hidden ? 'Ver detalhes do contato' : 'Ocultar contato'}">${ico(hidden ? 'more' : 'x')}</button>` : ''}</div><div class="meta">${hidden ? '' : `<span class="tag">${esc(c.cat)}</span>`}${vis(c.where?`<span class="tag tag-extra">${esc(c.where)}</span>`:'')}${vis(c.role?`<span class="tag tag-extra">${esc(c.role)}</span>`:'')}${hidden ? '' : (days != null?`<span class="tag">${days}d atrás</span>`:'<span class="tag">sem contato</span>')}${c.waitingFor?`<span class="waiting-pill">${ico('clock')} ${!hidden && c.waitingSince ? Math.floor((Date.now()-c.waitingSince)/86400000)+'d' : ''}</span>`:''}${isSnoozed?`<span class="snoozed-pill">${ico('pause')} ${hidden ? '' : fmtDate(c.snoozedUntil)}</span>`:''}${vis(rate != null?`<span class="response-rate ${rateCls} tag-extra" title="Taxa de resposta">${ico('repeat')} ${Math.round(rate*100)}%</span>`:'')}${vis(depthLabel?`<span class="tag tag-extra" style="opacity:.7">${depthLabel}</span>`:'')}${vis(clientBadge)}${vis(c.url?`<a class="tag contact-url" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">perfil ↗</a>`:'')}</div>${vis((c.tags||[]).length?`<div class="meta contact-tags" style="margin-top:2px">${(c.tags||[]).map(t => `<span class="tag" style="background:color-mix(in srgb,var(--ac) 10%,var(--s2))">${esc(t)}</span>`).join('')}</div>`:'')}${vis(c.lastConversation?`<div class="contact-last-conv">"${esc(c.lastConversation)}"</div>`:'')}${vis(recentInter.length?`<details class="contact-inter"><summary>Interações (${(c.interactions||[]).length})</summary>${recentInter.map(i => {const it = INTERACTION_TYPES.find(t => t.id === i.type) || INTERACTION_TYPES[0]; return `<div class="interaction-row"><span class="dir ${i.direction}">${i.direction==='out'?ico('arrow-up'):ico('arrow-down')}</span><span style="flex:none">${ico(INTERACTION_ICON[it.id] || 'more')} ${it.n}</span><span class="note">${esc(i.note || '')}</span><span style="color:var(--mu);font-size:10px">${fmtDate(iso(new Date(i.at)))}</span></div>`;}).join('')}</details>`:'')}${vis(c.nextAction?`<div class="contact-next">${ico('flag')} ${esc(c.nextAction)}</div>`:'')}<div class="quick-actions"><button class="primary" data-a="contactSend" data-id="${c.id}">${ico('arrow-up')} Enviei</button><button class="secondary" data-a="contactReceive" data-id="${c.id}">${ico('arrow-down')} Recebi</button><button class="secondary" data-a="contactSnooze" data-id="${c.id}">${ico('pause')} Adiar</button>${!c.clientId?`<button class="secondary" data-a="contactConvert" data-id="${c.id}">→ Virou cliente</button>`:''}</div>${hidden ? '' : `<details data-eid="${c.id}" ${openEdits.has(c.id)?'open':''}><summary>Editar</summary><div class="form"><label>Categoria<select data-p="${esc(k('cat'))}">${selOptions((type==='pro'?CAT_PRO:CAT_PERSONAL).map(x=>[x,x]), c.cat)}</select></label><label>Prioridade<select data-p="${esc(k('priority'))}">${selOptions(PR.map((x,i)=>[i,x]), c.priority)}</select></label><label>Cadência<input type="number" data-p="${esc(k('cadence'))}" value="${c.cadence||30}"></label><label>Último<input type="date" data-p="${esc(k('lastContact'))}" value="${esc(c.lastContact||'')}"></label><label>Próximo<input type="date" data-p="${esc(k('nextContact'))}" value="${esc(c.nextContact||'')}"></label><label class="full">Próximo passo<input data-p="${esc(k('nextAction'))}" value="${esc(c.nextAction||'')}" placeholder="Ligar na terça sobre a proposta"></label><label>Aniversário<input type="date" data-p="${esc(k('birthday'))}" value="${esc(c.birthday||'')}"></label><label>Onde<input data-p="${esc(k('where'))}" value="${esc(c.where||'')}"></label><label>Link<input data-p="${esc(k('url'))}" value="${esc(c.url||'')}"></label><label>Cargo<input data-p="${esc(k('role'))}" value="${esc(c.role||'')}"></label><label class="full">Contexto<input data-p="${esc(k('context'))}" value="${esc(c.context||'')}"></label><label class="full">Última conversa<input data-p="${esc(k('lastConversation'))}" value="${esc(c.lastConversation||'')}"></label><label class="full">Tags<input data-p="${esc(k('tagsStr'))}" list="contactTags" value="${esc(tagList(c.tags).join(', '))}"></label><label class="full">Notas<textarea data-p="${esc(k('notes'))}" rows="3">${esc(c.notes||'')}</textarea></label></div><div class="acts" style="margin-top:8px"><button data-a="contactLog" data-id="${c.id}">${ico('plus')} Log</button>${c.waitingFor?`<button data-a="contactClearWaiting" data-id="${c.id}">Cancelar aguardando</button>`:''}${isSnoozed?`<button data-a="contactUnsnooze" data-id="${c.id}">Cancelar adiamento</button>`:''}<button data-a="cArchive" data-id="${c.id}">${c.archived?'Restaurar':'Arquivar'}</button><button data-a="cDel" data-id="${c.id}" aria-label="Excluir contato" title="Excluir contato">${ico('x')} Excluir</button></div></details>`}</div>`;
 }
 /* v139 — teto por anel. Nó-aresta perde legibilidade com muita gente (Dunbar: camadas
    de ~5/15/50/150); o excedente vira um "+N" que abre a lista. */

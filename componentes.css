@@ -264,8 +264,11 @@
 .chk{width:26px;height:26px;border-radius:50%;padding:0;flex:none;color:var(--tx);font-weight:700;background:var(--chk-bg,var(--s2));border:1.5px solid var(--chk-bd,var(--bd));display:flex;align-items:center;justify-content:center;transition:all .2s}
 .card.done>.row>.chk{background:var(--chk-done,var(--c)) !important;border-color:var(--chk-done,var(--c)) !important;color:var(--chk-mark,#000) !important}
 
-.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--mu);font-size:12px;margin-top:6px}
-.tag{background:var(--s2);border-radius:6px;padding:2px 6px;font-size:11px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;color:var(--mu);font-size:12px;margin-top:6px}
+.tag{background:var(--s2);border-radius:6px;padding:2px 7px;font-size:11px}
+.card .meta .tag{margin:0}
+.contact-card .big{gap:8px}
+.contact-card .meta{gap:6px 8px}
 .dot{width:8px;height:8px;border-radius:var(--dot-radius,50%);display:inline-block;flex:none;background:var(--pr-c,var(--mu))}
 .pr-bars{display:inline-block;width:12px;height:12px;flex:none;border-radius:0}
 .tag-area,.tag-skill{color:var(--c,var(--tx))}
@@ -1538,8 +1541,6 @@
 .ai-task-meta{font-size:11px;color:var(--mu);margin-top:2px;font-variant-numeric:tabular-nums}
 .ai-task-card ul{margin:6px 0 0 18px;padding:0;color:var(--mu)}
 .ai-task-card li{font-size:12px;line-height:1.45}
-/* v161 — projetos: formulário recolhível no mobile (o desktop segue sempre aberto) */
-.proj-add-toggle{display:none}
 /* v163 — concluídas na Fila ficam visíveis em um bloco recolhido */
 .queue-done{margin-top:12px;border-top:1px solid var(--bd);padding-top:8px}
 .queue-done summary{cursor:pointer;font-size:12px;color:var(--mu)}

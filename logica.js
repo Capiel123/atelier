@@ -72,6 +72,20 @@ function projTaskCount(pId) {return S.tasks.filter(t => t.proj === pId).length;}
 function projDoneCount(pId) {return S.tasks.filter(t => t.proj === pId && t.done).length;}
 function projGoalsTotal(p) {return (p.goals || []).length;}
 function projGoalsDone(p) {return (p.goals || []).filter(g => g.d).length;}
+/* v172 — estado visual do projeto: concluído/arquivado, prazo próximo/atrasado,
+   futuro (sem progresso e prazo distante) ou em andamento. */
+function projectStatus(p) {
+  if (!p) return {id:'active', label:'Em andamento', color:'var(--ac)', days:null};
+  if (p.completedAt) return {id:'done', label:'Concluído', color:'var(--ok)', days:null};
+  if (p.archived) return {id:'archived', label:'Arquivado', color:'var(--mu)', days:null};
+  const days = p.due ? daysBetween(iso(new Date()), p.due) : null;
+  if (days != null && days < 0) return {id:'late', label:`Atrasado ${-days}d`, color:'var(--er)', days};
+  if (days != null && days <= 7) return {id:'soon', label:days === 0 ? 'Vence hoje' : `Vence em ${days}d`, color:'var(--wr)', days};
+  const ts = S.tasks.filter(t => t.proj === p.id);
+  const hasProgress = ts.some(t => t.done || taskMinutes(t) > 0) || (p.goals || []).some(g => g.d) || projMinutes(p.id) > 0;
+  if (!hasProgress && days != null && days > 7) return {id:'future', label:'Futuro', color:'var(--bu)', days};
+  return {id:'active', label:'Em andamento', color:'var(--ac)', days};
+}
 
 /* --- SEÇÕES E PESOS --- */
 function taskSection(t) {
@@ -168,15 +182,29 @@ function computeTaskScore(t, ctx) {
   let score = 0;
   score += [40, 25, 12][t.pr] ?? 15;
   if (t.due) {const days = Math.ceil((new Date(t.due) - new Date(ctx.today)) / 86400000); if (days < 0) score += 80; else if (days === 0) score += 55; else if (days === 1) score += 40; else if (days <= 3) score += 25; else if (days <= 7) score += 12; else score += 4;}
+  // v173 — Tipo = energia/esforço; Labels = modificadores de contexto.
+  // A energia decide o encaixe no estado atual e na janela restante. Labels
+  // que repetem a taxonomia do Tipo (legados) não somam de novo.
   const type = TASK_TYPES.find(x => x.id === t.type);
-  if (type) {const rank = {low:1, med:2, high:3}; const diff = Math.abs((rank[type.energy]||2) - (rank[ctx.energy]||2)); if (diff === 0) score += 25; else if (diff === 1) score += 5; else score -= 20;}
+  if (type) {
+    const rank = {low:1, med:2, high:3};
+    const diff = Math.abs((rank[type.energy]||2) - (rank[ctx.energy]||2));
+    score += diff === 0 ? 20 : diff === 1 ? 4 : -12;
+    if (type.energy === 'high' && ctx.remainingMin < 25) score -= 6;
+    else if ((type.id === 'admin' || type.id === 'manutencao') && ctx.remainingMin < 30) score += 6;
+  }
   const isQuick = t.est && t.est <= 10;
   const lbls = t.labels || [];
   if (isQuick) score += 8;
   if (lbls.includes('l_easy')) score += 6;
   if (lbls.includes('l_quick')) score += 6;
+  if (lbls.includes('l_blocked')) score -= 18;
   if (isQuick && ctx.remainingMin < 45) score += 12;
-  if (t.est && ctx.remainingMin < t.est) score -= 15;
+  let timePenalty = 0;
+  if (t.est && ctx.remainingMin < t.est) {
+    timePenalty = type && type.energy === 'high' ? 18 : type && type.energy === 'low' ? 5 : 10;
+    score -= timePenalty;
+  }
   score += Math.min(36, (t.postponedCount || 0) * 12);
   const ageDays = (Date.now() - (t.createdAt || Date.now())) / 86400000;
   if (ageDays > 7) score += Math.min(30, Math.round((ageDays - 7) * 3));
@@ -189,6 +217,23 @@ function scoreBreakdown(t, ctx) {
   const parts = [];
   parts.push('prioridade ' + PR[t.pr].toLowerCase() + ' +' + [40,25,12][t.pr]);
   if (t.due) {const days = Math.ceil((new Date(t.due) - new Date(ctx.today)) / 86400000); const bonus = days < 0 ? 80 : days === 0 ? 55 : days === 1 ? 40 : days <= 3 ? 25 : days <= 7 ? 12 : 4; parts.push('prazo ' + (days < 0 ? 'vencido' : days === 0 ? 'hoje' : 'em '+days+'d') + ' +' + bonus);}
+  const type = TASK_TYPES.find(x => x.id === t.type);
+  if (type) {
+    const rank = {low:1, med:2, high:3};
+    const diff = Math.abs((rank[type.energy]||2) - (rank[ctx.energy]||2));
+    const fit = diff === 0 ? 'encaixa na energia' : diff === 1 ? 'energia vizinha' : 'energia distante';
+    parts.push('demanda ' + type.n.toLowerCase() + ' · ' + fit + ' ' + (diff === 0 ? '+20' : diff === 1 ? '+4' : '-12'));
+    if (type.energy === 'high' && ctx.remainingMin < 25) parts.push('janela curta para alta demanda -6');
+    else if ((type.id === 'admin' || type.id === 'manutencao') && ctx.remainingMin < 30) parts.push('baixa demanda cabe na janela +6');
+    if (t.est && ctx.remainingMin < t.est) {
+      const penalty = type.energy === 'high' ? 18 : type.energy === 'low' ? 5 : 10;
+      parts.push('não cabe na janela -' + penalty);
+    }
+  }
+  const lbls = t.labels || [];
+  if (lbls.includes('l_easy')) parts.push('fácil +6');
+  if (lbls.includes('l_quick')) parts.push('rápida +6');
+  if (lbls.includes('l_blocked')) parts.push('bloqueada -18');
   if (t.postponedCount >= 2) parts.push('adiada ' + t.postponedCount + 'x +' + Math.min(36, t.postponedCount * 12));
   const ageDays = Math.floor((Date.now() - (t.createdAt || Date.now())) / 86400000);
   if (ageDays > 7) parts.push('parada ' + ageDays + 'd +' + Math.min(30, Math.round((ageDays - 7) * 3)));

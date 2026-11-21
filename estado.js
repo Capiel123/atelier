@@ -377,7 +377,10 @@ let reportWeekOffset = 0;
 let toastTmr = null;
 let filterState = {text:'', type:'', area:'', proj:'', labels:[], showLabels:false};
 let jobFilter = {stage:'active', area:'', priority:'all', platform:'', text:''};
-let contactFilterState = {pro: {text:'', cat:'', status:'all', tags:[], sort:'score'}, personal: {text:'', cat:'', status:'all', tags:[], sort:'score'}};
+let contactFilterState = {
+  pro: {text:'', cat:'', status:'all', tags:[], sort:'score', priority:'all', fav:false},
+  personal: {text:'', cat:'', status:'all', tags:[], sort:'score', priority:'all', fav:false}
+};
 let contactView = loadContactView();
 // O5 — estado local da órbita (não entra em S, exceto os favoritos).
 let orbitSelectedId = null;
@@ -565,10 +568,19 @@ function mkClient(o={}) {return {id: uid(), n:'', notes:'', createdAt: Date.now(
 function mkProject(o={}) {return {id: uid(), n:'', area:'Carreira', due:'', reward:'', claimed:false, archived:false, clientId:'', client:'', billingType:'none', billingValue:0, actualValue:null, completedAt:null, manualHours:null, currency:'BRL', goals:[], deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
 function mkGoal(o={}) {return {id: uid(), t:'', p:0, due:'', deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
 function mkWorkLog(o={}) {return {id: uid(), date:'', ts: Date.now(), taskId:'', taskTitle:'', projId:'', projName:'', area:'', text:'', ...o};}
-function defaultLabels() {return [{id:'l_easy',n:'fácil',color:'#6a8560',order:0},{id:'l_quick',n:'rápida',color:'#8fa5b8',order:1},{id:'l_creative',n:'criativa',color:'#c9764a',order:2},{id:'l_admin',n:'burocrática',color:'#7a7580',order:3},{id:'l_deep',n:'profunda',color:'#9d6bb5',order:4},{id:'l_comm',n:'comunicação',color:'#d4a84b',order:5},{id:'l_learn',n:'aprendizado',color:'#b8a9c4',order:6},{id:'l_maint',n:'manutenção',color:'#8b2942',order:7}];}
+function defaultLabels() {return [
+  {id:'l_easy',n:'fácil',color:'#6a8560',order:0},
+  {id:'l_quick',n:'rápida',color:'#8fa5b8',order:1},
+  {id:'l_recurring',n:'recorrente',color:'#7a9e8a',order:2},
+  {id:'l_blocked',n:'bloqueada',color:'#b46b62',order:3},
+  {id:'l_delegate',n:'delegar',color:'#8fa5b8',order:4},
+  {id:'l_review',n:'revisão',color:'#9d6bb5',order:5},
+  {id:'l_client',n:'cliente',color:'#d4a84b',order:6},
+  {id:'l_personal',n:'pessoal',color:'#b8a9c4',order:7}
+];}
 function defaultCommands() {
   return [
-    mkCommand('Atalhos de teclado','Ritual','Ctrl+Z desfaz · Ctrl+K busca · Ctrl+B menu lateral · N nova tarefa · F modo foco · Esc sair · Espaço inicia/pausa · ? este painel',''),
+    mkCommand('Atalhos de teclado','Ritual','Ctrl+Z desfaz · Ctrl+K busca · Ctrl+B menu lateral · ←/→ abrem os destinos da área · N nova tarefa · F modo foco · Esc sair · Espaço inicia/pausa · ? este painel',''),
     mkCommand('Criar tarefa','Tarefas','Digite no campo. Tokens: ~30 (min), !a (alta), #projeto','Editar teaser ~45 !a'),
     mkCommand('Play / Foco','Tarefas','Clique no ▶ do card para iniciar o timer normal. No card expandido, o ⛶ ao lado entra no modo foco. O mesmo botão vira ⏸ quando a tarefa está rodando.',''),
     mkCommand('Editar rápido','Tarefas','No card expandido, clique no tempo estimado (ex.: 30min) para editá-lo inline. O ✎ ao lado do título edita o título. Enter salva; Esc cancela.',''),
@@ -608,7 +620,7 @@ function seed() {
     cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, themePalette:true, reviewChecks:{}, weekPriority:{}, theme:defaultThemeId(), accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, focusSwitchHidden:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
     areas: AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()})),
     projects: [p1], skills, labels: defaultLabels(),
-    tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_comm'], section:'work'})],
+    tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_client'], section:'work'})],
     goals: [mkGoal({id:'g1', t:'2-3 clientes recorrentes'})],
     contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, timerStoppedAt: 0, clearedDone: {}, workLogs: [], pomodoros: [], focusBank: {date: iso(new Date()), sec: 0, count: 0, updatedAt: Date.now()},
     _seedId: uid(),
@@ -625,6 +637,9 @@ function migrate(raw) {
   s.clients = Array.isArray(s.clients) ? s.clients : [];
   s.commands = s.commands || defaultCommands();
   s.labels = Array.isArray(s.labels) && s.labels.length ? s.labels : defaultLabels();
+  // v173 — acrescenta os labels contextuais novos sem remover os antigos
+  // (quem já usava “profunda/criativa” etc. não perde o histórico de filtros).
+  defaultLabels().forEach(d => {if (!s.labels.some(l => l && l.id === d.id)) s.labels.push({...d});});
   s.energy = s.energy && typeof s.energy === 'object' ? s.energy : {};
   s.xpPool = num(s.xpPool);
   s.cfg = s.cfg || {};

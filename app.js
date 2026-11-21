@@ -94,6 +94,10 @@ document.addEventListener('click', ev => {
   // detail 0 = clique gerado por teclado (Enter/Espaço): as fileiras são recriadas
   // pelo render, então devolvemos o foco ao item ativo equivalente.
   const keyboardNav = ev.detail === 0 && !!btn.closest('#nav, #subnav, #sideNav');
+  // v159 — clique na sidebar devolve o foco ao item equivalente; assim ←/→ seguem funcionando.
+  const fromSide = !!(btn.closest && btn.closest('#sideNav'));
+  // v171 — o flyout do rail vive em #subnav; escolher um destino também devolve o foco à sidebar.
+  const fromFlyout = !!(btn.closest && btn.closest('#subnav.side-flyout'));
   const t = id && T(id); const c = id && S.contacts.find(x => x.id === id);
 
   // Card da Fila: alterna só quando o clique não é em controle interno nem no corpo expandido
@@ -104,14 +108,29 @@ document.addEventListener('click', ev => {
 
   switch (a) {
     case 'tab': if (btn.closest && btn.closest('#subnav.side-flyout') && typeof lockSideFlyoutFocus === 'function') lockSideFlyoutFocus(400); if (btn.dataset.t === 'people' && btn.dataset.seg) peopleMode = btn.dataset.seg === 'personal' ? 'personal' : 'pro'; goToTab(btn.dataset.t); hideMoreSheet(); hideAreaMenu(); break;
-    case 'navArea': hideAreaMenu(); setSideGroupOpen(btn.dataset.group, true); goToNavGroup(btn.dataset.group, keyboardNav); return;
+    case 'navArea': {
+      hideAreaMenu();
+      // v171 — no rail o clique abre o flyout de destinos (área → destino em 2 cliques).
+      const railGroup = (typeof desktopNav === 'function' && desktopNav() && isSidebarCollapsed()) ? GROUP_BY_ID[btn.dataset.group] : null;
+      if (railGroup && typeof groupHasMenu === 'function' && groupHasMenu(railGroup)) {
+        showSideFlyout(railGroup.id, btn);
+        if (keyboardNav) {
+          const first = document.querySelector('#subnav.side-flyout .nav-subitem');
+          if (first) first.focus();
+        }
+        return;
+      }
+      setSideGroupOpen(btn.dataset.group, true);
+      goToNavGroup(btn.dataset.group, keyboardNav || fromSide);
+      return;
+    }
     case 'sidePeek': toggleSideGroup(btn.dataset.group); renderSideNav(); focusNavSelector('#sideNav .side-group-btn[data-group="' + btn.dataset.group + '"]'); return;
     case 'peopleSeg': {
       peopleMode = btn.dataset.type === 'personal' ? 'personal' : 'pro';
       revealedContacts.clear();
       orbitSelectedId = null;
       render();
-      if (keyboardNav) focusNavSelector((typeof desktopNav === 'function' && desktopNav()) ? '#sideNav .side-subitem.on' : '#subnav .nav-subitem.on');
+      if (keyboardNav || fromSide || fromFlyout) focusNavSelector((typeof desktopNav === 'function' && desktopNav()) ? '#sideNav .side-subitem.on' : '#subnav .nav-subitem.on');
       return;
     }
     case 'sideCollapse': {
@@ -815,6 +834,16 @@ document.addEventListener('click', ev => {
     case 'contactView': contactView[btn.dataset.type] = btn.dataset.mode; orbitSelectedId = null; saveContactView(); render(); return;
     case 'toggleTagFilter': {const tp = btn.dataset.type, tag = btn.dataset.tag; const arr = contactFilterState[tp].tags; if (arr.includes(tag)) contactFilterState[tp].tags = arr.filter(x => x !== tag); else contactFilterState[tp].tags.push(tag); render(); return;}
     case 'clearTagFilter': contactFilterState[btn.dataset.type].tags = []; render(); return;
+    case 'contactFavFilter': {
+      const tp = btn.dataset.type;
+      contactFilterState[tp].fav = !contactFilterState[tp].fav;
+      render(); return;
+    }
+    case 'clearContactFilters': {
+      const tp = btn.dataset.type;
+      contactFilterState[tp] = {text:'', cat:'', status:'all', tags:[], sort:'score', priority:'all', fav:false};
+      render(); return;
+    }
     case 'cAdd': {const type = btn.dataset.type; const n = V('cN_' + type); if (!n) {toast('Nome obrigatório', true); return;} const cad = +V('cCadence_' + type) || (type === 'pro' ? 30 : 21); const tags = tagList(V('cTags_' + type) || ''); S.contacts.push(mkContact({n, type, cat: V('cCat_' + type) || (type === 'pro' ? 'Prospect' : 'Conhecido'), where: V('cWhere_' + type), url: V('cUrl_' + type), role: V('cRole_' + type), context: V('cContext_' + type), notes: V('cNotes_' + type), lastConversation: V('cLastConv_' + type), nextAction: V('cNextAction_' + type), cadence: cad, tags})); if (window.__atelierDraftClear) window.__atelierDraftClear('contact:' + type + ':'); break;}
     case 'contactSend': {if (!c) break; logInteraction(c, 'out', 'msg', ''); toast('Enviei · +' + (c.cadence || 30) + 'd'); break;}
     case 'contactReceive': {if (!c) break; logInteraction(c, 'in', 'msg', ''); toast('Resposta registrada'); break;}
@@ -872,7 +901,7 @@ document.addEventListener('click', ev => {
       return;
     }
     case 'cDel': if (!confirm('Excluir contato? Ele vai para o lixo.')) return; softDelete('contacts', id); break;
-    case 'cArchive': {if (!c) break; c.archived = !c.archived; touch(c); break;}
+    case 'cArchive': {if (!c) break; c.archived = !c.archived; touch(c); toast(c.archived ? 'Contato arquivado' : 'Contato restaurado'); break;}
     case 'toggleProjAdd': {
       projAddOpen = !projAddOpen;
       render();
@@ -882,7 +911,16 @@ document.addEventListener('click', ev => {
     case 'padd': {const n = V('pn'); if (!n) break; S.projects.push(mkProject({n, area: V('pa') || 'Carreira', due: V('pdu'), reward: V('prw'), clientId: V('pclient') || ''})); projAddOpen = false; break;}
     case 'pdel': if (!confirm('Excluir projeto? Ele vai para o lixo.')) return; softDelete('projects', id); break;
     case 'claim': {const p = S.projects.find(x => x.id === id); if (p) {p.claimed = true; touch(p);} break;}
-    case 'parch': {const p = S.projects.find(x => x.id === id); if (p) {p.archived = !p.archived; touch(p);} break;}
+    case 'parch': {
+      const p = S.projects.find(x => x.id === id);
+      if (p) {
+        p.archived = !p.archived;
+        touch(p);
+        if (p.archived) openEdits.add('projArchived'); else openEdits.delete('projArchived');
+        toast(p.archived ? 'Projeto arquivado' : 'Projeto restaurado');
+      }
+      break;
+    }
     case 'cm': cal = new Date(cal.getFullYear(), cal.getMonth() + (+i), 1); break;
     case 'gadd': {const tt = V('gn'); if (tt) S.goals.push(mkGoal({t: tt, due: V('gd')})); break;}
     case 'gdel': if (!confirm('Excluir meta?')) return; softDelete('goals', id); break;
@@ -991,7 +1029,7 @@ document.addEventListener('click', ev => {
     default: return;
   }
   save(); render();
-  if (keyboardNav) focusNavActive(btn.dataset.t);
+  if (keyboardNav || fromSide || fromFlyout) focusNavActive(btn.dataset.t);
 });
 
 /* --- COLAR BLOCO DA IA NA BARRA RÁPIDA (v160) ---
@@ -1041,6 +1079,7 @@ document.addEventListener('change', ev => {
   if (el.id === 'jobFilterArea') {jobFilter.area = el.value; render(); return;}
   if (el.id && el.id.startsWith('contactCatFilter_')) {const type = el.id.replace('contactCatFilter_',''); contactFilterState[type].cat = el.value; render(); return;}
   if (el.id && el.id.startsWith('contactStatusFilter_')) {const type = el.id.replace('contactStatusFilter_',''); contactFilterState[type].status = el.value; render(); return;}
+  if (el.id && el.id.startsWith('contactPriorityFilter_')) {const type = el.id.replace('contactPriorityFilter_',''); contactFilterState[type].priority = el.value; render(); return;}
   if (el.id && el.id.startsWith('contactSortFilter_')) {const type = el.id.replace('contactSortFilter_',''); contactFilterState[type].sort = el.value; render(); return;}
   if (el.dataset.a === 'postpone') {const t = T(el.dataset.id); if (t && el.value) postponeTask(t, el.value); el.value = ''; return;}
   if (el.dataset.a === 'jobStage') {const app = S.applications.find(x => x.id === el.dataset.id); if (app && el.value) {snapshot(); changeJobStage(app, el.value); save(); render();} el.value = ''; return;}
