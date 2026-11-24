@@ -1148,6 +1148,67 @@ function renderBottomNav() {
   }).join('');
 }
 
+/* --- PROTEÇÃO DE EDIÇÃO ATIVA CONTRA RE-RENDERS DE SYNC (v179) ---
+   Enquanto o usuário edita título inline, subtarefa (contenteditable/sadd) ou
+   campos de formulário em #app/#focusOverlay, re-renders originados por sync
+   ou ticks em background são adiados e aplicados assim que a edição termina. */
+let _pendingSyncRender = false;
+let _pendingFocusSyncRender = false;
+function isUserEditing() {
+  try {
+    if (typeof document === 'undefined') return false;
+    if (document.querySelector && document.querySelector('input.inline-edit, textarea.inline-edit')) return true;
+    const ae = document.activeElement;
+    if (!ae || ae === document.body || ae === document.documentElement) return false;
+    const inScope = !!(ae.closest && (ae.closest('#app') || ae.closest('#focusOverlay')));
+    if (!inScope) return false;
+    if (ae.isContentEditable || (ae.closest && ae.closest('[contenteditable="true"]'))) return true;
+    const tag = (ae.tagName || '').toUpperCase();
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (tag === 'INPUT') {
+      const ty = String(ae.type || 'text').toLowerCase();
+      return !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'file', 'color'].includes(ty);
+    }
+    return false;
+  } catch (e) { return false; }
+}
+function requestSyncRender() {
+  if (isUserEditing()) { _pendingSyncRender = true; return false; }
+  _pendingSyncRender = false;
+  render();
+  return true;
+}
+function requestFocusSyncRender() {
+  if (isUserEditing()) { _pendingFocusSyncRender = true; return false; }
+  _pendingFocusSyncRender = false;
+  if (typeof focusTaskId !== 'undefined' && focusTaskId && document.getElementById('focusOverlay')) {
+    renderFocus();
+    return true;
+  }
+  return false;
+}
+function flushPendingSyncRender() {
+  if (isUserEditing()) return false;
+  let flushed = false;
+  if (_pendingSyncRender) { _pendingSyncRender = false; render(); flushed = true; }
+  if (_pendingFocusSyncRender) {
+    _pendingFocusSyncRender = false;
+    if (typeof focusTaskId !== 'undefined' && focusTaskId && document.getElementById('focusOverlay')) {
+      renderFocus();
+      flushed = true;
+    }
+  }
+  return flushed;
+}
+try {
+  if (typeof window !== 'undefined') {
+    window.isUserEditing = isUserEditing;
+    window.requestSyncRender = requestSyncRender;
+    window.requestFocusSyncRender = requestFocusSyncRender;
+    window.flushPendingSyncRender = flushPendingSyncRender;
+  }
+} catch (e) {}
+
 /* --- RENDER MESTRE --- */
 function render() {
   // v158 — trocar de tela devolve o acordeão ao grupo da rota.
@@ -2090,8 +2151,31 @@ function renderProjectGoals(p, flat) {
     ${body}
   </details>`;
 }
-function courseCard(p) {
-  const st = studyStatus(p) || {state:'sem-avaliacoes', total:100, min:60, atual:0, evals:[], next:null};
+function renderCourseEvals(p, st) {
+  const study = (p.study && typeof p.study === 'object') ? p.study : mkStudy();
+  const evals = Array.isArray(study.evals) ? study.evals : [];
+  const weightWarn = (st.faltamPesos || st.pesosAcima) && st.pesoTotal > 0;
+  const rows = evals.map(ev => {
+    if (!ev || typeof ev !== 'object') return '';
+    const key = f => `${p.id}:${ev.id}:${f}`;
+    const gotVal = (ev.got == null || ev.got === '') ? '' : ev.got;
+    return `<div class="course-eval-row">
+      <input class="course-eval-name" type="text" data-eval="${esc(key('t'))}" value="${esc(ev.t||'')}" placeholder="Ex.: P1" aria-label="Nome da avaliação">
+      <input class="course-eval-date" type="date" data-eval="${esc(key('date'))}" value="${esc(ev.date||'')}" aria-label="Data da avaliação">
+      <label class="course-eval-num"><span>Peso</span><input type="number" step="0.5" min="0" data-eval="${esc(key('w'))}" value="${ev.w ?? 0}" aria-label="Peso da avaliação"></label>
+      <label class="course-eval-num"><span>Máx</span><input type="number" step="0.5" min="0" data-eval="${esc(key('max'))}" value="${ev.max ?? 100}" aria-label="Nota máxima"></label>
+      <label class="course-eval-num"><span>Nota</span><input type="number" step="0.1" min="0" data-eval="${esc(key('got'))}" value="${esc(String(gotVal))}" placeholder="—" aria-label="Nota obtida"></label>
+      <button type="button" class="btn-sm course-eval-del" data-a="evalDel" data-id="${esc(p.id)}" data-ev="${esc(ev.id)}" title="Excluir avaliação" aria-label="Excluir avaliação">${ico('x')}</button>
+    </div>`;
+  }).join('');
+  return `<div class="course-evals">
+    <div class="proj-edit-subhead">${ico('calendar')} Avaliações <span class="badge">${st.launched || 0}/${evals.length}</span>${evals.length ? `<span class="course-eval-weight${weightWarn ? ' is-warn' : ''}">Pesos: ${fmtStudyNum(st.pesoTotal)}/${fmtStudyNum(st.total)}</span>` : ''}</div>
+    ${evals.length ? `<div class="course-eval-list">${rows}</div>` : '<div class="msg" style="margin:6px 0">Nenhuma avaliação ainda.</div>'}
+    <button type="button" class="course-eval-add" data-a="evalAdd" data-id="${esc(p.id)}">${ico('plus')} Adicionar avaliação</button>
+  </div>`;
+}
+function courseCard(p, today) {
+  const st = studyStatus(p, typeof today === 'string' ? today : undefined) || {state:'sem-avaliacoes', total:100, min:60, atual:0, pesoTotal:0, launched:0, faltamPesos:false, pesosAcima:false, evals:[], next:null};
   const study = (p.study && typeof p.study === 'object') ? p.study : mkStudy();
   const ts = S.tasks.filter(t => t.proj === p.id);
   const done = ts.filter(t => t.done).length, total = ts.length;
@@ -2110,24 +2194,39 @@ function courseCard(p) {
     'aprovada':       {label: 'Aprovada', icon: 'check', color: 'var(--ok)'},
     'sem-nota':       {label: 'Sem notas', icon: 'calendar', color: 'var(--bu)'},
     'sem-como-passar':{label: 'Sem como passar', icon: 'x', color: 'var(--er)'},
-    'em-risco':       {label: 'Em andamento', icon: 'alert', color: 'var(--wr)'}
+    'em-risco':       {label: 'Em risco', icon: 'alert', color: 'var(--wr)'}
   };
   const sm = stateMap[st.state] || stateMap['sem-avaliacoes'];
+  const fmtNextDate = nx => `${fmtDate(nx.date)}${nx.overdue ? ' · <span class="course-overdue">atrasada</span>' : ''}`;
+  const weightNote = ((st.faltamPesos || st.pesosAcima) && st.pesoTotal > 0)
+    ? ` · <span class="course-warn">pesos somam ${fmtStudyNum(st.pesoTotal)}/${fmtStudyNum(st.total)}</span>`
+    : '';
   let summaryText = '';
   if (st.state === 'sem-avaliacoes') {
     summaryText = stepsTotal ? `${stepsLabel} ${stepsDone}/${stepsTotal} (${pct}%)` : 'Nenhuma avaliação cadastrada';
   } else if (st.state === 'sem-peso') {
-    summaryText = 'Defina o peso das avaliações.';
+    summaryText = `${ico('alert')} Defina o peso das avaliações.`;
   } else if (st.state === 'aprovada') {
-    summaryText = `Média ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)} · Aprovada`;
+    summaryText = `${ico('check')} Aprovada com ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)}${weightNote}`;
   } else if (st.state === 'sem-nota') {
     summaryText = st.next
-      ? `Sem notas · Próxima: ${esc(st.next.t || 'Avaliação')} (${fmtDate(st.next.date)})`
-      : 'Sem notas ainda';
+      ? `${ico('calendar')} Sem notas ainda · Próxima: ${esc(st.next.t || 'Avaliação')} (${fmtNextDate(st.next)})${weightNote}`
+      : `${ico('calendar')} Sem notas ainda${weightNote}`;
   } else if (st.state === 'sem-como-passar') {
-    summaryText = `Média ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)} · Sem como passar`;
+    summaryText = `${ico('x')} ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)} · Sem como passar${weightNote}`;
   } else {
-    summaryText = `Média ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)}` + (st.next ? ` · Próxima: ${esc(st.next.t || 'Avaliação')} (${fmtDate(st.next.date)})` : '');
+    let nextPart = '';
+    if (st.next) {
+      if (st.next.w <= 0) {
+        nextPart = ` · Próxima: ${esc(st.next.t || 'Avaliação')} (${fmtNextDate(st.next)}) — peso zero`;
+      } else {
+        const needLabel = st.next.max > 0
+          ? `${fmtStudyNum(st.next.nota)}/${fmtStudyNum(st.next.max)} (${fmtStudyNum(st.next.needed)}/${fmtStudyNum(st.next.w)} pts)`
+          : `${fmtStudyNum(st.next.needed)}/${fmtStudyNum(st.next.w)} pts`;
+        nextPart = ` · Precisa de <b>${needLabel}</b> na ${esc(st.next.t || 'próxima')} (${fmtNextDate(st.next)})`;
+      }
+    }
+    summaryText = `${ico('alert')} ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)}${nextPart}${weightNote}`;
   }
   const k = f => `projects:${p.id}:${f}`;
   const instTerm = [study.inst ? `<span>${ico('briefcase')} ${esc(study.inst)}</span>` : '', study.term ? `<span>${ico('calendar')} ${esc(study.term)}</span>` : ''].filter(Boolean).join('');
@@ -2159,6 +2258,7 @@ function courseCard(p) {
         <label>Nota total<input type="number" step="0.5" min="1" data-p="${esc(k('study.total'))}" value="${st.total}"></label>
         <label>Nota mínima<input type="number" step="0.5" min="0" data-p="${esc(k('study.min'))}" value="${st.min}"></label>
       </div>
+      ${renderCourseEvals(p, st)}
       ${renderProjectGoals(p, true)}
       <div class="acts proj-edit-actions">
         <button data-a="parch" data-id="${p.id}">${p.archived?'Restaurar':'Arquivar'}</button>
@@ -2350,13 +2450,7 @@ function historyEntryHTML(entry, dayStr, logsByTask) {
 }
 
 function events() {
-  const e = [];
-  S.tasks.forEach(t => {if (t.due && !t.done) e.push({d:t.due, t:'Tarefa: '+t.t});});
-  alive(S.projects).forEach(p => {if (p.due && !p.archived) e.push({d:p.due, t:'Projeto: '+p.n});});
-  alive(S.goals).forEach(g => {if (g.due) e.push({d:g.due, t:'Meta: '+g.t});});
-  alive(S.contacts).forEach(c => {if (c.nextContact && !c.archived) e.push({d:c.nextContact, t:'Contato: '+c.n}); if (c.birthday) {const parts = c.birthday.split('-'); if (parts.length >= 2) {const mm = parts[parts.length-2], dd = parts[parts.length-1]; const y = new Date().getFullYear(); e.push({d: `${y}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`, t:'Aniversário: '+c.n}); e.push({d: `${y+1}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`, t:'Aniversário: '+c.n});}}});
-  alive(S.applications).forEach(a => {if (a.nextFollowUp && !isJobTerminal(a)) e.push({d:a.nextFollowUp, t:'Vaga: '+(a.role||a.client)});});
-  return e.sort((a,b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  return calendarEvents(S);
 }
 function viewCalendar() {
   const y = cal.getFullYear(), m = cal.getMonth(); const first = (new Date(y, m, 1).getDay() + 6) % 7; const nDays = new Date(y, m+1, 0).getDate();

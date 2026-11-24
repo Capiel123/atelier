@@ -1431,3 +1431,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .tm-chev{min-width:30px;min-height:30px;margin-left:8px;padding:4px}
   .tm-chev::after{content:'';position:absolute;inset:-7px -4px}
 }
+/* v178 — disciplinas (E3): grade mobile de avaliações com alvo >= 44px */
+@media(max-width:640px){
+  .course-eval-row{grid-template-columns:1fr 1fr 1fr;gap:6px;padding:8px}
+  .course-eval-row .course-eval-name{grid-column:1/3}
+  .course-eval-row .course-eval-del{grid-column:3/4;grid-row:1;justify-self:end;min-width:44px;min-height:44px}
+  .course-eval-row .course-eval-date{grid-column:1/-1}
+  .course-eval-row input{min-height:40px;font-size:14px}
+  .course-eval-add{width:100%;justify-content:center;min-height:44px}
+}

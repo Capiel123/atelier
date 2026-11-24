@@ -31,12 +31,15 @@
   function readJSON(key, dflt) { try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : dflt; } catch (e) { return dflt; } }
   function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; } }
 
-  /* ---------------- lock (cross-tab) ---------------- */
+  /* ---------------- lock (cross-tab + fallback serial em memória) ---------------- */
+  var memLock = Promise.resolve();
   function withLock(fn) {
     if (typeof navigator !== 'undefined' && navigator.locks && navigator.locks.request) {
       return navigator.locks.request('atelier_sync_v1', { mode: 'exclusive' }, function () { return fn(); });
     }
-    return Promise.resolve().then(fn);
+    var next = memLock.then(function () { return fn(); }, function () { return fn(); });
+    memLock = next.catch(function () {});
+    return next;
   }
 
   /* ---------------- helpers ---------------- */
@@ -177,11 +180,11 @@
       var ops = byTable[table];
       if (!ops || !ops.length) continue;
 
-      // monta itens {op,row} na ordem das ops
+      // monta itens {op,row,sentHash} na ordem das ops
       var items = [];
       ops.forEach(function (o) {
         if (o.kind === 'tombstone') {
-          items.push({ op: o, row: { user_id: user.id, id: o.id, deleted_at: isoMs(o.ts), client_updated_at: o.ts } });
+          items.push({ op: o, row: { user_id: user.id, id: o.id, deleted_at: isoMs(o.ts), client_updated_at: o.ts }, sentHash: 'DELETED' });
           return;
         }
         var ent = findEntity(table, S, o.id);
@@ -194,7 +197,7 @@
         }
         var row = rowFor(table, S, user.id, ent);
         if (table === 'work_logs' && row.task_id) row.id = window.__merge.workLogId(row.task_id, row.date || '');
-        items.push({ op: o, row: row, ent: ent });
+        items.push({ op: o, row: row, ent: ent, sentHash: versionOf(table, S, ent) });
       });
 
       if (!items.length) { markDone(store, seen, ops); continue; }
@@ -220,10 +223,13 @@
         }
       }
 
-      // v161: antes de subir, faz o mesmo merge do pull para a tarefa que venceu
-      // o LWW. Assim um push do celular não apaga logs/subs que o PC já tinha
-      // (tempo manual + timer, subtarefas) e a conclusão não é reaberta por uma
-      // edição pendente sem marcador de reabertura.
+      // v161/v179: antes de subir, faz o mesmo merge do pull para a tarefa que venceu
+      // o LWW. Assim um push do celular não apaga logs/subs que o PC já tinha e a
+      // conclusão não é reaberta por edição pendente.
+      // v179: só marca `reconciled = true` quando o objeto local REALMENTE mudou
+      // (antes marcava sempre, disparando save()+render() 1,2s após qualquer edição
+      // e derrubando foco de títulos/subtarefas). Se a linha remota vier parcial
+      // (harnesses antigos), preserva os campos escalares locais no merge.
       if (table === 'tasks' && items.length) {
         var remoteRows = remoteCu && remoteCu.__rows;
         if (remoteRows) {
@@ -231,20 +237,26 @@
             var rr = it.row && remoteRows[it.row.id];
             if (!rr || !it.ent) return;
             try {
-              var merged = window.__merge.mergeEntity('tasks', it.ent, rr);
+              var mergeRow = (rr.title === undefined && it.row)
+                ? Object.assign({}, it.row, rr)
+                : rr;
+              var merged = window.__merge.mergeEntity('tasks', it.ent, mergeRow);
               if (merged && merged.action === 'set' && merged.entity && window.__importer && window.__importer.mapOne) {
                 it.row = window.__importer.mapOne('tasks', merged.entity, user.id);
-                // v168: o merge do push já resolveu a tarefa (ex.: remoto concluído,
-                // local pendente sem reabertura). Antes isso só ia para a row enviada;
-                // o S local ficava "vivo" no celular enquanto o PC já a mostrava concluída.
                 if (typeof S !== 'undefined' && S && Array.isArray(S.tasks)) {
                   var li = -1;
                   for (var si = 0; si < S.tasks.length; si++) { if (S.tasks[si].id === merged.entity.id) { li = si; break; } }
                   if (li >= 0) {
-                    S.tasks[li] = merged.entity;
-                    reconciled = true;
-                    seen.tasks = seen.tasks || {};
-                    seen.tasks[merged.entity.id] = { h: versionOf('tasks', S, merged.entity), flushed: true };
+                    var beforeJson = JSON.stringify(S.tasks[li]);
+                    var afterJson = JSON.stringify(merged.entity);
+                    if (beforeJson !== afterJson) {
+                      S.tasks[li] = merged.entity;
+                      it.ent = merged.entity;
+                      it.sentHash = versionOf('tasks', S, merged.entity);
+                      reconciled = true;
+                      seen.tasks = seen.tasks || {};
+                      seen.tasks[merged.entity.id] = { h: it.sentHash, flushed: true };
+                    }
                   }
                 }
               }
@@ -256,13 +268,13 @@
       var onConflict = (table === 'user_settings' || table === 'active_timer') ? 'user_id' : 'user_id,id';
       var batch = await tryUpsert(client, table, items.map(function (i) { return i.row; }), onConflict);
 
-      if (!batch.error) { markDone(store, seen, ops); continue; }
+      if (!batch.error) { markItemsDone(store, seen, items); continue; }
 
       if (isDataError(batch.error)) {
         // fallback linha a linha para isolar o registro problemático
         for (var i = 0; i < items.length; i++) {
           var one = await tryUpsert(client, table, [items[i].row], onConflict);
-          if (!one.error) { markDone(store, seen, [items[i].op]); }
+          if (!one.error) { markItemsDone(store, seen, [items[i]]); }
           else if (table === 'work_logs' && one.error.code === '23505') { await reconcileWorkLog23505(client, user, items[i].row, store, seen, items[i].op); }
           else { markFailed(store, items[i].op, one.error); }
         }
@@ -274,10 +286,24 @@
     }
 
     if (reconciled) {
-      try { if (typeof save === 'function') save(); } catch (e) {}
-      try { if (typeof render === 'function') render(); } catch (e) {}
+      try { if (typeof save === 'function') save({ silentSync: true }); } catch (e) {}
+      try {
+        if (typeof window !== 'undefined' && typeof window.requestSyncRender === 'function') window.requestSyncRender();
+        else if (typeof render === 'function') render();
+      } catch (e) {}
     }
     state.lastFlushAt = Date.now();
+    // v179: preserva ops mais novas gravadas na outbox durante um await lento.
+    var freshOutbox = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
+    if (freshOutbox && Array.isArray(freshOutbox.ops)) {
+      freshOutbox.ops.forEach(function (fo) {
+        var inStore = store.ops.some(function (so) { return so.table === fo.table && so.id === fo.id; });
+        if (!inStore && fo.seq > store.seq) {
+          store.ops.push(fo);
+          if (fo.seq > store.seq) store.seq = fo.seq;
+        }
+      });
+    }
     if (!writeJSON(OUTBOX_KEY, store)) setStatus('error', 'Falha ao gravar a fila');
     writeJSON(SEEN_KEY, seen);
     state.pending = store.ops.length;
@@ -311,9 +337,9 @@
         for (var i = 0; i < ids.length; i += REMOTE_VERSION_CHUNK) {
           if (done) return;
           var chunk = ids.slice(i, i + REMOTE_VERSION_CHUNK);
-          // v161: além da versão, traz o JSONB de logs/subs e o estado para o push
-          // preservar o histórico append-only do remoto (merge antes do upsert).
-          var r = await client.from(table).select('id,client_updated_at,updated_at,done,done_at,deleted_at,logs,subs').eq('user_id', user.id).in('id', chunk);
+          // v161/v179: traz a linha completa (*) para o merge pré-push nunca
+          // sobrescrever título/dia/área/projeto em empate de client_updated_at.
+          var r = await client.from(table).select('*').eq('user_id', user.id).in('id', chunk);
           if (!r || r.error) { finish(null); return; }
           (r.data || []).forEach(function (x) { map[x.id] = x.client_updated_at; rows[x.id] = x; });
         }
@@ -360,6 +386,22 @@
         if (o.kind === 'tombstone') delete seen[o.table][o.id];
         else seen[o.table][o.id].flushed = true;
       }
+    });
+  }
+  // v179: só remove da outbox se a entidade não foi editada novamente durante o
+  // await do upsert; edições feitas em voo continuam na fila para o próximo envio.
+  function markItemsDone(store, seen, items) {
+    items.forEach(function (it) {
+      var o = it.op;
+      if (o.kind !== 'tombstone' && it.sentHash) {
+        var cur = findEntity(o.table, S, o.id);
+        if (cur && versionOf(o.table, S, cur) !== it.sentHash) {
+          seen[o.table] = seen[o.table] || {};
+          seen[o.table][o.id] = { h: versionOf(o.table, S, cur), flushed: false };
+          return; // mantém na fila para reenviar a versão mais nova
+        }
+      }
+      markDone(store, seen, [o]);
     });
   }
   function markFailed(store, op, err) {
@@ -723,6 +765,10 @@
     if (!Array.isArray(list)) return { changed: false, id: null };
     var idx = -1;
     for (var i = 0; i < list.length; i++) { if (list[i].id === row.id) { idx = i; break; } }
+    // v179: se houver duplicata acidental do mesmo id no array local, colapsa.
+    if (idx >= 0) {
+      for (var j = list.length - 1; j > idx; j--) { if (list[j].id === row.id) list.splice(j, 1); }
+    }
     var local = idx >= 0 ? list[idx] : null;
     var res = window.__merge.mergeEntity(table, local, row);
     if (res.action === 'delete') { if (idx >= 0) { list.splice(idx, 1); return { changed: true, id: row.id }; } return { changed: false, id: row.id }; }
@@ -796,13 +842,14 @@
         else { rows.forEach(function (r) { var x = applyRemoteRow(table, r); if (x.changed) changedList.push({ table: table, id: x.id }); }); }
       }
       if (cleanupSeedLeftovers() && typeof toast === 'function') toast('Tarefa de exemplo removida');
-      if (typeof save === 'function') save();
+      if (typeof save === 'function') save({ silentSync: true });
       writeJSON(SEEN_KEY, buildBaseline(S));
       if (S._seedId) localStorage.setItem(SEEDID_KEY, S._seedId);
       state.pending = readJSON(OUTBOX_KEY, { seq: 0, ops: [] }).ops.length;
       if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
       if (typeof applyTheme === 'function') applyTheme();
-      if (typeof render === 'function') render();
+      if (typeof window !== 'undefined' && typeof window.requestSyncRender === 'function') window.requestSyncRender();
+      else if (typeof render === 'function') render();
       state.lastPullAt = Date.now();
       state.hydrated = true;
       renderSync();
@@ -837,7 +884,7 @@
     }
 
     if (changedList.length) {
-      if (typeof save === 'function' && !save()) return; // não avança cursor se falhou a gravação
+      if (typeof save === 'function' && !save({ silentSync: true })) return; // não avança cursor se falhou a gravação
       // anti-loop: marca seen das entidades aplicadas (flushed)
       var seenNow = readJSON(SEEN_KEY, null) || {};
       changedList.forEach(function (ch) {
@@ -860,11 +907,13 @@
       });
       writeJSON(SEEN_KEY, seenNow);
       if (typeof applyTheme === 'function') applyTheme();
-      if (typeof render === 'function') render();
-      // v97: se o pull mudou (ou apagou) a tarefa em foco, o overlay precisa refletir.
-      // `renderFocus` já fecha quando a tarefa sumiu/foi concluída.
+      if (typeof window !== 'undefined' && typeof window.requestSyncRender === 'function') window.requestSyncRender();
+      else if (typeof render === 'function') render();
+      // v97/v179: se o pull mudou (ou apagou) a tarefa em foco, o overlay reflete
+      // respeitando edição ativa de subtarefa.
       try {
-        if (typeof renderFocus === 'function' && typeof focusTaskId !== 'undefined' && focusTaskId && document.getElementById('focusOverlay')) renderFocus();
+        if (typeof window !== 'undefined' && typeof window.requestFocusSyncRender === 'function') window.requestFocusSyncRender();
+        else if (typeof renderFocus === 'function' && typeof focusTaskId !== 'undefined' && focusTaskId && document.getElementById('focusOverlay')) renderFocus();
       } catch (e) {}
     }
     writeCursors(cursors);
@@ -872,7 +921,12 @@
     if (typeof reconcileTimerTask === 'function') reconcileTimerTask();
     state.lastPullAt = Date.now();
     state.hydrated = true;
-    if (cleanupSeedLeftovers()) { if (typeof save === 'function') save(); if (typeof render === 'function') render(); if (typeof toast === 'function') toast('Tarefa de exemplo removida'); }
+    if (cleanupSeedLeftovers()) {
+      if (typeof save === 'function') save({ silentSync: true });
+      if (typeof window !== 'undefined' && typeof window.requestSyncRender === 'function') window.requestSyncRender();
+      else if (typeof render === 'function') render();
+      if (typeof toast === 'function') toast('Tarefa de exemplo removida');
+    }
     renderSync();
   }
 
@@ -890,7 +944,14 @@
     finally { state.inFlight = false; }
   }
 
-  async function syncCycle() { var ok = await pullOnce(); if (ok) await flushOnce(); }
+  // v179: sempre materializa pendências locais na outbox antes de puxar/enviar,
+  // eliminando a corrida entre scheduleEnqueue (80ms) e online/visibility (50–100ms).
+  async function syncCycle() {
+    if (state.enqTimer) { clearTimeout(state.enqTimer); state.enqTimer = null; }
+    if (!guardStateLoss() && readJSON(SEEN_KEY, null) !== null) enqueueAll();
+    var ok = await pullOnce();
+    if (ok) await flushOnce();
+  }
 
   function forceFullSync() {
     return withLock(function () {

@@ -279,7 +279,14 @@ const SECTION_ORDER = ['commitment','work','personal'];
 
 /* --- UTILITÁRIOS GERAIS (atalhos muito usados) --- */
 const $ = s => document.querySelector(s);
-const uid = () => Math.random().toString(36).slice(2,10);
+const uid = () => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+    }
+  } catch (e) {}
+  return Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 10);
+};
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 function isIsoDate(s) {
@@ -657,7 +664,7 @@ function seed() {
     cfg: {focus:50, brk:5, longBrk:15, cap:360, logo:null, notif:false, autoPriority:true, themePalette:true, reviewChecks:{}, weekPriority:{}, theme:defaultThemeId(), accentColor:null, focusDurations:[5,15,25,45,50,60], defaultFocus:25, usdRate:5.2, eurRate:5.6, currency:'BRL', primaryCurrency:'BRL', lastBackupAt:null, backupReminderDismissedAt:0, focusNoStop:false, focusSwitchHidden:false, taskDensity:'auto', sectionsCollapsed:{commitment:false, work:false, personal:false, done:true}},
     areas: AREAS_DEFAULT.map((a,i) => ({id:a.id, n:a.n, color:a.color, archived:false, order:i, updatedAt:Date.now()})),
     projects: [p1], skills, labels: defaultLabels(),
-    tasks: [mkTask('Bloco A: prospecção ativa', {pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_client'], section:'work'})],
+    tasks: [mkTask('Bloco A: prospecção ativa', {id:'seed_task_1', pr:0, est:45, proj:'p1', skills:[sid('Prospecção')], order:0, type:'comunicacao', labels:['l_client'], section:'work'})],
     goals: [mkGoal({id:'g1', t:'2-3 clientes recorrentes'})],
     contacts: [], commands: defaultCommands(), applications: [], clients: [], trash: [], energy: {}, xpPool: 0, timer: null, timerStoppedAt: 0, clearedDone: {}, workLogs: [], pomodoros: [], focusBank: {date: iso(new Date()), sec: 0, count: 0, updatedAt: Date.now()},
     _seedId: uid(),
@@ -672,6 +679,24 @@ function migrate(raw) {
   s.skills = s.skills || []; s.contacts = s.contacts || [];
   s.applications = Array.isArray(s.applications) ? s.applications : [];
   s.clients = Array.isArray(s.clients) ? s.clients : [];
+  // v179: deduplica entidades por id (mantém a cópia com updatedAt mais recente).
+  const dedupeById = arr => {
+    const map = new Map();
+    const out = [];
+    for (const item of arr) {
+      if (!item || typeof item !== 'object') continue;
+      if (!item.id) { out.push(item); continue; }
+      const prev = map.get(item.id);
+      if (!prev) { map.set(item.id, item); out.push(item); }
+      else if ((Number(item.updatedAt) || 0) > (Number(prev.updatedAt) || 0)) {
+        const idx = out.indexOf(prev);
+        if (idx >= 0) out[idx] = item;
+        map.set(item.id, item);
+      }
+    }
+    return out;
+  };
+  ['tasks','projects','clients','contacts','applications','skills','goals'].forEach(k => { s[k] = dedupeById(s[k]); });
   s.commands = s.commands || defaultCommands();
   s.labels = Array.isArray(s.labels) && s.labels.length ? s.labels : defaultLabels();
   // v173 — acrescenta os labels contextuais novos sem remover os antigos
@@ -888,12 +913,13 @@ function refreshSaveState() {
   } catch(e) {}
   setSaveState('error'); return 'error';
 }
-function save() {
+function save(opts) {
   if (recoveryBlocked) {setSaveState('blocked'); return false;}
+  const silentSync = !!(opts && opts.silentSync);
   dirty = true;
   setSaveState('saving');
   const prevModified = S.lastModified;
-  S.lastModified = Date.now();
+  if (!silentSync) S.lastModified = Date.now();
   try {localStorage.setItem(LS_KEY, JSON.stringify(S));}
   catch(e) {
     S.lastModified = prevModified;
@@ -902,7 +928,7 @@ function save() {
     return false;
   }
   setSaveState('saved');
-  if (typeof window !== 'undefined' && window.__sync && window.__sync.onSave) window.__sync.onSave();
+  if (!silentSync && typeof window !== 'undefined' && window.__sync && window.__sync.onSave) window.__sync.onSave();
   clearTimeout(saveTmr);
   saveTmr = setTimeout(() => {if (!dbDoc) return; dbDoc.set({json: JSON.stringify(S)}).catch(err => console.warn('Sync offline:', err));}, 1500);
   return true;

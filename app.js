@@ -6,7 +6,18 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','paddCourse','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave','showClearedDone','completeActiveTask']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','paddCourse','evalAdd','evalDel','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave','showClearedDone','completeActiveTask']);
+
+/* v179 — guarda de idempotência contra duplo disparo imediato no mobile
+   (duplo toque em + / Agendar para / Enter + click em teclados IME). */
+let _lastSubmitGuard = { key: '', at: 0 };
+function isDuplicateSubmit(key, windowMs) {
+  const now = Date.now();
+  const win = windowMs || 600;
+  if (key && _lastSubmitGuard.key === key && (now - _lastSubmitGuard.at) < win) return true;
+  _lastSubmitGuard = { key: String(key || ''), at: now };
+  return false;
+}
 
 /* --- NAVEGAÇÃO POR ÁREA (R3) ---
    A área não é um destino novo: abre a última tela usada do grupo (D9) ou o padrão.
@@ -102,6 +113,11 @@ document.addEventListener('click', ev => {
 
   // Card da Fila: alterna só quando o clique não é em controle interno nem no corpo expandido
   if (a === 'toggleQueueCard' && ev.target.closest('.queue-body, input, textarea, select, button, a, label, summary, [contenteditable="true"]')) return;
+  if (a === 'qa') {
+    const qaEl = $('#qa');
+    const qaRaw = qaEl ? qaEl.value.trim() : '';
+    if (qaRaw && isDuplicateSubmit('qa:' + dv(qaEl.dataset.d) + ':' + qaRaw.toLowerCase(), 600)) return;
+  }
 
   // Toda ação mutante tira um snapshot ANTES de executar (para Ctrl+Z)
   if (MUTATING_ACTIONS.has(a)) snapshot();
@@ -653,7 +669,7 @@ document.addEventListener('click', ev => {
     case 'setnext': if (!t) break; if (t.next) {t.next = false; touch(t);} else {S.tasks.forEach(x => {if (x.next) {x.next = false; touch(x);}}); t.next = true; touch(t); toast('⭐');} break;
     case 'moveUp': case 'moveDown': if (!t) break; reorderTask(t, a === 'moveUp' ? -1 : 1); return;
     case 'setTaskColor': if (!t) break; t.color = btn.dataset.color || ''; touch(t); break;
-    case 'cp': {if (!t) break; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: (t.subs||[]).filter(sb => !sb.deletedAt).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast(tab === 'q' ? (i === 'q' ? 'Duplicada na Fila' : 'Duplicada para ' + DAYS[+i] + ' · original na Fila') : 'Copiada'); break;}
+    case 'cp': {if (!t) break; if (isDuplicateSubmit('cp:' + id + ':' + i, 500)) return; const copy = {...t, id: uid(), done:false, doneAt:null, xpClaimed:false, next:false, order:0, spent:0, logs:[], skills: Array.isArray(t.skills)?[...t.skills]:[], labels: Array.isArray(t.labels)?[...t.labels]:[], subs: (t.subs||[]).filter(sb => !sb.deletedAt).map(sb => ({...sb, id: uid(), d:false, xpClaimed:false, logs:[], deletedAt:null})), day: i === 'q' ? null : +i, createdAt: Date.now(), updatedAt: Date.now(), postponedCount: 0}; copy.order = dayTasks(copy.day).length; S.tasks.push(copy); toast(tab === 'q' ? (i === 'q' ? 'Duplicada na Fila' : 'Duplicada para ' + DAYS[+i] + ' · original na Fila') : 'Copiada'); break;}
     case 'del': if (!t) break; if (S.timer && S.timer.taskId === id) stopTimer(); if (window.__sync && window.__sync.markDeleted) window.__sync.markDeleted('tasks', id); S.trash = S.trash || []; S.trash.unshift({id: uid(), task: t, deletedAt: Date.now()}); S.tasks = S.tasks.filter(x => x.id !== id); if (focusTaskId === id) { focusTaskId = null; document.getElementById('focusOverlay')?.remove(); } break;
     case 'sdel': {
       if (!t) break;
@@ -940,6 +956,25 @@ document.addEventListener('click', ev => {
       projAddOpen = false;
       break;
     }
+    case 'evalAdd': {
+      const p = S.projects.find(x => x.id === id);
+      if (!p || p.kind !== 'course') break;
+      if (!p.study || typeof p.study !== 'object') p.study = mkStudy();
+      if (!Array.isArray(p.study.evals)) p.study.evals = [];
+      p.study.evals.push({id: uid(), t: '', date: '', w: 0, max: 100, got: null});
+      openEdits.add('pe_' + p.id);
+      touch(p);
+      break;
+    }
+    case 'evalDel': {
+      const p = S.projects.find(x => x.id === id);
+      const evId = btn.dataset.ev;
+      if (!p || p.kind !== 'course' || !evId) break;
+      if (!p.study || !Array.isArray(p.study.evals)) break;
+      p.study.evals = p.study.evals.filter(ev => ev && ev.id !== evId);
+      touch(p);
+      break;
+    }
     case 'pdel': {
       const p = S.projects.find(x => x.id === id);
       const isCourse = p && p.kind === 'course';
@@ -984,8 +1019,9 @@ document.addEventListener('click', ev => {
       if (type === 'trash') {
         const tr = (S.trash||[]).find(x => x.task && x.task.id === id);
         if (tr) {
-          // v96: `touch` antes de voltar — sem isso o LWW do push descartava a
-          // restauração (o tombstone remoto era mais novo) e o pull apagava de novo.
+          // v96/v179: remove eventual duplicata do mesmo id e faz `touch` antes de
+          // voltar — sem isso o LWW do push descartava a restauração.
+          S.tasks = S.tasks.filter(x => x.id !== tr.task.id);
           touch(tr.task);
           S.tasks.push(tr.task);
           S.trash = S.trash.filter(x => x.id !== tr.id);
@@ -1157,6 +1193,37 @@ document.addEventListener('change', ev => {
   }
   if (el.dataset.skillTask) {const task = T(el.dataset.skillTask); if (!task) return; task.skills = task.skills || []; if (el.checked) {if (!task.skills.includes(el.dataset.skillId)) task.skills.push(el.dataset.skillId);} else task.skills = task.skills.filter(x => x !== el.dataset.skillId); touch(task); save(); render(); return;}
   if (el.dataset.labelTask) {const task = T(el.dataset.labelTask); if (!task) return; task.labels = task.labels || []; if (el.checked) {if (!task.labels.includes(el.dataset.labelId)) task.labels.push(el.dataset.labelId);} else task.labels = task.labels.filter(x => x !== el.dataset.labelId); touch(task); save(); render(); return;}
+  if (el.dataset.eval) {
+    const [pid, evId, field] = el.dataset.eval.split(':');
+    const proj = (S.projects || []).find(x => x.id === pid);
+    if (!proj || proj.kind !== 'course' || !proj.study || !Array.isArray(proj.study.evals)) return;
+    const evObj = proj.study.evals.find(x => x && x.id === evId);
+    if (!evObj) return;
+    snapshot();
+    if (field === 't') {
+      evObj.t = String(el.value == null ? '' : el.value).trim();
+    } else if (field === 'date') {
+      const raw = String(el.value == null ? '' : el.value).trim();
+      evObj.date = isIsoDate(raw) ? raw : '';
+    } else if (field === 'w') {
+      const n = Number(el.value);
+      evObj.w = (el.value !== '' && isFinite(n)) ? Math.max(0, n) : 0;
+    } else if (field === 'max') {
+      const n = Number(el.value);
+      evObj.max = (el.value !== '' && isFinite(n)) ? Math.max(0, n) : 0;
+    } else if (field === 'got') {
+      const raw = String(el.value == null ? '' : el.value).trim();
+      if (raw === '') {
+        evObj.got = null;
+      } else {
+        const n = Number(raw.replace(',', '.'));
+        evObj.got = isFinite(n) ? n : null;
+      }
+    }
+    touch(proj);
+    save(); render();
+    return;
+  }
   const p = el.dataset.p;
   if (!p) return;
   const [col, id, key] = p.split(':');
@@ -1254,6 +1321,7 @@ document.addEventListener('keydown', ev => {
     ev.preventDefault();
     return;
   }
+  if (el.id === 'qa' && el.value.trim() && isDuplicateSubmit('qa:' + dv(el.dataset.d) + ':' + el.value.trim().toLowerCase(), 600)) { ev.preventDefault(); return; }
   if (el.id === 'qa') {
     const t = el.value.trim() ? addQuick(dv(el.dataset.d), el.value) : null;
     ev.preventDefault();
@@ -1278,10 +1346,12 @@ document.addEventListener('keydown', ev => {
   }
   else if (el.id === 'clientN') {if (el.value.trim()) {snapshot(); S.clients.push(mkClient({n: el.value.trim()})); el.value=''; save(); render();} ev.preventDefault();}
   else if (el.dataset.a === 'sadd' && el.value.trim()) {
+    const rawSub = el.value.trim();
+    if (isDuplicateSubmit('sadd:' + el.dataset.id + ':' + rawSub.toLowerCase(), 600)) { ev.preventDefault(); return; }
     const t = T(el.dataset.id);
     if (t) {
       t.subs = t.subs || [];
-      t.subs.push({id: uid(), t: el.value.trim(), d:false, xpClaimed:false, est:0, order:t.subs.length, logs:[], deletedAt: null});
+      t.subs.push({id: uid(), t: rawSub, d:false, xpClaimed:false, est:0, order:t.subs.length, logs:[], deletedAt: null});
       // Mostra a subtarefa recém-criada mesmo quando a lista tem limite visual.
       if (typeof expandedSubs !== 'undefined') expandedSubs.add(t.id);
       if (typeof subsCollapsed !== 'undefined') subsCollapsed.delete(t.id);
@@ -1655,7 +1725,13 @@ function commitInlineEdit(input) {
 
   // Estimativa e título afetam resumo, progresso, score, ordenação e o card
   // "Próxima"; um render mantém a tela coerente (o input inline já foi removido).
-  if (changed && typeof render === 'function') { render(); return; }
+  if (changed && typeof render === 'function') {
+    if (typeof _pendingSyncRender !== 'undefined') _pendingSyncRender = false;
+    render();
+    return;
+  }
+
+  if (typeof flushPendingSyncRender === 'function' && flushPendingSyncRender()) return;
 
   if (trigger && typeof trigger.focus === 'function') {
     try { trigger.focus({preventScroll: true}); } catch (e) {}
@@ -1672,7 +1748,7 @@ document.addEventListener('blur', ev => {
     const p = S.projects.find(x => x.id === pid); if (!p) return;
     const g = (p.goals || []).find(x => x.id === gid); if (!g) return;
     const newText = el.textContent.trim();
-    if (newText && newText !== g.t) {g.t = newText; touch(p); save();}
+    if (newText && newText !== g.t) {snapshot(); g.t = newText; touch(p); save();}
     return;
   }
   if (!el.dataset.subedit) return;
@@ -1681,7 +1757,14 @@ document.addEventListener('blur', ev => {
   const sb = t.subs.find(x => x.id === sid); if (!sb) return;
   // Remove o prefixo visual "▶ " que aparece quando a subtarefa está rodando
   const newText = el.textContent.trim().replace(/^▶\s*/, '');
-  if (newText && newText !== sb.t) {sb.t = newText; touch(t); save();}
+  if (newText && newText !== sb.t) {snapshot(); sb.t = newText; touch(t); save();}
+}, true);
+
+/* v179 — aplica qualquer render de sync adiado assim que o usuário sai de um
+   campo de edição (microtask garante que o próximo foco já esteja resolvido). */
+document.addEventListener('focusout', () => {
+  if (typeof flushPendingSyncRender !== 'function') return;
+  Promise.resolve().then(() => { flushPendingSyncRender(); });
 }, true);
 
 /* --- EDIÇÃO INLINE: Enter confirma, Esc cancela --- */
@@ -1692,17 +1775,20 @@ document.addEventListener('keydown', ev => {
   else if (ev.key === 'Escape') {ev.preventDefault(); el._inlineCancel = true; el.blur();}
 }, true);
 
-/* --- RENOMEAR SUBTAREFA NO FOCO: Enter confirma, Esc cancela --- */
+/* --- RENOMEAR SUBTAREFA (cards e Modo Foco): Enter confirma, Esc cancela --- */
 document.addEventListener('focusin', ev => {
   const el = ev.target;
-  if (!el || !el.dataset || !el.dataset.subedit || !el.closest || !el.closest('#focusOverlay')) return;
+  if (!el || !el.dataset || !el.dataset.subedit) return;
   el._origText = el.textContent;
-  // Mantém a etapa editada visível acima do teclado virtual sem mexer no timer.
-  if (el.scrollIntoView) setTimeout(() => { try { el.scrollIntoView({block: 'nearest'}); } catch (e) {} }, 60);
+  // Mantém a etapa editada visível acima do teclado virtual no foco sem mexer no timer.
+  if (el.closest && el.closest('#focusOverlay') && el.scrollIntoView) {
+    setTimeout(() => { try { el.scrollIntoView({block: 'nearest'}); } catch (e) {} }, 60);
+  }
 });
 document.addEventListener('keydown', ev => {
   const el = ev.target;
-  if (!el || !el.dataset || !el.dataset.subedit || !el.closest || !el.closest('#focusOverlay')) return;
+  if (!el || !el.dataset || !el.dataset.subedit) return;
+  if (ev.isComposing || ev.keyCode === 229) return;
   if (ev.key === 'Enter') {ev.preventDefault(); el.blur();}
   else if (ev.key === 'Escape') {ev.preventDefault(); if (el._origText != null) el.textContent = el._origText; el.blur();}
 }, true);
@@ -1992,6 +2078,25 @@ function focusQuickAdd() {
 }
 
 setInterval(() => {if (S.timer) renderTimer();}, 500);                             // relógio do timer no topo
-setInterval(() => {const slot = currentEnergySlot(); if (slot !== lastSlot) {lastSlot = slot; if (S && S.cfg.autoPriority && tab === 'week') refreshTaskList();}}, 60000); // reordena quando muda o período do dia
+setInterval(() => {const slot = currentEnergySlot(); if (slot !== lastSlot) {lastSlot = slot; if (S && S.cfg.autoPriority && tab === 'week') {if (typeof isUserEditing === 'function' && isUserEditing()) {if (typeof requestSyncRender === 'function') requestSyncRender();} else refreshTaskList();}}}, 60000); // reordena quando muda o período do dia
 setInterval(() => {if (!S.timer || S.timer.paused) return; if (S.timer.phase === 'focus') {awardFocusPomodoros(); if (S.timer.targetMin && timerElapsedSec() / 60 >= S.timer.targetMin) advancePhase(true);} else if (S.timer.phase === 'rest' && S.timer.targetMin && timerElapsedSec() / 60 >= S.timer.targetMin) completeRest();}, 800); // foco conclui sozinho; descanso só sugere retorno
 setInterval(() => {if (focusTaskId) updateFocusTimer();}, 500);                    // anel do modo foco
+
+/* v179 — sincroniza estado entre abas/instâncias da mesma origem via evento storage,
+   evitando que uma aba adormecida sobrescreva localStorage com estado obsoleto. */
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('storage', ev => {
+    if (!ev || ev.key !== LS_KEY || !ev.newValue || recoveryBlocked) return;
+    try {
+      const parsed = JSON.parse(ev.newValue);
+      if (!parsed || !Array.isArray(parsed.tasks)) return;
+      if (S && Number(parsed.lastModified || 0) <= Number(S.lastModified || 0)) return;
+      const migrated = migrate(parsed);
+      if (!migrated) return;
+      S = migrated;
+      applyTheme();
+      if (typeof requestSyncRender === 'function') requestSyncRender();
+      else render();
+    } catch (e) {}
+  });
+}

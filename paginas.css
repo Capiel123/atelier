@@ -428,6 +428,19 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .proj-card--course .proj-status{display:inline-flex;align-items:center;gap:4px}
 .course-summary{margin-top:8px;font-size:12.5px;line-height:1.35;color:var(--tx);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .course-hours{color:var(--tx);font-weight:600;font-variant-numeric:tabular-nums}
+/* v178 — disciplinas (E3): avaliações inline e alertas do resumo */
+.course-overdue{color:var(--er);font-weight:600}
+.course-warn{color:var(--wr);font-size:11.5px}
+.course-evals{margin-top:12px;border-top:1px solid var(--bd);padding-top:8px}
+.course-eval-weight{margin-left:auto;font-size:11px;color:var(--mu);font-weight:500;font-variant-numeric:tabular-nums}
+.course-eval-weight.is-warn{color:var(--wr)}
+.course-eval-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.course-eval-row{display:grid;grid-template-columns:minmax(100px,1.5fr) 132px repeat(3,minmax(64px,76px)) auto;gap:6px;align-items:end;padding:6px;background:var(--s2);border:1px solid var(--bd);border-radius:var(--radius-sm)}
+.course-eval-row input{width:100%;min-width:0;padding:5px 7px;font-size:12px}
+.course-eval-num{display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--mu);min-width:0}
+.course-eval-num input{font-variant-numeric:tabular-nums}
+.course-eval-del{min-width:32px;min-height:32px;align-self:end}
+.course-eval-add{margin-top:8px;display:inline-flex;align-items:center;gap:5px;font-size:12px}
 .area-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd)}
 .area-row:last-child{border-bottom:none}
 .area-row.archived{opacity:.5}

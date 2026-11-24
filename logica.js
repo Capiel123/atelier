@@ -240,6 +240,50 @@ function studyStatus(p, today) {
   };
 }
 
+/* --- CALENDÁRIO DE PRAZOS (E4 — docs/ui/CALENDARIO-PRAZOS.md) ---
+   Função pura: devolve [{d, t, kind}] ordenado por data. Só prazos pendentes
+   entram (tarefa, projeto de trabalho, meta < 100%, avaliação não lançada);
+   follow-ups, aniversários e itens concluídos/arquivados/excluídos ficam fora. */
+function calendarEvents(state) {
+  const st = state || (typeof S !== 'undefined' ? S : null);
+  if (!st) return [];
+  const e = [];
+  const seen = new Set();
+  const push = (d, t, kind, uidKey) => {
+    if (!isIsoDate(d)) return;
+    const k = uidKey ? `${kind}:${uidKey}:${d}` : `${kind}:${d}:${t}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    e.push({d, t, kind});
+  };
+  (Array.isArray(st.tasks) ? st.tasks : []).forEach(t => {
+    if (!t || t.deletedAt || t.done || !isIsoDate(t.due)) return;
+    push(t.due, 'Tarefa: ' + (t.t || ''), 'task', t.id);
+  });
+  (Array.isArray(st.projects) ? st.projects : []).forEach(p => {
+    if (!p || p.deletedAt || p.archived || p.completedAt) return;
+    if (p.kind === 'course') {
+      const evals = (p.study && Array.isArray(p.study.evals)) ? p.study.evals : [];
+      evals.forEach(ev => {
+        if (!ev || typeof ev !== 'object') return;
+        const gotNum = Number(ev.got);
+        const hasGot = ev.got != null && ev.got !== '' && isFinite(gotNum);
+        if (hasGot || !isIsoDate(ev.date)) return;
+        const label = ev.t ? `${p.n || ''} — ${ev.t}` : (p.n || 'Avaliação');
+        push(ev.date, 'Prova: ' + label, 'eval', `${p.id}:${ev.id || ev.t || ''}`);
+      });
+      return;
+    }
+    if (isIsoDate(p.due)) push(p.due, 'Projeto: ' + (p.n || ''), 'project', p.id);
+  });
+  (Array.isArray(st.goals) ? st.goals : []).forEach(g => {
+    if (!g || g.deletedAt || !isIsoDate(g.due)) return;
+    if (num(g.p) >= 100) return;
+    push(g.due, 'Meta: ' + (g.t || ''), 'goal', g.id);
+  });
+  return e.sort((a,b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.t.localeCompare(b.t, 'pt-BR'));
+}
+
 function getFocusDurations() {return (S.cfg.focusDurations && S.cfg.focusDurations.length) ? S.cfg.focusDurations : POMODORO_OPTIONS;}
 
 /* --- ENERGIA POR SLOT --- */
