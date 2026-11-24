@@ -5,7 +5,7 @@
 // =========================================================
 
 /* --- VERSÃO E CHAVES DE ARMAZENAMENTO --- */
-const VERSION = 15.9;
+const VERSION = 15.10;
 const LS_KEY = 'atelier';
 const LS_BACKUP = 'atelier_backup_prev';
 const SNAP_KEY = 'atelier_auto_snapshot';
@@ -282,6 +282,12 @@ const $ = s => document.querySelector(s);
 const uid = () => Math.random().toString(36).slice(2,10);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function isIsoDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const y = +s.slice(0,4), m = +s.slice(5,7), d = +s.slice(8,10);
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
 const todayI = () => (new Date().getDay()+6)%7;
 const dv = v => (v === '' || v == null) ? null : +v;
 const num = v => {const n = Number(v); return isFinite(n) ? n : 0;};
@@ -407,6 +413,7 @@ let focusTargetMin = 25;
 let searchQuery = '';
 let searchIndex = -1; // R5 — linha destacada na paleta de busca
 let expandedTasks = new Set();
+let collapsedTasks = new Set();
 let expandedSubs = new Set();
 let subsCollapsed = new Set();
 // Mostra todas as subtarefas de um card quando ele tem mais que o limite visual.
@@ -565,7 +572,37 @@ function mkContact(o={}) {return {id: uid(), n:'', type:'pro', cat:'Prospect', w
 function mkCommand(n, cat, cmd, example='') {return {id: uid(), n, cat, cmd, example, order:0, updatedAt: Date.now()};}
 function mkJob(o={}) {return {id: uid(), client:'', role:'', url:'', contactName:'', contactInfo:'', platform:'', area:'', subarea:'', ticket:0, priority:1, notes:'', stage:'prospect', stageHistory:[{stage:'prospect', at: Date.now()}], foundAt: Date.now(), appliedAt: null, firstResponseAt: null, nextFollowUp:'', lastInteractionAt: null, linkedTaskId: null, projectId: null, interactions: [], deletedAt: null, createdAt: Date.now(), updatedAt: Date.now(), ...o};}
 function mkClient(o={}) {return {id: uid(), n:'', notes:'', createdAt: Date.now(), updatedAt: Date.now(), deletedAt: null, ...o};}
-function mkProject(o={}) {return {id: uid(), n:'', area:'Carreira', due:'', reward:'', claimed:false, archived:false, clientId:'', client:'', billingType:'none', billingValue:0, actualValue:null, completedAt:null, manualHours:null, currency:'BRL', goals:[], deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
+function mkStudy(o={}) {return {inst:'', type:'grad', term:'', teacher:'', total:100, min:60, evals:[], ...o};}
+function normalizeStudyEvals(v) {
+  if (!Array.isArray(v)) return [];
+  return v.filter(e => e && typeof e === 'object' && !Array.isArray(e)).map(e => {
+    const max = num(e.max);
+    const w = Math.max(0, num(e.w));
+    const gotNum = Number(e.got);
+    const got = (e.got == null || e.got === '' || !isFinite(gotNum)) ? null : gotNum;
+    const date = isIsoDate(e.date) ? e.date : '';
+    return {id: e.id ? String(e.id) : uid(), t: String(e.t == null ? '' : e.t), date, w, max, got};
+  });
+}
+function normalizeStudy(st) {
+  if (!st || typeof st !== 'object' || Array.isArray(st)) return null;
+  const totalNum = Number(st.total);
+  const total = (st.total != null && st.total !== '' && isFinite(totalNum) && totalNum > 0) ? totalNum : 100;
+  const minNum = Number(st.min);
+  const minRaw = (st.min != null && st.min !== '' && isFinite(minNum)) ? minNum : 60;
+  const min = Math.max(0, Math.min(minRaw, total));
+  const type = ['grad','free','self'].includes(st.type) ? st.type : 'grad';
+  return {
+    inst: String(st.inst == null ? '' : st.inst),
+    type,
+    term: String(st.term == null ? '' : st.term),
+    teacher: String(st.teacher == null ? '' : st.teacher),
+    total,
+    min,
+    evals: normalizeStudyEvals(st.evals)
+  };
+}
+function mkProject(o={}) {return {id: uid(), n:'', area:'Carreira', due:'', reward:'', claimed:false, archived:false, clientId:'', client:'', billingType:'none', billingValue:0, actualValue:null, completedAt:null, manualHours:null, currency:'BRL', goals:[], kind:'project', study:null, deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
 function mkGoal(o={}) {return {id: uid(), t:'', p:0, due:'', deletedAt:null, createdAt:Date.now(), updatedAt:Date.now(), ...o};}
 function mkWorkLog(o={}) {return {id: uid(), date:'', ts: Date.now(), taskId:'', taskTitle:'', projId:'', projName:'', area:'', text:'', ...o};}
 function defaultLabels() {return [
@@ -725,17 +762,23 @@ function migrate(raw) {
   const existingNames = new Set(s.commands.map(c => c.n));
   latestCmds.forEach(c => {if (!existingNames.has(c.n)) s.commands.push({...c, id: uid(), order: s.commands.length, updatedAt: Date.now()});});
 
-  s.projects = s.projects.map(p => ({
-    ...p,
-    clientId: p.clientId ?? '',
-    client: p.client ?? '',
-    billingType: p.billingType ?? 'none',
-    billingValue: +p.billingValue || 0,
-    actualValue: (p.actualValue != null && p.actualValue !== '') ? +p.actualValue : null,
-    completedAt: p.completedAt ?? null,
-    manualHours: (p.manualHours != null && p.manualHours !== '') ? +p.manualHours : null,
-    goals: Array.isArray(p.goals) ? p.goals.map((g, gi) => ({id: g.id || uid(), t: String(g.t || ''), d: !!g.d, order: g.order ?? gi})) : []
-  }));
+  s.projects = s.projects.map(p => {
+    const hasStudy = !!(p.study && typeof p.study === 'object' && !Array.isArray(p.study));
+    const kind = (p.kind === 'course' || hasStudy) ? 'course' : 'project';
+    return {
+      ...p,
+      kind,
+      study: kind === 'course' ? normalizeStudy(p.study) : null,
+      clientId: p.clientId ?? '',
+      client: p.client ?? '',
+      billingType: p.billingType ?? 'none',
+      billingValue: +p.billingValue || 0,
+      actualValue: (p.actualValue != null && p.actualValue !== '') ? +p.actualValue : null,
+      completedAt: p.completedAt ?? null,
+      manualHours: (p.manualHours != null && p.manualHours !== '') ? +p.manualHours : null,
+      goals: Array.isArray(p.goals) ? p.goals.map((g, gi) => ({id: g.id || uid(), t: String(g.t || ''), d: !!g.d, order: g.order ?? gi})) : []
+    };
+  });
   /* v161 — projetos só são concluídos por ação explícita (`pcomplete`). Antes,
      `migrate()` marcava `completedAt` sozinho quando todas as tarefas estavam
      prontas, finalizando projetos sem o usuário pedir. */

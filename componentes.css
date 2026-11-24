@@ -291,10 +291,11 @@
 .tm b{color:var(--tx);font-variant-numeric:tabular-nums; font-size: 14px;}
 .tm-time{display:flex;align-items:baseline;justify-content:flex-end;gap:3px}
 .tm-sep{color:var(--mu);font-size:12px}
-.tm-chev{color:var(--mu);font-size:11px;line-height:1;margin-left:2px;align-self:center;flex:none}
+.tm-chev{display:inline-flex;align-items:center;justify-content:center;padding:3px 5px;margin:0 0 0 6px;background:transparent;border:1px solid transparent;border-radius:var(--radius-sm,6px);color:var(--mu);font-size:11px;line-height:1;align-self:center;flex:none;cursor:pointer;position:relative;z-index:2}
+.tm-chev:hover,.tm-chev:focus-visible{color:var(--ac);background:var(--s2);border-color:var(--bd);outline:none}
 .tm-est{padding:0 2px;margin:0;background:none;border:0;border-bottom:1px dotted color-mix(in srgb,var(--mu) 55%,transparent);border-radius:0;color:var(--mu);font:inherit;font-size:12px;font-variant-numeric:tabular-nums;cursor:pointer;position:relative}
 .tm-est:hover,.tm-est:focus-visible{color:var(--ac);border-bottom-color:var(--ac);outline:none}
-.tm-est::after{content:'';position:absolute;inset:-8px -6px}
+.tm-est::after{content:'';position:absolute;inset:-8px -2px -8px -6px}
 .inline-edit{font:inherit;color:var(--tx);background:var(--s2);border:1px solid var(--ac);border-radius:var(--radius-sm,8px);padding:2px 6px;outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 18%,transparent)}
 .tt .inline-edit{flex:1 1 180px;min-width:120px;font-weight:600;font-size:15.5px;padding:1px 6px}
 .tm .inline-edit{width:64px;font-size:13px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;padding:1px 4px}

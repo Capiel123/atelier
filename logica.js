@@ -164,8 +164,82 @@ function projectEarnings(p) {
   return {total, currency: cur, hours, ratePerHour, estMin, actualMin, taskCount: ts.length, doneCount: ts.filter(t => t.done).length};
 }
 function clientById(id) {const c = (S.clients||[]).find(c => c.id === id && !c.deletedAt); return c;}
-function projectsByClient(cid) {return alive(S.projects).filter(p => p.clientId === cid);}
+function projectsByClient(cid) {return alive(S.projects).filter(p => p.kind !== 'course' && p.clientId === cid);}
 function clientName(p) {if (p.clientId) {const c = clientById(p.clientId); if (c) return c.n;} return p.client || '(sem cliente)';}
+/* --- DISCIPLINAS (E1) ---
+   Cálculo puro de notas; não gera HTML e não depende de S. O card da E3 formata
+   o retorno. `p.study` é o objeto descrito em docs/ui/PLANO-DISCIPLINAS.md §3. */
+function studyEvalPoints(ev) {
+  if (!ev || typeof ev !== 'object') return 0;
+  const w = Math.max(0, num(ev.w));
+  const max = num(ev.max);
+  const gotNum = Number(ev.got);
+  if (ev.got == null || ev.got === '' || !isFinite(gotNum)) return 0;
+  if (max > 0) return Math.max(0, Math.min(gotNum, max)) / max * w;
+  return Math.max(0, Math.min(gotNum, w));
+}
+function studyNextEval(evals) {
+  const list = (Array.isArray(evals) ? evals : []).filter(ev => {
+    if (!ev || typeof ev !== 'object') return false;
+    const gotNum = Number(ev.got);
+    if (ev.got != null && ev.got !== '' && isFinite(gotNum)) return false;
+    return isIsoDate(ev.date);
+  });
+  list.sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  return list[0] || null;
+}
+function studyStatus(p, today) {
+  if (!p || p.kind !== 'course') return null;
+  const st = (p.study && typeof p.study === 'object' && !Array.isArray(p.study)) ? p.study : {};
+  const totalNum = Number(st.total);
+  const total = (st.total != null && st.total !== '' && isFinite(totalNum) && totalNum > 0) ? totalNum : 100;
+  const minNum = Number(st.min);
+  const minRaw = (st.min != null && st.min !== '' && isFinite(minNum)) ? minNum : 60;
+  const min = Math.max(0, Math.min(minRaw, total));
+  const evals = (Array.isArray(st.evals) ? st.evals : []).filter(ev => ev && typeof ev === 'object' && !Array.isArray(ev)).map(ev => {
+    const max = num(ev.max);
+    const gotNum = Number(ev.got);
+    const got = (ev.got == null || ev.got === '' || !isFinite(gotNum)) ? null : gotNum;
+    return {id: ev.id || '', t: String(ev.t == null ? '' : ev.t), date: isIsoDate(ev.date) ? ev.date : '', w: Math.max(0, num(ev.w)), max, got};
+  });
+  const launched = evals.filter(ev => ev.got != null);
+  const unlaunched = evals.filter(ev => ev.got == null);
+  const atual = launched.reduce((a,ev) => a + studyEvalPoints(ev), 0);
+  const pesoTotal = evals.reduce((a,ev) => a + ev.w, 0);
+  const pesoRestante = unlaunched.reduce((a,ev) => a + ev.w, 0);
+  const alcancavel = atual + pesoRestante;
+  const falta = Math.max(0, min - atual);
+  const faltamPesos = pesoTotal < total - 0.01;
+  const pesosAcima = pesoTotal > total + 0.01;
+  const next = studyNextEval(unlaunched);
+  let depois = 0, neededRaw = 0, needed = 0, nota = 0, pct = 0;
+  if (next) {
+    depois = unlaunched.filter(ev => ev !== next && ev.date && ev.date >= next.date).reduce((a,ev) => a + ev.w, 0);
+    neededRaw = falta - depois;
+    needed = Math.max(0, Math.min(neededRaw, next.w));
+    if (next.w > 0) {
+      nota = next.max > 0 ? needed / next.w * next.max : needed;
+      pct = next.max > 0 ? nota / next.max : 0;
+    }
+  }
+  let state;
+  if (!evals.length) state = 'sem-avaliacoes';
+  else if (pesoTotal <= 0) state = 'sem-peso';
+  else if (launched.length && atual >= min) state = 'aprovada';
+  else if (!launched.length) state = 'sem-nota';
+  else if (!faltamPesos && alcancavel < min) state = 'sem-como-passar';
+  else state = 'em-risco';
+  const todayIso = today || iso(new Date());
+  return {
+    state, total, min, atual, falta, pesoTotal, pesoRestante, alcancavel,
+    faltamPesos, pesosAcima, launched: launched.length, evals,
+    next: next ? Object.assign({}, next, {
+      depois, needed, neededRaw, nota, pct,
+      overdue: !!(next.date && next.date < todayIso)
+    }) : null
+  };
+}
+
 function getFocusDurations() {return (S.cfg.focusDurations && S.cfg.focusDurations.length) ? S.cfg.focusDurations : POMODORO_OPTIONS;}
 
 /* --- ENERGIA POR SLOT --- */
@@ -1120,7 +1194,7 @@ function globalSearch(q) {
   const match = s => normalize(s).includes(nq);
   const out = {tasks:[],projects:[],clients:[],contacts:[],applications:[],skills:[],goals:[]};
   alive(S.tasks).forEach(t => {if (match(t.t) || match(t.desc)) out.tasks.push(t);});
-  alive(S.projects).forEach(p => {if (match(p.n)) out.projects.push(p);});
+  alive(S.projects).forEach(p => {if (match(p.n) || (p.kind === 'course' && p.study && match(p.study.inst))) out.projects.push(p);});
   alive(S.clients).forEach(c => {if (match(c.n)) out.clients.push(c);});
   alive(S.contacts).forEach(c => {if (match(c.n) || match(c.notes) || match(c.lastConversation)) out.contacts.push(c);});
   alive(S.applications).forEach(a => {if (match(a.client) || match(a.role) || match(a.notes)) out.applications.push(a);});

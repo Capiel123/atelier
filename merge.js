@@ -77,6 +77,8 @@
     };
   }
   function fromProject(r) {
+    var study = (r.study && typeof r.study === 'object' && !Array.isArray(r.study)) ? r.study : null;
+    var kind = (r.kind === 'course' || (!r.kind && study)) ? 'course' : 'project';
     return {
       id: r.id, n: str(r.name), area: str(r.area, 'Carreira'), due: nullStr(r.due_date) || '',
       reward: str(r.reward), claimed: !!r.claimed, archived: !!r.archived,
@@ -86,6 +88,7 @@
       completedAt: isoMs(r.completed_at),
       manualHours: (r.manual_hours == null) ? null : num(r.manual_hours, 0),
       currency: str(r.currency, 'BRL'), goals: arr(r.goals),
+      kind: kind, study: kind === 'course' ? study : null,
       deletedAt: isoMs(r.deleted_at), createdAt: isoMs(r.created_at) || Date.now(), updatedAt: num(r.client_updated_at, 0)
     };
   }

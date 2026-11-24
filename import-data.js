@@ -40,6 +40,7 @@
   }
 
   function project(p, uid) {
+    const isCourse = p.kind === 'course' || (!p.kind && p.study && typeof p.study === 'object');
     return {
       user_id: uid, id: p.id, name: text(p.n), area: text(p.area, 'Carreira'),
       due_date: nullStr(p.due), reward: text(p.reward), claimed: !!p.claimed, archived: !!p.archived,
@@ -49,6 +50,8 @@
       completed_at: iso(p.completedAt),
       manual_hours: (p.manualHours == null || p.manualHours === '') ? null : num(p.manualHours, 0),
       currency: text(p.currency, 'BRL'), goals: arr(p.goals),
+      kind: isCourse ? 'course' : 'project',
+      study: isCourse ? (p.study && typeof p.study === 'object' && !Array.isArray(p.study) ? p.study : null) : null,
       deleted_at: iso(p.deletedAt), client_updated_at: int(p.updatedAt, 0)
     };
   }

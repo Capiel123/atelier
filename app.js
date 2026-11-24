@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave','showClearedDone','completeActiveTask']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','paddCourse','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave','showClearedDone','completeActiveTask']);
 
 /* --- NAVEGAÇÃO POR ÁREA (R3) ---
    A área não é um destino novo: abre a última tela usada do grupo (D9) ou o padrão.
@@ -381,9 +381,11 @@ document.addEventListener('click', ev => {
       selectedTaskId = id;
       if (expandedTasks.has(id)) expandedTasks.delete(id);
       else {expandedTasks.add(id);} // v119: preserva o recolhimento de Fases ao reabrir
+      if (typeof refreshTaskCard === 'function' && refreshTaskCard(id)) return;
       if (tab === 'q') {
         const ql = document.getElementById('queueList');
-        if (ql) ql.innerHTML = dayTasks(null).length ? dayTasks(null).map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>';
+        const pending = dayTasks(null).filter(t => !isDone(t));
+        if (ql) ql.innerHTML = pending.length ? pending.map(t => cardQueue(t)).join('') : '<div class="msg">Fila vazia.</div>';
       } else {
         refreshTaskList();
       }
@@ -402,8 +404,17 @@ document.addEventListener('click', ev => {
     }
     case 'expandTask': {
       if (!id) break;
-      if (expandedTasks.has(id)) expandedTasks.delete(id);
-      else {expandedTasks.add(id); subsCollapsed.delete(id);}
+      const wasCompact = (typeof isTaskCompact === 'function')
+        ? isTaskCompact(id)
+        : (getTaskCompactMode() ? !expandedTasks.has(id) : collapsedTasks.has(id));
+      if (wasCompact) {
+        expandedTasks.add(id);
+        collapsedTasks.delete(id);
+        subsCollapsed.delete(id);
+      } else {
+        expandedTasks.delete(id);
+        collapsedTasks.add(id);
+      }
       if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
       return;
     }
@@ -475,14 +486,17 @@ document.addEventListener('click', ev => {
     case 'collapseCard': {
       if (!id) break;
       expandedTasks.delete(id);
+      collapsedTasks.add(id);
       expandedSubs.delete(id);
       subsCollapsed.add(id);
       subsShowAll.delete(id);
       if (typeof refreshTaskCard !== 'function' || !refreshTaskCard(id)) refreshTaskList();
       return;
     }
-    case 'expandAll': {      forcedCompact = false;
+    case 'expandAll': {
+      forcedCompact = false;
       expandedTasks.clear();
+      collapsedTasks.clear();
       expandedSubs.clear();
       subsCollapsed.clear();
       subsShowAll.clear();
@@ -492,6 +506,7 @@ document.addEventListener('click', ev => {
     case 'collapseAll': {
       forcedCompact = true;
       expandedTasks.clear();
+      collapsedTasks.clear();
       expandedSubs.clear();
       subsCollapsed.clear();
       subsShowAll.clear();
@@ -506,7 +521,7 @@ document.addEventListener('click', ev => {
       return;
     }
     case 'gotoClient': {tab = 'clients'; render(); setTimeout(() => {const el = document.querySelector(`[data-p="clients:${id}:n"]`)?.closest('.client-card'); if (el) {el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('highlight'); setTimeout(() => el.classList.remove('highlight'), 2100);}}, 100); return;}
-    case 'gotoProject': {tab = 'proj'; render(); setTimeout(() => {const el = document.querySelector(`[data-p="projects:${id}:n"]`)?.closest('.card'); if (el) {el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('highlight'); setTimeout(() => el.classList.remove('highlight'), 2100);}}, 100); return;}
+    case 'gotoProject': {projView = 'project'; tab = 'proj'; render(); setTimeout(() => {const el = document.querySelector(`[data-p="projects:${id}:n"]`)?.closest('.card'); if (el) {el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('highlight'); setTimeout(() => el.classList.remove('highlight'), 2100);}}, 100); return;}
     case 'clientAdd': {const n = V('clientN'); if (!n) return; S.clients.push(mkClient({n})); break;}
     case 'clientDel': if (!confirm('Excluir cliente? Ele vai para o lixo. Projetos vinculados ficam sem cliente.')) return; softDelete('clients', id); alive(S.projects).forEach(p => {if (p.clientId === id) {p.clientId = ''; touch(p);}}); alive(S.contacts).forEach(ct => {if (ct.clientId === id) {ct.clientId = null; touch(ct);}}); break;
     case 'pcomplete': {const p = S.projects.find(x => x.id === id); if (p && !p.completedAt) {if (!confirm('Marcar este projeto como concluído? Você pode reabrir depois.')) return; p.completedAt = Date.now(); touch(p); toast('Projeto concluído');} break;}
@@ -902,14 +917,36 @@ document.addEventListener('click', ev => {
     }
     case 'cDel': if (!confirm('Excluir contato? Ele vai para o lixo.')) return; softDelete('contacts', id); break;
     case 'cArchive': {if (!c) break; c.archived = !c.archived; touch(c); toast(c.archived ? 'Contato arquivado' : 'Contato restaurado'); break;}
+    case 'projView': {
+      projView = btn.dataset.kind === 'course' ? 'course' : 'project';
+      projAddOpen = false;
+      render();
+      return;
+    }
     case 'toggleProjAdd': {
       projAddOpen = !projAddOpen;
       render();
-      if (projAddOpen) setTimeout(() => {const el = document.getElementById('pn'); if (el) {try {el.focus({preventScroll:true});} catch (e) {el.focus();}}}, 0);
+      if (projAddOpen && projView !== 'course') setTimeout(() => {const el = document.getElementById('pn'); if (el) {try {el.focus({preventScroll:true});} catch (e) {el.focus();}}}, 0);
       return;
     }
     case 'padd': {const n = V('pn'); if (!n) break; S.projects.push(mkProject({n, area: V('pa') || 'Carreira', due: V('pdu'), reward: V('prw'), clientId: V('pclient') || ''})); projAddOpen = false; break;}
-    case 'pdel': if (!confirm('Excluir projeto? Ele vai para o lixo.')) return; softDelete('projects', id); break;
+    case 'paddCourse': {
+      const n = V('cn'); if (!n) break;
+      const type = ['grad','free','self'].includes(V('ctype')) ? V('ctype') : 'grad';
+      S.projects.push(mkProject({
+        n, area: '', kind: 'course',
+        study: mkStudy({inst: V('cinst'), type, term: V('cterm'), teacher: V('cteacher')})
+      }));
+      projAddOpen = false;
+      break;
+    }
+    case 'pdel': {
+      const p = S.projects.find(x => x.id === id);
+      const isCourse = p && p.kind === 'course';
+      if (!confirm(isCourse ? 'Excluir disciplina? Ela vai para o lixo.' : 'Excluir projeto? Ele vai para o lixo.')) return;
+      softDelete('projects', id);
+      break;
+    }
     case 'claim': {const p = S.projects.find(x => x.id === id); if (p) {p.claimed = true; touch(p);} break;}
     case 'parch': {
       const p = S.projects.find(x => x.id === id);
@@ -917,7 +954,8 @@ document.addEventListener('click', ev => {
         p.archived = !p.archived;
         touch(p);
         if (p.archived) openEdits.add('projArchived'); else openEdits.delete('projArchived');
-        toast(p.archived ? 'Projeto arquivado' : 'Projeto restaurado');
+        const isCourse = p.kind === 'course';
+        toast(p.archived ? (isCourse ? 'Disciplina arquivada' : 'Projeto arquivado') : (isCourse ? 'Disciplina restaurada' : 'Projeto restaurado'));
       }
       break;
     }
@@ -1125,6 +1163,27 @@ document.addEventListener('change', ev => {
   const obj = (S[col] || []).find(x => x.id === id); if (!obj) return;
 
   snapshot();
+
+  if (col === 'projects' && key.startsWith('study.')) {
+    const sk = key.slice(6);
+    if (!obj.study || typeof obj.study !== 'object') obj.study = mkStudy();
+    if (sk === 'total') {
+      const numVal = Number(el.value);
+      obj.study.total = (el.value !== '' && isFinite(numVal) && numVal > 0) ? numVal : 100;
+      if (obj.study.min > obj.study.total) obj.study.min = obj.study.total;
+    } else if (sk === 'min') {
+      const numVal = Number(el.value);
+      const tot = (isFinite(Number(obj.study.total)) && Number(obj.study.total) > 0) ? Number(obj.study.total) : 100;
+      obj.study.min = (el.value !== '' && isFinite(numVal)) ? Math.max(0, Math.min(numVal, tot)) : Math.min(60, tot);
+    } else if (sk === 'type') {
+      obj.study.type = ['grad','free','self'].includes(el.value) ? el.value : 'grad';
+    } else if (sk === 'inst' || sk === 'term' || sk === 'teacher') {
+      obj.study[sk] = String(el.value == null ? '' : el.value).trim();
+    }
+    touch(obj);
+    save(); render();
+    return;
+  }
 
   let v = el.value;
   if (el.type === 'number' || el.type === 'range') v = +v || 0;

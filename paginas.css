@@ -420,6 +420,14 @@ kbd{background:var(--s2);border:1px solid var(--bd);border-bottom-width:2px;bord
 .proj-archived{margin-top:14px}
 .proj-row-line{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--bd);font-size:12px}
 .proj-row-line:last-child{border-bottom:none}
+/* v176 — disciplinas (E2): seletor e card enxuto */
+.proj-seg{margin-bottom:10px}
+.proj-seg button{display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.proj-seg .count{font-size:11px;color:var(--mu);font-variant-numeric:tabular-nums}
+.proj-seg button.on .count{color:var(--tx)}
+.proj-card--course .proj-status{display:inline-flex;align-items:center;gap:4px}
+.course-summary{margin-top:8px;font-size:12.5px;line-height:1.35;color:var(--tx);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.course-hours{color:var(--tx);font-weight:600;font-variant-numeric:tabular-nums}
 .area-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd)}
 .area-row:last-child{border-bottom:none}
 .area-row.archived{opacity:.5}

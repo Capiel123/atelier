@@ -332,7 +332,14 @@ function renderSearchResults(q) {
   if (!total) {box.innerHTML = '<div class="msg center">Nada encontrado.</div>'; return;}
   const groups = [
     ['tasks','Tarefas','check','var(--ac)', t => ({title: t.t, sub: `${areaLabel(t.area)} · ${t.est?t.est+'min':'sem est.'}`, tab:'week', target:`[data-p="tasks:${t.id}:t"]`})],
-    ['projects','Projetos','briefcase','#4fb3a2', p => ({title: p.n, sub: areaLabel(p.area), tab:'proj', target:`[data-p="projects:${p.id}:n"]`})],
+    ['projects','Projetos','briefcase','#4fb3a2', p => {
+      if (p.kind === 'course') {
+        const st = p.study || {};
+        const sub = [st.inst, studyTypeLabel(st.type)].filter(Boolean).join(' · ');
+        return {title: p.n, sub, tab:'proj', seg:'course', target:`[data-p="projects:${p.id}:n"]`};
+      }
+      return {title: p.n, sub: areaLabel(p.area), tab:'proj', seg:'project', target:`[data-p="projects:${p.id}:n"]`};
+    }],
     ['clients','Clientes','user','var(--ok)', c => ({title: c.n, sub: '', tab:'clients', target:`[data-p="clients:${c.id}:n"]`})],
     ['contacts','Contatos','mail','#e0626a', c => ({title: discreet ? maskContactName(c.n) : c.n, sub: discreet ? (c.type==='pro'?'Rede':'Amizade') : `${c.cat} · ${c.type==='pro'?'Rede':'Amizade'}`, tab:'people', seg: c.type, target:`[data-p="contacts:${c.id}:n"]`})],
     ['applications','Vagas','mail','#c9764a', a => ({title: `${a.client} — ${a.role||''}`, sub: jobStage(a).n, tab:'jobs', target:`[data-p="applications:${a.id}:client"]`})],
@@ -380,6 +387,7 @@ function renderSearchResults(q) {
 function goToSearchResult(tabName, target, seg) {
   closeSearch();
   if (seg === 'pro' || seg === 'personal') peopleMode = seg;
+  if (seg === 'project' || seg === 'course') projView = seg;
   goToTab(tabName);
   render();
   if (!target) return;
@@ -477,7 +485,7 @@ const TAB_META = {
   q:       {n: 'Fila',        group: 'plan',     icon: 'inbox',     aliases: ['fila', 'backlog', 'inbox', 'queue']},
   cal:     {n: 'Prazos',      group: 'plan',     icon: 'calendar',  aliases: ['prazos', 'calendario', 'datas', 'cal']},
   goal:    {n: 'Metas',       group: 'plan',     icon: 'flag',      aliases: ['metas', 'objetivos', 'goals']},
-  proj:    {n: 'Projetos',    group: 'work',     icon: 'briefcase', aliases: ['projetos', 'projeto', 'proj']},
+  proj:    {n: 'Projetos',    group: 'work',     icon: 'briefcase', aliases: ['projetos', 'projeto', 'proj', 'disciplina', 'disciplinas']},
   clients: {n: 'Clientes',    group: 'work',     icon: 'user',      aliases: ['clientes', 'cliente', 'clients']},
   jobs:    {n: 'Vagas',       group: 'work',     icon: 'briefcase', aliases: ['vagas', 'vaga', 'candidaturas', 'jobs']},
   earn:    {n: 'Rendimento',  group: 'work',     icon: 'star',      aliases: ['rendimento', 'ganhos', 'receita', 'dinheiro', 'earn']},
@@ -1348,7 +1356,7 @@ function filterBar() {
     <input id="filterText" placeholder="Filtrar…" value="${esc(filterState.text)}">
     <select id="filterType"><option value="">Demanda</option>${TASK_TYPES.map(tt => `<option value="${tt.id}" ${filterState.type===tt.id?'selected':''}>${tt.n}</option>`).join('')}</select>
     <select id="filterArea"><option value="">Área</option>${areaOpts.map(a => `<option value="${esc(a[0])}" ${filterState.area===a[0]?'selected':''}>${esc(a[1])}</option>`).join('')}</select>
-    <select id="filterProj"><option value="">Projeto</option>${alive(S.projects).filter(p=>!p.archived).map(p => `<option value="${p.id}" ${filterState.proj===p.id?'selected':''}>${esc(p.n)}</option>`).join('')}</select>
+    <select id="filterProj"><option value="">Projeto</option>${alive(S.projects).filter(p=>!p.archived).map(p => `<option value="${p.id}" ${filterState.proj===p.id?'selected':''}>${esc(projectOptionLabel(p))}</option>`).join('')}</select>
     <button data-a="toggleLabelsFilter" class="${hasLabels?'on':''}">Labels${hasLabels?' · '+filterState.labels.length:''}</button>
     <button data-a="clearFilters">${ico('x')} Limpar</button>
   </div>
@@ -1361,6 +1369,11 @@ function getTaskCompactMode() {
   if (d === 'compact') return true;
   if (d === 'full') return false;
   return window.innerWidth <= 640;
+}
+/* v177 — todos os cards de tarefa são colapsáveis em qualquer modo (PC, mobile,
+   densidade full/auto/compact e após expandAll/collapseAll). */
+function isTaskCompact(id) {
+  return getTaskCompactMode() ? !expandedTasks.has(id) : collapsedTasks.has(id);
 }
 
 // v94: primeira tarefa PENDENTE da lista visível (mesma ordem e filtros do render).
@@ -1462,7 +1475,7 @@ function renderFilteredTasks() {
     if (!pendingItems.length) {
       return headerHtml + `<div class="msg" style="font-size:11.5px;color:var(--mu);margin:6px 8px 12px;opacity:0.8">✓ Todas as tarefas de ${meta.n.toLowerCase()} concluídas.</div>`;
     }
-    const cardsHtml = ordered.map(({t, score}) => compact && !expandedTasks.has(t.id) ? cardTaskCompact(t, score) : cardTask(t, score)).join('');
+    const cardsHtml = ordered.map(({t, score}) => isTaskCompact(t.id) ? cardTaskCompact(t, score) : cardTask(t, score)).join('');
     return headerHtml + cardsHtml;
   }).join('');
 
@@ -1482,7 +1495,7 @@ function renderFilteredTasks() {
       <div class="done-tasks-list">
         ${doneGroups.map(g => `<div class="done-group">
           <div class="done-group-head"><span>${g.label}</span><span class="done-group-count">${g.items.length}</span></div>
-          ${g.items.map(t => compact && !expandedTasks.has(t.id) ? cardTaskCompact(t, null) : cardTask(t, null)).join('')}
+          ${g.items.map(t => isTaskCompact(t.id) ? cardTaskCompact(t, null) : cardTask(t, null)).join('')}
         </div>`).join('')}
       </div>`;
     doneSectionHtml = `
@@ -1552,7 +1565,7 @@ function refreshTaskCard(taskId) {
   const score = isDone(t) ? null : (S.cfg.autoPriority ? computeTaskScore(t, buildCtx()) : null);
   el.outerHTML = tab === 'q'
     ? cardQueue(t)
-    : (getTaskCompactMode() && !expandedTasks.has(t.id) ? cardTaskCompact(t, score) : cardTask(t, score));
+    : (isTaskCompact(t.id) ? cardTaskCompact(t, score) : cardTask(t, score));
   return true;
 }
 
@@ -1664,7 +1677,7 @@ function cardTask(t, score) {
         <div class="meta">${prMark(t.pr)}${PR[t.pr]}<span class="tag tag-area" style="--c:${areaColor(t.area)}">${esc(areaLabel(t.area))}</span>${flagsHtml ? `<span class="task-flags task-flags--inline">${flagsHtml}</span>` : ''}${skillObjs.map(s => `<span class="tag tag-skill" style="--c:${themeColor(s.color)}">${esc(s.n)}</span>`).join('')}${proj ? `<span class="tag">${esc(proj.n)}</span>` : ''}${t.due ? `<span class="tag">prazo ${fmtDate(t.due)}</span>` : ''}${t.next ? `<span class="tag" style="color:var(--ac)">${ico('star', 'ico--on')}</span>` : ''}${labels.slice(0,4).map(l => `<span class="label-pill" style="--lc:${themeColor(l.color)}">${esc(l.n)}</span>`).join('')}${labels.length>4 ? `<span class="label-pill">+${labels.length-4}</span>` : ''}</div>
       </div>
       <div class="tm" data-a="expandTask" data-id="${t.id}" style="cursor:pointer;">
-        <div class="tm-time"><b data-live-spent="${t.id}">${fmtMin(spent)}</b><span class="tm-sep">/</span><button type="button" class="tm-est" data-a="editInline" data-kind="est" data-id="${t.id}" title="Editar tempo estimado" aria-label="Editar tempo estimado">${t.est ? fmtMin(t.est) : '—'}</button><span class="tm-chev" aria-hidden="true">${ico('chevron-up')}</span></div>
+        <div class="tm-time"><b data-live-spent="${t.id}">${fmtMin(spent)}</b><span class="tm-sep">/</span><button type="button" class="tm-est" data-a="editInline" data-kind="est" data-id="${t.id}" title="Editar tempo estimado" aria-label="Editar tempo estimado">${t.est ? fmtMin(t.est) : '—'}</button><button type="button" class="tm-chev" data-a="collapseCard" data-id="${t.id}" title="Recolher tarefa" aria-label="Recolher tarefa">${ico('chevron-up')}</button></div>
         <div class="mini"><div data-live-bar="${t.id}" style="width:${pctT}%;--bar-span:${pctT>0?(10000/pctT).toFixed(2):100}%"></div></div>
       </div>
     </div>
@@ -1703,6 +1716,7 @@ function cardTask(t, score) {
           ${doneNow ? `<button data-a="openWorkLog" data-id="${t.id}" title="Registrar/editar resumo do trabalho">${ico('edit')} Resumo</button>` : ''}
           ${timerOnTask ? `<button data-a="stopTimer" data-id="${t.id}" title="Parar timer">${ico('stop')} Parar timer</button>` : ''}
           <button data-a="openTaskDetails" data-id="${t.id}">${ico('edit')} Editar detalhes</button>
+          <button data-a="collapseCard" data-id="${t.id}" title="Recolher tarefa">${ico('chevron-up')} Recolher</button>
         </div>
       </details>
       </div>
@@ -1718,15 +1732,18 @@ function cardTask(t, score) {
   </div>`;
 }
 
+function projectOptionLabel(p) {
+  return p && p.kind === 'course' ? p.n + ' · disciplina' : (p ? p.n : '');
+}
 /* v163 — tarefa só se associa a projeto ativo. Um vínculo já existente com
    projeto concluído/arquivado continua visível para não “perder” o valor. */
 function taskProjectOptions(t) {
   const active = alive(S.projects).filter(p => !p.archived && !p.completedAt);
-  const opts = [['', '—'], ...active.map(p => [p.id, p.n])];
+  const opts = [['', '—'], ...active.map(p => [p.id, projectOptionLabel(p)])];
   const cur = t && t.proj ? (S.projects || []).find(p => p.id === t.proj) : null;
   if (cur && !active.some(p => p.id === cur.id)) {
     const why = cur.deletedAt ? 'removido' : cur.completedAt ? 'concluído' : 'arquivado';
-    opts.push([cur.id, cur.n + ' (' + why + ')']);
+    opts.push([cur.id, projectOptionLabel(cur) + ' (' + why + ')']);
   }
   return opts;
 }
@@ -1979,9 +1996,51 @@ function cardJob(app) {
 }
 
 let projAddOpen = false;
+let projView = 'project'; // 'project' | 'course' (transitório, não persiste)
+const STUDY_TYPES = [['grad', 'Graduação'], ['free', 'Curso livre'], ['self', 'Autodidata']];
+function studyTypeLabel(t) {return (STUDY_TYPES.find(x => x[0] === t) || STUDY_TYPES[0])[1];}
+function fmtStudyNum(n) {
+  const r = Math.round(num(n) * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1).replace('.', ',');
+}
 function viewProjects() {
-  const active = alive(S.projects).filter(p => !p.archived);
-  const archived = alive(S.projects).filter(p => p.archived);
+  const allAlive = alive(S.projects);
+  const allProjects = allAlive.filter(p => p.kind !== 'course');
+  const allCourses = allAlive.filter(p => p.kind === 'course');
+  const isCourse = projView === 'course';
+  const activeProjCount = allProjects.filter(p => !p.archived).length;
+  const activeCourseCount = allCourses.filter(p => !p.archived).length;
+  const seg = `<div class="view-toggle proj-seg" role="tablist" aria-label="Projetos ou disciplinas"><button type="button" role="tab" aria-selected="${!isCourse}" class="${!isCourse ? 'on' : ''}" data-a="projView" data-kind="project">${ico('briefcase')} Projetos <span class="count">${activeProjCount}</span></button><button type="button" role="tab" aria-selected="${isCourse}" class="${isCourse ? 'on' : ''}" data-a="projView" data-kind="course">${ico('flag')} Disciplinas <span class="count">${activeCourseCount}</span></button></div>`;
+  if (isCourse) {
+    const active = allCourses.filter(p => !p.archived);
+    const archived = allCourses.filter(p => p.archived);
+    const insts = [...new Set(allCourses.map(p => (p.study && p.study.inst ? String(p.study.inst).trim() : '')).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+    const sorted = active.slice().sort((a,b) => {
+      const sa = studyStatus(a), sb = studyStatus(b);
+      const da = (sa && sa.next && sa.next.date) || '9999';
+      const db = (sb && sb.next && sb.next.date) || '9999';
+      return da.localeCompare(db) || (a.n || '').localeCompare(b.n || '', 'pt-BR');
+    });
+    return `${seg}
+      <datalist id="courseInstList">${insts.map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>
+      <div class="card proj-add${projAddOpen ? ' open' : ''}">
+        <button type="button" class="proj-add-toggle" data-a="toggleProjAdd" aria-expanded="${projAddOpen}" aria-controls="projAddBody">${ico(projAddOpen ? 'x' : 'plus')} ${projAddOpen ? 'Fechar' : 'Adicionar disciplina'}</button>
+        <div class="proj-add-body" id="projAddBody">
+          <div class="form">
+            <label class="full">Nome<input id="cn" placeholder="Ex.: Cálculo II"></label>
+            <label>Instituição<input id="cinst" list="courseInstList" placeholder="Ex.: UFMG"></label>
+            <label>Tipo<select id="ctype">${STUDY_TYPES.map(x => `<option value="${x[0]}">${x[1]}</option>`).join('')}</select></label>
+            <label>Período<input id="cterm" placeholder="Ex.: 2026/2"></label>
+            <label>Professor (opcional)<input id="cteacher"></label>
+          </div>
+          <button data-a="paddCourse" style="margin-top:8px">Criar disciplina</button>
+        </div>
+      </div>
+      ${sorted.length ? sorted.map(projectCard).join('') : '<div class="msg">Nenhuma disciplina ativa. Use “Adicionar disciplina” acima.</div>'}
+      ${archived.length ? `<details class="proj-archived" data-eid="projArchived" ${openEdits.has('projArchived') ? 'open' : ''}><summary>Arquivados (${archived.length})</summary>${archived.map(projectCard).join('')}</details>` : ''}`;
+  }
+  const active = allProjects.filter(p => !p.archived);
+  const archived = allProjects.filter(p => p.archived);
   const clients = alive(S.clients);
   const statusById = new Map(active.map(p => [p.id, projectStatus(p)]));
   const nActive = active.filter(p => statusById.get(p.id).id === 'active').length;
@@ -1998,7 +2057,7 @@ function viewProjects() {
     <span class="proj-chip proj-chip--future"><i></i>Futuros <b>${nFuture}</b></span>
     <span class="proj-chip proj-chip--soon" title="${nLate ? nLate + ' atrasado(s)' : 'Prazo de até 7 dias'}"><i></i>Prazo próximo <b>${nSoon}</b>${nLate ? `<em>${nLate} atrasado${nLate === 1 ? '' : 's'}</em>` : ''}</span>
   </div>` : '';
-  return `<div class="card proj-add${projAddOpen ? ' open' : ''}">
+  return `${seg}<div class="card proj-add${projAddOpen ? ' open' : ''}">
     <button type="button" class="proj-add-toggle" data-a="toggleProjAdd" aria-expanded="${projAddOpen}" aria-controls="projAddBody">${ico(projAddOpen ? 'x' : 'plus')} ${projAddOpen ? 'Fechar' : 'Adicionar projeto'}</button>
     <div class="proj-add-body" id="projAddBody">
       <div class="form"><label>Nome<input id="pn"></label><label>Área<select id="pa">${getAreas().map(a=>`<option value="${esc(a.id)}">${esc(a.n)}</option>`).join('')}</select></label><label>Cliente<select id="pclient"><option value="">—</option>${clients.map(c => `<option value="${c.id}">${esc(c.n)}</option>`).join('')}</select></label><label>Prazo<input id="pdu" type="date"></label><label>Recompensa<input id="prw"></label></div>
@@ -2031,7 +2090,85 @@ function renderProjectGoals(p, flat) {
     ${body}
   </details>`;
 }
+function courseCard(p) {
+  const st = studyStatus(p) || {state:'sem-avaliacoes', total:100, min:60, atual:0, evals:[], next:null};
+  const study = (p.study && typeof p.study === 'object') ? p.study : mkStudy();
+  const ts = S.tasks.filter(t => t.proj === p.id);
+  const done = ts.filter(t => t.done).length, total = ts.length;
+  const goals = p.goals || [];
+  const goalsDone = goals.filter(g => g.d).length;
+  const stepsTotal = goals.length || total;
+  const stepsDone = goals.length ? goalsDone : done;
+  const stepsLabel = goals.length ? 'Etapas' : 'Tarefas';
+  const mins = projMinutes(p.id);
+  const pct = st.evals.length && st.total > 0
+    ? Math.max(0, Math.min(100, Math.round(st.atual / st.total * 100)))
+    : (stepsTotal ? Math.round(stepsDone / stepsTotal * 100) : 0);
+  const stateMap = {
+    'sem-avaliacoes': {label: 'Em estudo', icon: 'flag', color: 'var(--ac)'},
+    'sem-peso':       {label: 'Sem pesos', icon: 'alert', color: 'var(--wr)'},
+    'aprovada':       {label: 'Aprovada', icon: 'check', color: 'var(--ok)'},
+    'sem-nota':       {label: 'Sem notas', icon: 'calendar', color: 'var(--bu)'},
+    'sem-como-passar':{label: 'Sem como passar', icon: 'x', color: 'var(--er)'},
+    'em-risco':       {label: 'Em andamento', icon: 'alert', color: 'var(--wr)'}
+  };
+  const sm = stateMap[st.state] || stateMap['sem-avaliacoes'];
+  let summaryText = '';
+  if (st.state === 'sem-avaliacoes') {
+    summaryText = stepsTotal ? `${stepsLabel} ${stepsDone}/${stepsTotal} (${pct}%)` : 'Nenhuma avaliação cadastrada';
+  } else if (st.state === 'sem-peso') {
+    summaryText = 'Defina o peso das avaliações.';
+  } else if (st.state === 'aprovada') {
+    summaryText = `Média ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)} · Aprovada`;
+  } else if (st.state === 'sem-nota') {
+    summaryText = st.next
+      ? `Sem notas · Próxima: ${esc(st.next.t || 'Avaliação')} (${fmtDate(st.next.date)})`
+      : 'Sem notas ainda';
+  } else if (st.state === 'sem-como-passar') {
+    summaryText = `Média ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)} · Sem como passar`;
+  } else {
+    summaryText = `Média ${fmtStudyNum(st.atual)}/${fmtStudyNum(st.total)}` + (st.next ? ` · Próxima: ${esc(st.next.t || 'Avaliação')} (${fmtDate(st.next.date)})` : '');
+  }
+  const k = f => `projects:${p.id}:${f}`;
+  const instTerm = [study.inst ? `<span>${ico('briefcase')} ${esc(study.inst)}</span>` : '', study.term ? `<span>${ico('calendar')} ${esc(study.term)}</span>` : ''].filter(Boolean).join('');
+  return `<div class="card proj-card proj-card--course proj-card--${st.state}" style="--c:${sm.color};--pc:${sm.color}">
+    <div class="proj-card-head">
+      <div class="proj-heading">
+        <div class="proj-kicker"><span class="proj-status">${ico(sm.icon)} ${sm.label}</span><span class="proj-status-note">${esc(studyTypeLabel(study.type))}</span></div>
+        <h3 class="proj-name">${esc(p.n)}</h3>
+        <div class="proj-meta">
+          ${instTerm}
+          <span class="course-hours">${ico('clock')} ${mins ? fmtMin(mins) : '0min'}</span>
+          ${stepsTotal ? `<span>${ico('flag')} ${stepsLabel} ${stepsDone}/${stepsTotal}</span>` : ''}
+        </div>
+        <div class="course-summary">${summaryText}</div>
+      </div>
+    </div>
+    <div class="proj-pct-row" aria-label="Progresso ${pct}%">
+      <div class="proj-pct-bar"><i style="width:${pct}%"></i></div>
+      <span class="proj-pct">${pct}%</span>
+    </div>
+    <details class="proj-edit" data-eid="pe_${p.id}" ${openEdits.has('pe_' + p.id) ? 'open' : ''}>
+      <summary>${ico('chevron-down','proj-edit-chev')} Editar disciplina</summary>
+      <div class="form">
+        <label class="full">Nome<input data-p="${esc(k('n'))}" value="${esc(p.n)}"></label>
+        <label>Instituição<input data-p="${esc(k('study.inst'))}" list="courseInstList" value="${esc(study.inst||'')}"></label>
+        <label>Tipo<select data-p="${esc(k('study.type'))}">${selOptions(STUDY_TYPES, study.type)}</select></label>
+        <label>Período<input data-p="${esc(k('study.term'))}" value="${esc(study.term||'')}" placeholder="Ex.: 2026/2"></label>
+        <label>Professor<input data-p="${esc(k('study.teacher'))}" value="${esc(study.teacher||'')}"></label>
+        <label>Nota total<input type="number" step="0.5" min="1" data-p="${esc(k('study.total'))}" value="${st.total}"></label>
+        <label>Nota mínima<input type="number" step="0.5" min="0" data-p="${esc(k('study.min'))}" value="${st.min}"></label>
+      </div>
+      ${renderProjectGoals(p, true)}
+      <div class="acts proj-edit-actions">
+        <button data-a="parch" data-id="${p.id}">${p.archived?'Restaurar':'Arquivar'}</button>
+        <button data-a="pdel" data-id="${p.id}" class="proj-del" aria-label="Excluir disciplina" title="Excluir disciplina">${ico('x')} Excluir</button>
+      </div>
+    </details>
+  </div>`;
+}
 function projectCard(p) {
+  if (p && p.kind === 'course') return courseCard(p);
   const ts = S.tasks.filter(t => t.proj === p.id);
   const done = ts.filter(t => t.done).length, total = ts.length;
   const goals = p.goals || [];
@@ -2122,7 +2259,7 @@ function viewClients() {
 }
 
 function viewEarnings() {
-  const completed = alive(S.projects).filter(p => p.completedAt);
+  const completed = alive(S.projects).filter(p => p.kind !== 'course' && p.completedAt);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth()-1, 1).getTime();
@@ -2279,14 +2416,14 @@ function viewStats() {
   const energyDone = {high:0, med:0, low:0};
   S.tasks.forEach(t => {if (!t.done || !t.doneAt) return; const h = new Date(t.doneAt).getHours(); if (h >= 6 && h < 12) energyDone.high++; else if (h >= 12 && h < 18) energyDone.med++; else energyDone.low++;});
   const energyTotal = energyDone.high + energyDone.med + energyDone.low;
-  const projList = alive(S.projects).filter(p => !p.archived).map(p => {const ts = S.tasks.filter(t => t.proj === p.id); const done = ts.filter(t => t.done).length; const total = ts.length; const pctTasks = total ? Math.round(done/total*100) : 0; const estTotal = projEstTotal(p.id), estDone = projEstDone(p.id); const pctTime = estTotal > 0 ? Math.round(estDone/estTotal*100) : null; return {p, pctTasks, pctTime, done, total, mins: projMinutes(p.id), color: areaColor(p.area)};}).filter(x => x.total > 0).sort((a,b) => b.mins - a.mins);
+  const projList = alive(S.projects).filter(p => p.kind !== 'course' && !p.archived).map(p => {const ts = S.tasks.filter(t => t.proj === p.id); const done = ts.filter(t => t.done).length; const total = ts.length; const pctTasks = total ? Math.round(done/total*100) : 0; const estTotal = projEstTotal(p.id), estDone = projEstDone(p.id); const pctTime = estTotal > 0 ? Math.round(estDone/estTotal*100) : null; return {p, pctTasks, pctTime, done, total, mins: projMinutes(p.id), color: areaColor(p.area)};}).filter(x => x.total > 0).sort((a,b) => b.mins - a.mins);
   const calib = calibrationStats();
   const proNet = networkStats('pro');
   const personalNet = networkStats('personal');
   const birthdays = upcomingBirthdays(14);
   const jStats = jobStats();
   const primary = S.cfg.primaryCurrency || 'BRL';
-  const earnedPrimary = alive(S.projects).filter(p => p.completedAt).reduce((s,p) => {const e = projectEarnings(p); return s + convertTo(e.total, e.currency, primary);}, 0);
+  const earnedPrimary = alive(S.projects).filter(p => p.kind !== 'course' && p.completedAt).reduce((s,p) => {const e = projectEarnings(p); return s + convertTo(e.total, e.currency, primary);}, 0);
 
   const xpBlock = `<h3 style="margin-top:0">Progressão</h3><div class="xp-hero"><div><div class="xp-level-label">Nível</div><div class="xp-level">${xp.lv}</div></div><div class="xp-bar-wrap"><div style="font-size:12px;color:var(--mu);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b style="color:var(--tx)">${Math.round(xp.inLevel)}</b> / ${xp.forLevel} XP neste nível</span><span>faltam <b style="color:var(--ac)">${xp.toNext}</b></span></div><div class="xp-bar"><div style="width:${(xp.progress*100)}%"></div></div><div class="xp-meta">Total: <b>${Math.round(xp.gxp)}</b> XP · Semana: <b>+${xp.weekXp}</b> · Mês: <b>+${xp.monthXp}</b></div></div></div><h4>Top habilidades por XP</h4>${xp.topSkills.length ? xp.topSkills.map(s => {const skXp = Math.round(num(s.xp)); const info = levelInfo(skXp); return `<div class="skill-xp-row"><div class="sxr-label" style="color:${themeColor(s.color)}">${esc(s.n)}</div><div class="sxr-bar"><div style="width:${(skXp/xp.maxSkillXp*100)}%;background:${themeColor(s.color)}"></div></div><div class="sxr-val"><b>N${info.lv}</b> · ${skXp} XP</div></div>`;}).join('') : '<div class="msg">Sem habilidades ainda.</div>'}`;
 

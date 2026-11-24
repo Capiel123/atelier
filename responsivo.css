@@ -1420,3 +1420,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .contact-filter-summary{margin:0 0 8px}
   .tag-filter-label{flex-basis:100%;margin:0 0 2px}
 }
+/* v176 — disciplinas (E2): seletor e resumo no mobile */
+@media(max-width:640px){
+  .proj-seg button{min-height:44px}
+  .course-summary{font-size:12px}
+}
+/* v177 — recolher card de tarefa sem conflito com a hitbox de .tm-est */
+@media(max-width:640px){
+  .tm-est::after{inset:-11px -2px -11px -8px}
+  .tm-chev{min-width:30px;min-height:30px;margin-left:8px;padding:4px}
+  .tm-chev::after{content:'';position:absolute;inset:-7px -4px}
+}
