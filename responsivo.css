@@ -1440,3 +1440,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ac);box-
   .course-eval-row input{min-height:40px;font-size:14px}
   .course-eval-add{width:100%;justify-content:center;min-height:44px}
 }
+/* v180 — Pessoas: chips de investimento e rede social confortáveis no mobile */
+@media(max-width:640px){
+  .contact-invest-bar{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .invest-chip{justify-content:center;min-height:40px;padding:6px 8px;font-size:11.5px}
+  .contact-invest{min-height:28px;padding:3px 8px}
+  .contact-social-copy{min-width:32px;min-height:32px}
+  .contact-context,.contact-notes,.contact-interests{flex-direction:column;gap:2px}
+}

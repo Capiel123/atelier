@@ -398,18 +398,38 @@ let contactView = loadContactView();
 // O5 — estado local da órbita (não entra em S, exceto os favoritos).
 let orbitSelectedId = null;
 let orbitDepthFilter = {pro: 0, personal: 0};
+function orbitFavMeta() {
+  if (!S || !S.cfg) return {};
+  if (!S.cfg.orbitFavMeta || typeof S.cfg.orbitFavMeta !== 'object' || Array.isArray(S.cfg.orbitFavMeta)) {
+    S.cfg.orbitFavMeta = {};
+  }
+  return S.cfg.orbitFavMeta;
+}
 function orbitFavorites() {
   if (!S || !S.cfg) return [];
   if (!Array.isArray(S.cfg.orbitFavorites)) S.cfg.orbitFavorites = [];
   return S.cfg.orbitFavorites;
 }
-function isOrbitFavorite(id) { return !!id && orbitFavorites().indexOf(id) >= 0; }
+function isOrbitFavorite(id) {
+  if (!id || !S || !S.cfg) return false;
+  const meta = S.cfg.orbitFavMeta;
+  if (meta && typeof meta === 'object' && Object.prototype.hasOwnProperty.call(meta, id)) {
+    return !!(meta[id] && meta[id].on);
+  }
+  return orbitFavorites().indexOf(id) >= 0;
+}
 function toggleOrbitFavorite(id) {
   if (!id) return false;
   const list = orbitFavorites();
+  const meta = orbitFavMeta();
+  const next = !isOrbitFavorite(id);
+  const now = Date.now();
+  const prevAt = (meta[id] && Number(meta[id].at)) || 0;
+  meta[id] = {on: next, at: Math.max(now, prevAt + 1)};
   const i = list.indexOf(id);
-  if (i >= 0) list.splice(i, 1); else list.push(id);
-  return i < 0;
+  if (next) { if (i < 0) list.push(id); }
+  else if (i >= 0) { list.splice(i, 1); }
+  return next;
 }
 // v137 — aba única "Pessoas": o segmento decide qual tipo é exibido (não persiste).
 let peopleMode = 'pro';
@@ -844,6 +864,22 @@ function migrate(raw) {
   s.cfg.focusNoStop = s.cfg.focusNoStop ?? false;
   s.cfg.focusSwitchHidden = s.cfg.focusSwitchHidden ?? false;
   s.cfg.taskDensity = s.cfg.taskDensity ?? 'auto';
+  // v180: normaliza orbitFavorites + orbitFavMeta (LWW por contato; remoção nunca revive).
+  if (!Array.isArray(s.cfg.orbitFavorites)) s.cfg.orbitFavorites = [];
+  s.cfg.orbitFavorites = [...new Set(s.cfg.orbitFavorites.filter(x => typeof x === 'string' && x))];
+  if (!s.cfg.orbitFavMeta || typeof s.cfg.orbitFavMeta !== 'object' || Array.isArray(s.cfg.orbitFavMeta)) {
+    s.cfg.orbitFavMeta = {};
+  }
+  Object.keys(s.cfg.orbitFavMeta).forEach(cid => {
+    const entry = s.cfg.orbitFavMeta[cid];
+    if (!entry || typeof entry !== 'object') { delete s.cfg.orbitFavMeta[cid]; return; }
+    const on = !!entry.on;
+    const at = Number(entry.at) || 0;
+    s.cfg.orbitFavMeta[cid] = {on, at};
+    const idx = s.cfg.orbitFavorites.indexOf(cid);
+    if (on && idx < 0) s.cfg.orbitFavorites.push(cid);
+    else if (!on && idx >= 0) s.cfg.orbitFavorites.splice(idx, 1);
+  });
   ['projects','clients','contacts','applications','skills','goals'].forEach(k => {
     (s[k]||[]).forEach(o => {if (o.deletedAt === undefined) o.deletedAt = null;});
   });

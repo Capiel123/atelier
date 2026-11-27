@@ -6,7 +6,7 @@
 
 /* --- AÇÕES QUE MUTAM S (disparam snapshot para Ctrl+Z) --- */
 // 💡 Se criar uma nova ação que altere S, adicione o nome aqui — senão o undo não pega.
-const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','paddCourse','evalAdd','evalDel','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave','showClearedDone','completeActiveTask']);
+const MUTATING_ACTIONS = new Set(['tog','stog','log','del','sdel','subUp','subDown','cp','clrDone','focusCompleteYes','focusDone','padd','paddCourse','evalAdd','evalDel','pdel','gadd','gdel','skillAdd','skillArch','skillRestore','cAdd','cDel','cArchive','cmdAdd','cmdAddFull','cmdDel','cmdUp','cmdDown','setTaskColor','setnext','moveUp','moveDown','setEnergy','postpone','moveToDay','qaJob','jobAddFull','jobAreaAdd','jobAreaDel','jobSubareaAdd','jobSubareaDel','jobPlatformAdd','jobPlatformDel','jobStage','jobApply','jobFollowUp','jobOpenApply','jobBulkAdd','jobCreateTask','jobDel','reviewJobFollowUp','reviewJobSnooze','reviewComplete','reviewArchive','reviewArchiveProj','reviewContactDone','reviewContactSnooze','reviewSavePriority','contactSend','contactReceive','contactSnooze','contactUnsnooze','contactClearWaiting','contactLog','contactOrbitFav','contactCycleInvest','snoozeApply','toggleTagFilter','clearTagFilter','setTheme','clearCustomAccent','logoRemove','focusDurAdd','focusDurRem','clientAdd','clientDel','pcomplete','puncomplete','histReopen','histCopy','histDel','workLogSave','pgadd','pgtog','pgdel','pgup','pgdown','areaAdd','areaArch','trashRestore','trashDelete','trashEmpty','contactConvert','jobConvert','contactsCompact','closeFocusStop','closeFocusConfirm','focusStopAndStartHere','toggleSection','resetXp','aiTaskSave','showClearedDone','completeActiveTask']);
 
 /* v179 — guarda de idempotência contra duplo disparo imediato no mobile
    (duplo toque em + / Agendar para / Enter + click em teclados IME). */
@@ -870,12 +870,34 @@ document.addEventListener('click', ev => {
       contactFilterState[tp].fav = !contactFilterState[tp].fav;
       render(); return;
     }
+    case 'contactInvestFilter': {
+      const tp = btn.dataset.type;
+      const v = btn.dataset.v || 'all';
+      contactFilterState[tp].priority = (contactFilterState[tp].priority === v && v !== 'all') ? 'all' : v;
+      render(); return;
+    }
+    case 'contactCycleInvest': {
+      if (!c) break;
+      const cur = (c.priority === 0 || c.priority === 2) ? c.priority : 1;
+      const next = (cur + 1) % 3;
+      c.priority = next;
+      touch(c);
+      const inv = contactInvestMeta(next, c.type);
+      toast(inv.label);
+      break;
+    }
+    case 'contactCopySocial': {
+      if (!c || !c.url) return;
+      const parsed = parseSocialLink(c.url);
+      copyTxt((parsed && parsed.copyText) || c.url);
+      return;
+    }
     case 'clearContactFilters': {
       const tp = btn.dataset.type;
       contactFilterState[tp] = {text:'', cat:'', status:'all', tags:[], sort:'score', priority:'all', fav:false};
       render(); return;
     }
-    case 'cAdd': {const type = btn.dataset.type; const n = V('cN_' + type); if (!n) {toast('Nome obrigatório', true); return;} const cad = +V('cCadence_' + type) || (type === 'pro' ? 30 : 21); const tags = tagList(V('cTags_' + type) || ''); S.contacts.push(mkContact({n, type, cat: V('cCat_' + type) || (type === 'pro' ? 'Prospect' : 'Conhecido'), where: V('cWhere_' + type), url: V('cUrl_' + type), role: V('cRole_' + type), context: V('cContext_' + type), notes: V('cNotes_' + type), lastConversation: V('cLastConv_' + type), nextAction: V('cNextAction_' + type), cadence: cad, tags})); if (window.__atelierDraftClear) window.__atelierDraftClear('contact:' + type + ':'); break;}
+    case 'cAdd': {const type = btn.dataset.type; const n = V('cN_' + type); if (!n) {toast('Nome obrigatório', true); return;} const cad = +V('cCadence_' + type) || (type === 'pro' ? 30 : 21); const tags = tagList(V('cTags_' + type) || ''); const prioRaw = V('cPriority_' + type); const priority = ['0','1','2'].includes(String(prioRaw)) ? +prioRaw : 1; S.contacts.push(mkContact({n, type, cat: V('cCat_' + type) || (type === 'pro' ? 'Prospect' : 'Conhecido'), priority, where: V('cWhere_' + type), url: V('cUrl_' + type), role: V('cRole_' + type), birthday: V('cBirthday_' + type), interests: V('cInterests_' + type), context: V('cContext_' + type), notes: V('cNotes_' + type), lastConversation: V('cLastConv_' + type), nextAction: V('cNextAction_' + type), cadence: cad, tags})); if (window.__atelierDraftClear) window.__atelierDraftClear('contact:' + type + ':'); break;}
     case 'contactSend': {if (!c) break; logInteraction(c, 'out', 'msg', ''); toast('Enviei · +' + (c.cadence || 30) + 'd'); break;}
     case 'contactReceive': {if (!c) break; logInteraction(c, 'in', 'msg', ''); toast('Resposta registrada'); break;}
     case 'contactConvert': {

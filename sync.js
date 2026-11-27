@@ -689,11 +689,49 @@
     return changed;
   }
 
+  // v180: favoritos de Pessoas convergem por contato (LWW em orbitFavMeta).
+  // Uma remoção local nunca revive por um pull atrasado de user_settings.
+  function mergeOrbitFavoritesFromSettings(data) {
+    if (!data || !data.cfg || typeof data.cfg !== 'object') return false;
+    if (!S || !S.cfg) return false;
+    var rFavs = Array.isArray(data.cfg.orbitFavorites) ? data.cfg.orbitFavorites : [];
+    var rMeta = (data.cfg.orbitFavMeta && typeof data.cfg.orbitFavMeta === 'object' && !Array.isArray(data.cfg.orbitFavMeta)) ? data.cfg.orbitFavMeta : {};
+    var lFavs = Array.isArray(S.cfg.orbitFavorites) ? S.cfg.orbitFavorites : [];
+    var lMeta = (S.cfg.orbitFavMeta && typeof S.cfg.orbitFavMeta === 'object' && !Array.isArray(S.cfg.orbitFavMeta)) ? S.cfg.orbitFavMeta : {};
+    if (!window.__merge || !window.__merge.mergeOrbitFavorites) return false;
+    var res = window.__merge.mergeOrbitFavorites(lFavs, lMeta, rFavs, rMeta);
+    var changed = JSON.stringify(lFavs) !== JSON.stringify(res.favorites) || JSON.stringify(lMeta) !== JSON.stringify(res.meta);
+    var remoteDiffers = JSON.stringify(rFavs) !== JSON.stringify(res.favorites) || JSON.stringify(rMeta) !== JSON.stringify(res.meta);
+    if (changed) {
+      S.cfg.orbitFavorites = res.favorites;
+      S.cfg.orbitFavMeta = res.meta;
+    }
+    if (remoteDiffers) {
+      var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
+      pushOp(store, 'user_settings', 'settings', 'upsert');
+      writeJSON(OUTBOX_KEY, store);
+      state.pending = store.ops.length;
+    }
+    return changed;
+  }
+
   function applyUserSettings(row) {
     var cu = numVal(row.client_updated_at, 0);
     var last = numVal(localStorage.getItem(SETTINGS_CU_KEY), 0);
     var data = row.data || {};
-    if (last && cu <= last) return mergePomodorosFromSettings(data);
+    // v180: se há alteração local mais nova pendente em user_settings (ex.:
+    // desmarcar favorito 100ms antes do pull), não sobrescrever S.cfg inteiro;
+    // converge apenas os campos CRDT/append-only (pomodoros e favoritos).
+    var store = readJSON(OUTBOX_KEY, { seq: 0, ops: [] });
+    var hasPendingSettings = store.ops.some(function (o) { return o.table === 'user_settings'; });
+    var localCu = numVal((typeof S !== 'undefined' && S) ? S.lastModified : 0, 0);
+    if ((last && cu <= last) || (hasPendingSettings && localCu >= cu)) {
+      var pCh = mergePomodorosFromSettings(data);
+      var fCh = mergeOrbitFavoritesFromSettings(data);
+      return !!(pCh || fCh);
+    }
+    var prevFavs = (S.cfg && Array.isArray(S.cfg.orbitFavorites)) ? S.cfg.orbitFavorites.slice() : [];
+    var prevFavMeta = (S.cfg && S.cfg.orbitFavMeta && typeof S.cfg.orbitFavMeta === 'object') ? Object.assign({}, S.cfg.orbitFavMeta) : {};
     var cfg = Object.assign({}, data.cfg || {});
     // v100 (BUG 3): recolhimento de seções é preferência LOCAL (não vai no pull).
     var localSections = (S.cfg && S.cfg.sectionsCollapsed) || null;
@@ -706,8 +744,12 @@
     S.cfg = cfg; S.energy = data.energy || {}; S.xpPool = numVal(data.xpPool, 0);
     S.commands = Array.isArray(data.commands) ? data.commands : [];
     // Fase 4: S.pomodoros viaja no blob de user_settings (JSONB), sem tabela nova.
-    // Se o remoto ainda não tem o campo (cliente antigo), preserva o local.
     mergePomodorosFromSettings(data);
+    // v180: restaura os favoritos locais antes do merge por contato para não
+    // perder nenhuma remoção recente do aparelho atual.
+    S.cfg.orbitFavorites = prevFavs;
+    S.cfg.orbitFavMeta = prevFavMeta;
+    mergeOrbitFavoritesFromSettings(data);
     S.cfg.theme = localTheme;
     S.cfg.accentColor = localAccent;
     if (localSections) S.cfg.sectionsCollapsed = localSections;

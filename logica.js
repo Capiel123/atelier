@@ -559,6 +559,80 @@ function createFollowUpTask(app) {const d = app.nextFollowUp ? (new Date(app.nex
 function jobStats() {const active = alive(S.applications).filter(a => !isJobTerminal(a)); const applied = alive(S.applications).filter(a => a.appliedAt); const responded = applied.filter(a => a.firstResponseAt); const responseRate = applied.length ? responded.length / applied.length : 0; const timeToResponse = responded.map(a => (a.firstResponseAt - a.appliedAt) / 86400000).filter(x => x >= 0).sort((a,b) => a-b); const medianTime = timeToResponse.length ? timeToResponse[Math.floor(timeToResponse.length/2)] : 0; const pipelineValue = active.reduce((sum, a) => sum + (a.ticket || 0) * (JOB_STAGE_PROB[a.stage] || 0), 0); const byStage = {}; JOB_STAGES.forEach(s => byStage[s.id] = 0); alive(S.applications).forEach(a => byStage[a.stage] = (byStage[a.stage] || 0) + 1); const byPlatform = {}; alive(S.applications).forEach(a => {if (!a.platform) return; if (!byPlatform[a.platform]) byPlatform[a.platform] = {applied:0, responded:0}; if (a.appliedAt) byPlatform[a.platform].applied++; if (a.firstResponseAt) byPlatform[a.platform].responded++;}); const byArea = {}; alive(S.applications).forEach(a => {if (!a.area) return; if (!byArea[a.area]) byArea[a.area] = {count:0, ticket:0}; byArea[a.area].count++; byArea[a.area].ticket += a.ticket || 0;}); return {active, applied, responded, responseRate, medianTime, pipelineValue, byStage, byPlatform, byArea};}
 
 /* --- CONTATOS --- */
+// v180 — prioridade de investimento relacional com vocabulário próprio por aba (Rede vs. Pessoal).
+function contactInvestMeta(priority, type) {
+  const p = (priority === 0 || priority === '0') ? 0 : (priority === 2 || priority === '2') ? 2 : 1;
+  const isPro = type !== 'personal';
+  if (isPro) {
+    return [
+      {level: 0, label: 'Priorizar', short: 'Priorizar', hint: 'Alto retorno · investir energia ativa'},
+      {level: 1, label: 'Manter', short: 'Manter', hint: 'Ritmo regular · manter contato'},
+      {level: 2, label: 'Segundo plano', short: '2º plano', hint: 'Baixo investimento · deixar mais de lado'}
+    ][p];
+  }
+  return [
+    {level: 0, label: 'Círculo íntimo', short: 'Íntimo', hint: 'Vínculo essencial · vale investir presença'},
+    {level: 1, label: 'Cultivar', short: 'Cultivar', hint: 'Manter por perto no ritmo leve'},
+    {level: 2, label: 'Esporádico', short: 'Esporádico', hint: 'Sem cobrança · deixar mais de lado'}
+  ][p];
+}
+// v180 — parser seguro de rede social: aceita URL, domínio sem protocolo,
+// "plataforma: @handle" ou "@handle". Bloqueia javascript: e devolve rótulo limpo.
+function parseSocialLink(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return null;
+  if (/^\s*javascript:/i.test(s) || /^\s*data:/i.test(s)) return null;
+  const prefixMap = [
+    [/^(?:ig|insta|instagram)\s*[:/]\s*@?([^\s/]+)$/i, 'Instagram', h => 'https://instagram.com/' + h, h => '@' + h],
+    [/^(?:x|twitter|tw)\s*[:/]\s*@?([^\s/]+)$/i, 'X', h => 'https://x.com/' + h, h => '@' + h],
+    [/^(?:li|linkedin)\s*[:/]\s*@?([^\s]+)$/i, 'LinkedIn', h => 'https://linkedin.com/in/' + h.replace(/^in\//i, ''), h => '@' + h.replace(/^in\//i, '')],
+    [/^(?:be|behance)\s*[:/]\s*@?([^\s/]+)$/i, 'Behance', h => 'https://behance.net/' + h, h => '@' + h],
+    [/^(?:art|artstation)\s*[:/]\s*@?([^\s/]+)$/i, 'ArtStation', h => 'https://artstation.com/' + h, h => '@' + h],
+    [/^(?:gh|github)\s*[:/]\s*@?([^\s/]+)$/i, 'GitHub', h => 'https://github.com/' + h, h => '@' + h],
+    [/^(?:yt|youtube)\s*[:/]\s*@?([^\s/]+)$/i, 'YouTube', h => 'https://youtube.com/@' + h, h => '@' + h],
+    [/^(?:dc|discord)\s*[:/]\s*(.+)$/i, 'Discord', () => '', h => h.trim()],
+    [/^(?:wa|whats|whatsapp)\s*[:/]\s*([+\d\s()-]+)$/i, 'WhatsApp', h => 'https://wa.me/' + h.replace(/\D/g, ''), h => h.trim()]
+  ];
+  for (const [re, platform, toHref, toHandle] of prefixMap) {
+    const m = re.exec(s);
+    if (m) {
+      const handle = toHandle(m[1]);
+      const href = toHref(m[1]);
+      return {platform, handle, href, label: platform + ' · ' + handle, copyText: href || handle};
+    }
+  }
+  const hasProto = /^https?:\/\//i.test(s);
+  const looksLikeDomain = !hasProto && !s.startsWith('@') && /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(s);
+  if (hasProto || looksLikeDomain) {
+    const href = hasProto ? s : ('https://' + s);
+    try {
+      const u = new URL(href);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+      const host = u.hostname.replace(/^www\./i, '').toLowerCase();
+      const segs = u.pathname.split('/').filter(Boolean);
+      const known = [
+        ['instagram.com', 'Instagram', () => segs[0] ? '@' + segs[0].replace(/^@/, '') : ''],
+        ['linkedin.com', 'LinkedIn', () => segs[1] ? segs[1] : (segs[0] || '')],
+        ['x.com', 'X', () => segs[0] ? '@' + segs[0].replace(/^@/, '') : ''],
+        ['twitter.com', 'X', () => segs[0] ? '@' + segs[0].replace(/^@/, '') : ''],
+        ['behance.net', 'Behance', () => segs[0] ? '@' + segs[0] : ''],
+        ['artstation.com', 'ArtStation', () => segs[0] ? '@' + segs[0] : ''],
+        ['github.com', 'GitHub', () => segs[0] ? '@' + segs[0] : ''],
+        ['youtube.com', 'YouTube', () => segs[0] || ''],
+        ['wa.me', 'WhatsApp', () => segs[0] || ''],
+        ['t.me', 'Telegram', () => segs[0] ? '@' + segs[0] : ''],
+        ['tiktok.com', 'TikTok', () => segs[0] ? (segs[0].startsWith('@') ? segs[0] : '@' + segs[0]) : ''],
+        ['vimeo.com', 'Vimeo', () => segs[0] || '']
+      ];
+      const hit = known.find(([dom]) => host === dom || host.endsWith('.' + dom));
+      const platform = hit ? hit[1] : host;
+      const handle = hit ? hit[2]() : (segs[0] ? '/' + segs[0] : '');
+      const label = handle ? (platform + ' · ' + handle) : platform;
+      return {platform, handle: handle || host, href: u.toString(), label, copyText: u.toString()};
+    } catch (e) {}
+  }
+  return {platform: 'Social', handle: s, href: '', label: s, copyText: s};
+}
 function contactStatus(c) {const today = iso(new Date()); if (c.archived) return {k:'arquivado', label:'Arquivado', color:'#666'}; if (c.snoozedUntil && c.snoozedUntil > today) return {k:'snoozed', label:'Adiado até ' + fmtDate(c.snoozedUntil), color:'#7a7580'}; if (c.waitingFor && c.waitingSince) {const waitDays = (Date.now() - c.waitingSince) / 86400000; if (waitDays >= 10) return {k:'atrasado', label:'Aguardando há ' + Math.round(waitDays) + 'd', color:'#e0626a'}; if (waitDays >= 5) return {k:'aguardando', label:'Aguardando', color:'#6b3a5e'}; return {k:'aguardando', label:'Aguardando (recente)', color:'#6b3a5e'};} if (!c.lastContact && !c.nextContact) return {k:'novo', label:'Novo contato', color:'#9a94a3'}; if (c.nextContact && c.nextContact < today) return {k:'atrasado', label:'Follow-up atrasado', color:'#e0626a'}; if (c.nextContact && c.nextContact === today) return {k:'hoje', label:'Follow-up hoje', color:'#e0a33b'}; if (c.nextContact) return {k:'agendado', label:'Em dia', color:'#4fb3a2'}; if (c.lastContact) return {k:'interagido', label:'Sem próximo passo', color:'#9a94a3'}; return {k:'novo', label:'Novo contato', color:'#9a94a3'};}
 function contactScore(c) {if (c.archived || c.deletedAt) return -1000; const today = iso(new Date()); if (c.snoozedUntil && c.snoozedUntil > today) return -500; const last = c.lastContact ? new Date(c.lastContact) : null; const days = last ? (Date.now() - last.getTime()) / 86400000 : 999; const cadence = c.cadence || 30; const ratio = days / cadence; let score = 0; if (ratio >= 2) score += 60; else if (ratio >= 1.5) score += 45; else if (ratio >= 1) score += 28; else if (ratio >= 0.7) score += 12; score += [15, 8, 0][c.priority] ?? 0; if (c.waitingFor && c.waitingSince) {const waitDays = (Date.now() - c.waitingSince) / 86400000; if (waitDays < 5) score *= 0.3; else if (waitDays >= 10) score += 12;} if ((c.sentCount || 0) >= 3) {const rate = (c.receivedCount || 0) / c.sentCount; if (rate >= 0.6) score += 10; else if (rate < 0.2) score -= 15;} if (c.type === 'personal') score *= 0.75; return Math.max(0, Math.round(score));}
 function contactScoreBreakdown(c) {if (c.archived) return 'Arquivado'; const today = iso(new Date()); if (c.snoozedUntil && c.snoozedUntil > today) return 'Adiado até ' + fmtDate(c.snoozedUntil); const parts = []; const last = c.lastContact ? new Date(c.lastContact) : null; const days = last ? (Date.now() - last.getTime()) / 86400000 : 999; const cadence = c.cadence || 30; const ratio = days / cadence; if (ratio >= 2) parts.push('atrasado ' + (Math.round(ratio * 10) / 10) + 'x cadência'); else if (ratio >= 1) parts.push('cadência vencida'); else if (ratio >= 0.7) parts.push('em dia'); else parts.push('recente'); parts.push('prioridade ' + PR[c.priority].toLowerCase()); if (c.waitingFor) parts.push('aguardando'); if ((c.sentCount || 0) >= 3) {const rate = (c.receivedCount || 0) / c.sentCount; if (rate >= 0.6) parts.push('responde bem'); else if (rate < 0.2) parts.push('raramente responde');} if (c.type === 'personal') parts.push('pessoal × 0.75'); return parts.join(' · ');}

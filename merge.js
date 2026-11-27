@@ -56,6 +56,48 @@
     });
   }
 
+  // v180 — favoritos de Pessoas (LWW por contactId).
+  // Cada toggle grava { on: bool, at: ms } em orbitFavMeta. Na convergência entre
+  // dispositivos, o maior `at` vence; uma remoção explícita ({ on:false, at>0 })
+  // sempre vence uma entrada legada sem meta (at=0), evitando que o favorito reviva.
+  function mergeOrbitFavorites(localFavs, localMeta, remoteFavs, remoteMeta) {
+    var lf = Array.isArray(localFavs) ? localFavs : [];
+    var rf = Array.isArray(remoteFavs) ? remoteFavs : [];
+    var lm = (localMeta && typeof localMeta === 'object' && !Array.isArray(localMeta)) ? localMeta : {};
+    var rm = (remoteMeta && typeof remoteMeta === 'object' && !Array.isArray(remoteMeta)) ? remoteMeta : {};
+    var ids = {};
+    lf.forEach(function (id) { if (id) ids[String(id)] = 1; });
+    rf.forEach(function (id) { if (id) ids[String(id)] = 1; });
+    Object.keys(lm).forEach(function (id) { if (id) ids[id] = 1; });
+    Object.keys(rm).forEach(function (id) { if (id) ids[id] = 1; });
+
+    var mergedMeta = {};
+    var mergedFavs = [];
+    Object.keys(ids).sort().forEach(function (id) {
+      var le = lm[id] && typeof lm[id] === 'object' ? { on: !!lm[id].on, at: num(lm[id].at, 0) } : null;
+      var re = rm[id] && typeof rm[id] === 'object' ? { on: !!rm[id].on, at: num(rm[id].at, 0) } : null;
+      var inL = lf.indexOf(id) >= 0;
+      var inR = rf.indexOf(id) >= 0;
+      var win = null;
+      if (le && re) {
+        if (le.at > re.at) win = le;
+        else if (re.at > le.at) win = re;
+        else win = (!le.on || !re.on) ? { on: false, at: le.at } : le; // empate exato: remoção vence
+      } else if (le) {
+        win = le;
+      } else if (re) {
+        win = re;
+      } else {
+        // Legado sem meta dos dois lados: mantém se presente em algum array
+        if (inL || inR) mergedFavs.push(id);
+        return;
+      }
+      mergedMeta[id] = win;
+      if (win.on) mergedFavs.push(id);
+    });
+    return { favorites: mergedFavs, meta: mergedMeta };
+  }
+
   function workLogId(taskId, date) { return 'wl_' + fnv(String(taskId || '') + '|' + String(date || '')); }
   function workLogKey(taskId, date) { return String(taskId || '') + '|' + String(date || ''); }
 
@@ -293,7 +335,7 @@
   window.__merge = {
     decide: decide, fromRow: fromRow, fromTimer: fromTimer, mergeEntity: mergeEntity, mergeWorkLog: mergeWorkLog,
     workLogId: workLogId, workLogKey: workLogKey,
-    unionLogs: unionLogs, unionSubs: unionSubs, mergePomodoros: mergePomodoros,
+    unionLogs: unionLogs, unionSubs: unionSubs, mergePomodoros: mergePomodoros, mergeOrbitFavorites: mergeOrbitFavorites,
     _test: { fromTask: fromTask, fromProject: fromProject, fromContact: fromContact, fromWorkLog: fromWorkLog, fromTimer: fromTimer }
   };
 })();
